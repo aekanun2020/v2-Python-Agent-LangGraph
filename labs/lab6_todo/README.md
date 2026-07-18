@@ -12,6 +12,39 @@
 - เข้าใจการจัดการ **state ใน agent** ด้วย class `TodoState` ที่เก็บ todo list ไว้ใน memory
 - เห็นว่า agent ใช้ todo เป็นแผนงาน แล้วอัปเดตสถานะ (todo → doing → done) ระหว่างทำงานจริงด้วย MCP tools
 
+> `agent_todo.py` คือเวอร์ชันพื้นฐานเพื่อเรียนรู้ TodoWrite: โมเดลเป็นผู้ประกาศสถานะเอง
+> จึงยังไม่ใช่ planner runtime ที่ตรวจหลักฐาน ดูหัวข้อ Pure Python Planner ด้านล่าง
+
+## Enhanced: Pure Python Evidence-driven Planner
+
+ไฟล์ `agent_planner.py` เพิ่ม planner จริงโดยไม่ใช้ LangGraph ส่วน Python runtime เป็น
+เจ้าของ state transition แทนการเชื่อคำประกาศของ LLM:
+
+- มี `PlannerState`, revision และสถานะของแต่ละขั้น
+- MCP result ถูกผูกกับ step ที่ `in_progress` เป็น evidence อัตโนมัติ
+- `plan_complete` ถูกปฏิเสธทันทีถ้ายังไม่มี tool evidence
+- แก้แผนระหว่างทำงานผ่าน `plan_revise` และรักษาหลักฐานเดิม
+- final answer ถูก runtime gate ปฏิเสธจนกว่าทุกขั้นเสร็จและมีหลักฐาน
+
+```text
+while (plain Python):
+  LLM proposes action
+  → Python validates transition
+  → MCP executes
+  → Python binds evidence to active step
+  → incomplete/unsupported answer is rejected
+```
+
+พิสูจน์กติกาโดยไม่ใช้ LLM/MCP และรัน Agent จริงตามลำดับ:
+
+```bash
+make proof-pure-planner
+make run-pure-planner
+```
+
+ความแตกต่างสำคัญ: LLM ยังใช้ reasoning เพื่อสร้าง/แก้แผน แต่ไม่มีสิทธิ์เปลี่ยน
+ขั้นเป็น `completed` หรืออนุมัติคำตอบเองหาก runtime ยังไม่พบหลักฐาน
+
 ---
 
 ## สิ่งที่ต้องเตรียมก่อน (Prerequisites)

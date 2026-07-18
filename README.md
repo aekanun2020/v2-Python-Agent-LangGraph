@@ -69,6 +69,7 @@ make test        # unit tests
 make proof       # real MCP, deterministic driver
 make run-planner # real OpenRouter + real MCP
 make compare-lab8 # รัน Lab 8 เดิมและใหม่ด้วยโจทย์/model/MCP เดียวกัน
+make proof-pure-planner # Pure Python evidence gate + MCP จริง ไม่ใช้ LangGraph
 ```
 
 > `make proof` และ `make run-planner` อ่าน endpoint/key จาก `.env` ผ่าน `python-dotenv`
