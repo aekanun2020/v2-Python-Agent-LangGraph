@@ -68,12 +68,39 @@ python labs/lab8_langgraph/agent_langgraph.py
 make test        # unit tests
 make proof       # real MCP, deterministic driver
 make run-planner # real OpenRouter + real MCP
+make compare-lab6-hr # TodoWrite เดิม vs Pure Python Planner บนโจทย์ HR เดียวกัน
 make compare-lab8 # รัน Lab 8 เดิมและใหม่ด้วยโจทย์/model/MCP เดียวกัน
 make proof-pure-planner # Pure Python evidence gate + MCP จริง ไม่ใช้ LangGraph
 ```
 
 > `make proof` และ `make run-planner` อ่าน endpoint/key จาก `.env` ผ่าน `python-dotenv`
 > คีย์จริงจะไม่ถูกเก็บในภาพหลักฐานหรือ source code
+
+### เปรียบเทียบ Lab 6 TodoWrite กับ Pure Python Planner
+
+การเปรียบเทียบนี้ **ไม่ใช้ LangGraph** ทั้งสองฝั่ง ใช้ agent loop ที่เขียนด้วย Pure
+Python, คำถาม HR, `OPENROUTER_MODEL` และ `MCP_SERVER_URL` ชุดเดียวกัน:
+
+| เวอร์ชัน | ใครควบคุมสถานะและเงื่อนไขจบ |
+| --- | --- |
+| Lab 6 เดิม — TodoWrite | LLM เขียน todo, เปลี่ยน status และตัดสินใจจบเอง |
+| Lab 6 Enhanced — Pure Python Planner | Python runtime ตรวจ transition, ผูก MCP evidence และควบคุม answer gate |
+
+```bash
+make validate-hr-challenges
+make compare-lab6-hr                                      # default: skills_project_risk
+make compare-lab6-hr HR_CHALLENGE=mobility_outcomes
+make compare-lab6-hr HR_CHALLENGE=training_effectiveness
+```
+
+Runner วัด MCP calls, latency, todo completion, plan revision, evidence coverage และ
+answer-gate status แล้วสร้าง:
+
+- `artifacts/lab6_hr_comparison_<challenge>.json`
+- `artifacts/lab6_hr_comparison_<challenge>.html`
+
+> สถานะ: comparison runner และ tests พร้อมแล้ว แต่ยังไม่แสดงตัวเลขหรือภาพ captured
+> run ใน README จนกว่าจะรัน OpenRouter + MCP จริงสำเร็จ เพื่อไม่สร้างผล benchmark ปลอม
 
 ### เปรียบเทียบ Lab 8 เดิมกับ Lab 8 ใหม่
 

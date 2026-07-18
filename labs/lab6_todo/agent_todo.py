@@ -74,7 +74,7 @@ def build_tools(registry: ToolRegistry) -> list[dict]:
     return todo_tools + registry.openai_tools
 
 
-def run(question: str, registry: ToolRegistry, max_steps: int = 30):
+def run(question: str, registry: ToolRegistry, max_steps: int = 30, return_details: bool = False):
     todo = TodoState()
     tools = build_tools(registry)
     messages = [
@@ -105,6 +105,8 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 30):
         print(f"[answer]\n{msg.content}")
         print("-" * 60)
         print(f"[todo สุดท้าย]\n{todo.render()}")
+        if return_details:
+            return {"answer": msg.content, "todo_items": todo.items, "turns": step}
         return msg.content
 
     # ชนเพดาน max_steps — บังคับให้โมเดลสรุปปิดท้าย จะได้ไม่จบแบบเงียบๆ โดยไม่มีบทสรุป
@@ -116,6 +118,8 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 30):
     print(f"[answer]\n{content}")
     print("-" * 60)
     print(f"[todo สุดท้าย]\n{todo.render()}")
+    if return_details:
+        return {"answer": content, "todo_items": todo.items, "turns": max_steps + 1}
     return content
 
 

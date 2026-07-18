@@ -40,10 +40,22 @@ while (plain Python):
 ```bash
 make proof-pure-planner
 make run-pure-planner
+make compare-lab6-hr
 ```
 
 ความแตกต่างสำคัญ: LLM ยังใช้ reasoning เพื่อสร้าง/แก้แผน แต่ไม่มีสิทธิ์เปลี่ยน
 ขั้นเป็น `completed` หรืออนุมัติคำตอบเองหาก runtime ยังไม่พบหลักฐาน
+
+### เปรียบเทียบของเดิมกับของใหม่บนโจทย์ HR
+
+```bash
+make validate-hr-challenges
+make compare-lab6-hr HR_CHALLENGE=skills_project_risk
+```
+
+คำสั่งนี้รัน `agent_todo.py` และ `agent_planner.py` แบบเรียงลำดับด้วยคำถาม,
+model และ MCP เดียวกัน แล้วบันทึกผล JSON/HTML ใน `artifacts/` การเทียบนี้แยกจาก
+Lab 8 โดยสมบูรณ์และไม่มี LangGraph อยู่ใน execution path
 
 ---
 
