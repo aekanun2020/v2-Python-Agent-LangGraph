@@ -57,6 +57,10 @@ make compare-lab6-hr HR_CHALLENGE=skills_project_risk
 model และ MCP เดียวกัน แล้วบันทึกผล JSON/HTML ใน `artifacts/` การเทียบนี้แยกจาก
 Lab 8 โดยสมบูรณ์และไม่มี LangGraph อยู่ใน execution path
 
+ผลจริงของ `skills_project_risk`: TodoWrite ใช้ MCP 10 calls / 169.306 วินาที;
+Pure Python Planner ใช้ 11 calls / 160.743 วินาที, completed 7/7 และ Answer Gate
+= APPROVED ดูภาพได้ที่ `../../artifacts/lab6_hr_comparison_skills_project_risk.png`
+
 ---
 
 ## สิ่งที่ต้องเตรียมก่อน (Prerequisites)

@@ -99,8 +99,23 @@ answer-gate status แล้วสร้าง:
 - `artifacts/lab6_hr_comparison_<challenge>.json`
 - `artifacts/lab6_hr_comparison_<challenge>.html`
 
-> สถานะ: comparison runner และ tests พร้อมแล้ว แต่ยังไม่แสดงตัวเลขหรือภาพ captured
-> run ใน README จนกว่าจะรัน OpenRouter + MCP จริงสำเร็จ เพื่อไม่สร้างผล benchmark ปลอม
+ผล captured run ของ `skills_project_risk` วันที่ 18 กรกฎาคม 2026:
+
+![Lab 6 TodoWrite vs Pure Python Planner](artifacts/lab6_hr_comparison_skills_project_risk.png)
+
+| Metric | TodoWrite เดิม | Pure Python Planner |
+| --- | ---: | ---: |
+| MCP tool calls | 10 | 11 |
+| ระยะเวลา | 169.306 วินาที | 160.743 วินาที |
+| Work state | todo completed 4/4 | plan completed 7/7 |
+| Plan revisions | ไม่มี | 1 |
+| Evidence binding | ไม่มี runtime validation | ผูก MCP result กับ active step |
+| Answer gate | ไม่มี | APPROVED |
+
+รอบนี้ Planner ใหม่เร็วกว่า 8.563 วินาที แต่ใช้ MCP เพิ่ม 1 call จุดสำคัญไม่ใช่
+ความเร็วจาก single run แต่คือ Python runtime สามารถตรวจว่าแต่ละ completed step มี
+tool evidence และไม่ยอมให้ LLM อนุมัติคำตอบเอง ผลเต็มอยู่ใน
+`artifacts/lab6_hr_comparison_skills_project_risk.json` และ `.html`
 
 ### เปรียบเทียบ Lab 8 เดิมกับ Lab 8 ใหม่
 

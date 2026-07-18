@@ -1,0 +1,91 @@
+{
+  "challenge_id": "skills_project_risk",
+  "question": "สร้าง workforce risk matrix รายแผนกสำหรับพนักงานที่ยังปฏิบัติงาน โดยคำนวณ headcount, สัดส่วนพนักงานที่มี skill record, จำนวนทักษะเฉลี่ยต่อคน, years_of_experience เฉลี่ย, training hours เฉลี่ยต่อคน, performance review ล่าสุดเฉลี่ย และ project_value รวมต่อหัว ต้อง aggregate skills, training, reviews และ projects แยกเป็นหนึ่งแถวต่อพนักงานก่อน join จัดอันดับแผนกที่ project_value ต่อหัวสูงแต่ skill coverage หรือ training ต่ำว่าเสี่ยงที่สุด พร้อมอธิบายเกณฑ์ที่ใช้และข้อจำกัดของข้อมูล",
+  "model": "anthropic/claude-sonnet-4.6",
+  "mcp_endpoint": "https://bb36-184-22-21-43.ngrok-free.app/mcp",
+  "required_fields": [
+    "employees.employee_id",
+    "employees.department",
+    "employees.status",
+    "skills.employee_id",
+    "skills.skill_name",
+    "skills.years_of_experience",
+    "training_records.hours",
+    "performance_reviews.overall_score",
+    "performance_reviews.review_date",
+    "projects.project_value"
+  ],
+  "todo_write": {
+    "mcp_calls": 10,
+    "elapsed_ms": 169306,
+    "total_items": 4,
+    "done_items": 4,
+    "answer": "---\n\n## 🏢 Workforce Risk Matrix — รายแผนก (พนักงานปฏิบัติงาน 25 คน)\n\n---\n\n### 📊 ตาราง Risk Matrix สมบูรณ์\n\n| ลำดับ | แผนก | HC | Skill Cov.% | Avg Skills/คน | Avg YoE | Avg Training Hrs | Avg Review | Review Cov.% | ProjVal/Head (ล้าน) | Risk A (Skill) | Risk B (Training) | Risk C (Value Exp.) | **Total Score** | **Tier** |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n| 1 | วิจัยและพัฒนา | 3 | 0.0% | 0.00 | — | 8.0 | — | 0.0% | 3.33 | 33.30 | 26.64 | 33.30 | **93.2** | 🔴 CRITICAL |\n| 2 | ผลิต | 3 | 33.3% | 0.67 | 11.00 | 8.0 | 4.30 | 33.3% | 2.67 | 22.20 | 26.64 | 26.64 | **75.5** | 🔴 CRITICAL |\n| 3 | บริหารทั่วไป | 1 | 0.0% | 0.00 | — | 0.0 | — | 0.0% | 0.00 | 33.30 | 33.30 | 0.00 | **66.6** | 🔴 CRITICAL |\n| 4 | การตลาด | 4 | 25.0% | 0.50 | 4.00 | 8.0 | 3.80 | 25.0% | 0.75 | 24.98 | 26.64 | 7.49 | **59.1** | 🟠 HIGH |\n| 5 | การเงิน | 3 | 33.3% | 0.67 | 9.00 | 8.0 | 4.50 | 33.3% | 0.67 | 22.20 | 26.64 | 6.66 | **55.5** | 🟠 HIGH |\n| 6 | ทรัพยากรบุคคล | 4 | 25.0% | 0.50 | 4.00 | 8.0 | 4.00 | 25.0% | 0.00 | 24.98 | 26.64 | 0.00 | **51.6** | 🟠 HIGH |\n| 7 | เทคโนโลยีสารสนเทศ | 5 | 40.0% | 1.00 | 5.92 | 20.0 | 4.15 | 40.0% | 1.00 | 19.98 | 16.65 | 9.99 | **46.6** | 🟠 HIGH |\n| 8 | บัญชี | 2 | 50.0% | 1.00 | 9.00 | 8.0 | 4.20 | 50.0% | 0.00 | 16.65 | 26.64 | 0.00 | **43.3** | 🟠 HIGH |\n\n---\n\n### 🔢 เกณฑ์การคำนวณ Risk Score (0–100)\n\n**Risk Score = Risk A + Risk B + Risk C** โดยแต่ละ Component มีน้ำหนักสูงสุด 33.3 คะแนน:\n\n| Component | สูตร | ตรรกะ |\n|---|---|---|\n| **A — Skill Risk** | `(100 − Skill_Coverage%) × 0.333` | แผนกที่ไม่มี skill record ยิ่งมาก = เสี่ยงสูง |\n| **B — Training Risk** | `(1 − AvgTraining/40hrs) × 33.3` | Ceiling ที่ 40 ชม. = เต็ม; ต่ำกว่า = เสี่ยงเพิ่ม |\n| **C — Value Exposure** | `(ProjVal/Head ÷ Max_ProjVal/Head) × 33.3` | Relative exposure: ยิ่งดูแล project มูลค่าสูง + skill/training ต่ำ = เสี่ยงมาก |\n\n| Tier | คะแนน | ความหมาย |\n|---|---|---|\n| 🔴 CRITICAL | ≥ 60 | ต้องแก้ไขเร่งด่วน |\n| 🟠 HIGH | 40–59 | ควรวางแผนพัฒนา |\n| 🟡 MEDIUM | 20–39 | ติดตามอย่างใกล้ชิด |\n| 🟢 LOW | < 20 | ระดับที่ยอมรับได้ |\n\n---\n\n### 🔍 วิเคราะห์เชิงลึกรายแผนก\n\n#### 🔴 วิจัยและพัฒนา — Score 93.2 (อันตรายที่สุด)\n- **Zero Skill Coverage**: ทั้ง 3 คนไม่มี skill record เลย → ไม่รู้ว่าองค์กรมีความสามารถด้านใดบ้าง\n- **Project Value สูงสุด 10 ล้านบาท** ตกอยู่ที่พนักงาน 1 คน (วิทยา) ที่ไม่มี skill record และไม่เคยถูก review\n- **ไม่มี Review** ทั้งแผนก → ไม่มีกลไกวัดผลงานเลย\n- ⚠️ ความเสี่ยง: ถ้า key person ลาออก ทั้ง 10 ล้านบาทของ project อยู่ในมือที่ไม่มีเอกสารใดๆ รองรับ\n\n#### 🔴 ผลิต — Score 75.5\n- 2 ใน 3 คนไม่มีข้อมูลใดเลย (skills, training, review = 0/ว่าง)\n- มีเพียง \"ประยุทธ รบชนะ\" ที่ดูแล project 8 ล้าน — **single point of failure**\n- Avg YoE จาก skills = 11 ปี (สูงสุด) แต่มีเพียงคนเดียวที่บันทึก → ข้อมูลเบี่ยงเบนสูงมาก\n\n#### 🔴 บริหารทั่วไป — Score 66.6\n- มีเพียง 1 คน, **ไม่มีข้อมูลใดเลย** (ทั้ง skill, training, review, project = ว่างหมด)\n- เป็น \"blind spot\" ที่สมบูรณ์แบบขององค์กร\n\n#### 🟠 การตลาด — Score 59.1\n- 3 ใน 4 คนไม่มี skill record; Review score เฉลี่ยต่ำสุดในกลุ่มที่มีข้อมูล (3.80/5.00)\n- 2 คนไม่ผ่านการฝึกอบรมเลย\n\n#### 🟠 เทคโนโลยีสารสนเทศ — Score 46.6 (ดีสุดในกลุ่ม HIGH)\n- Skill Coverage สูงสุด (40%), Training Hours สูงสุด (20 ชม.) — พัฒนาต่อยอดได้ง่ายที่สุด\n\n---\n\n### ⚠️ ข้อจำกัดของข้อมูลที่สำคัญ\n\n| ข้อจำกัด | ผลกระทบ |\n|---|---|\n| **Skill Coverage ต่ำมากทั่วทั้งองค์กร** (7/25 คนเท่านั้น = 28%) | Risk Score ทุกแผนกเบี่ยงสูงขึ้น อาจไม่ใช่ความเสี่ยงจริง แต่เป็น **data quality problem** |\n| **Review Coverage = 7/25 คน (28%)** และทุก record ลงวันที่ Jan 2024 | อาจเป็น review รอบแรกที่ยังไม่สมบูรณ์ ไม่ใช่ไม่มีการ review จริง |\n| **Project เชื่อมแบบ Many-to-One** (employee_id) ไม่มีทีม | project_value ที่ \"assign\" ให้พนักงาน 1 คนอาจเป็นงานทีมจริงๆ → ตัวเลขต่อหัวสูงเกินจริง |\n| **years_of_experience ใน skills** ≠ อายุงานในองค์กร | เป็น YoE ต่อ skill แต่ละอัน ไม่ใช่ seniority จริง ใช้ประเมิน tenure ไม่ได้ |\n| **บริหารทั่วไป** มีพนักงาน 1 คน | ตัวเลขเฉลี่ยใดๆ ไม่มีความหมายทางสถิติ |\n| **ไม่มี salary/compensation data** | ไม่สามารถคำนวณ cost-of-risk ได้ครบ |\n\n---\n\n### 🎯 ข้อเสนอแนะเชิงธุรกิจ\n\n1. **🚨 เร่งด่วน — วิจัยและพัฒนา**: ทำ Skill Mapping และ Knowledge Transfer ทันที โดยเฉพาะ project 10 ล้านบาท ก่อนที่จะเป็น single point of failure ที่แก้ไม่ได้\n2. **📋 ผลิต**: ทำ Succession Planning สำหรับ \"ประยุทธ รบชนะ\" และเร่ง onboard พนักงานอีก 2 คนเข้าระบบ skill/training\n3. **🗄️ Data Completeness Program**: องค์กรต้องมีแผน input ข้อมูล HR ให้ครบก่อนตัดสินใจใดๆ เพราะข้อมูลปัจจุบันสะท้อนภาพจริงได้เพียง ~28% ของพนักงาน\n4. **IT เป็น Best Practice Model**: เป็นแผนกเดียวที่มี skill + training + review ครบถ้วนพอสมควร → ใช้เป็น benchmark สำหรับแผนกอื่น"
+  },
+  "pure_planner": {
+    "mcp_calls": 11,
+    "elapsed_ms": 160743,
+    "revision": 1,
+    "approved": true,
+    "completed_steps": 7,
+    "total_steps": 7,
+    "answer": "ทุกขั้น completed แล้ว — นำเสนอผลลัพธ์ฉบับสมบูรณ์:\n\n---\n\n## 🔴 Workforce Risk Matrix — รายแผนก (พนักงานที่ยังปฏิบัติงาน)\n\n### ตารางผลลัพธ์หลัก\n\n| อันดับความเสี่ยง | แผนก | Headcount | Skill Coverage % | Avg Skills/คน | Avg YoE (skills) | Avg Training Hrs | Avg Review (ล่าสุด) | Project Value รวม (M฿) | Proj Value/หัว (M฿) | 🔥 Risk Score (0–100) |\n|:---:|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|\n| **1** | **วิจัยและพัฒนา** | 3 | **0.0%** | 0.00 | — | 8.0 | — | 10.00 | **3.333** | **76.0** |\n| **2** | **บริหารทั่วไป** | 1 | **0.0%** | 0.00 | — | **0.0** | — | 0.00 | 0.000 | **70.0** |\n| **3** | ผลิต | 3 | 33.3% | 0.67 | 11.00 | 8.0 | 4.30 | 8.00 | **2.667** | **60.7** |\n| **4** | การตลาด | 4 | 25.0% | 0.50 | 4.00 | 8.0 | 3.80 | 3.00 | 0.750 | **58.3** |\n| **5** | ทรัพยากรบุคคล | 4 | 25.0% | 0.50 | 4.00 | 8.0 | 4.00 | 0.00 | 0.000 | **56.0** |\n| **6** | การเงิน | 3 | 33.3% | 0.67 | 9.00 | 8.0 | 4.50 | 2.00 | 0.667 | **54.7** |\n| 7 | เทคโนโลยีสารสนเทศ | 5 | 40.0% | 1.00 | 5.92 | 20.0 | 4.15 | 5.00 | 1.000 | **47.0** |\n| 8 | บัญชี | 2 | 50.0% | 1.00 | 9.00 | 8.0 | 4.20 | 0.00 | 0.000 | **46.0** |\n\n---\n\n### 🔥 Risk Score Matrix — แผนภาพเชิงคุณภาพ\n\n```\nRisk Score   ████████████████████████████████████████  แผนก\n\n76.0  ███████████████████████████████████████  วิจัยและพัฒนา  ← 🔴 CRITICAL\n70.0  ████████████████████████████████████     บริหารทั่วไป   ← 🔴 HIGH\n60.7  ██████████████████████████████          ผลิต            ← 🟠 HIGH\n58.3  █████████████████████████████           การตลาด         ← 🟠 MEDIUM-HIGH\n56.0  ████████████████████████████            ทรัพยากรบุคคล  ← 🟡 MEDIUM\n54.7  ████████████████████████████            การเงิน         ← 🟡 MEDIUM\n47.0  ███████████████████████████             IT              ← 🟢 LOWER\n46.0  ██████████████████████████              บัญชี           ← 🟢 LOWER\n```\n\n---\n\n## 📐 เกณฑ์การคำนวณ Risk Score (0–100 คะแนน)\n\nRisk Score คำนวณจาก **3 มิติ** ที่มีน้ำหนักต่างกัน:\n\n| มิติ | น้ำหนัก | สูตร | เหตุผล |\n|---|:---:|---|---|\n| **Skill Gap** | **40%** | `(100 − skill_coverage%) / 100 × 40` | ช่องโหว่ด้านความสามารถหลักมีผลต่อ execution ระยะยาวมากที่สุด |\n| **Training Gap** | **30%** | `(60 − avg_training_hrs) / 60 × 30` | การขาดการพัฒนาสะท้อนความเสี่ยงด้าน obsolescence |\n| **Project Exposure** | **30%** | `(proj_value_per_head / 10M) × 30` | คนน้อยแต่แบกมูลค่าโครงการสูง = concentration risk |\n\n> **ตรรกะหลัก:** แผนกที่มี Project Value/หัวสูง แต่ Skill Coverage และ Training ต่ำ คือ \"กลุ่มเสี่ยงสูงสุด\" — องค์กรพึ่งพาคนกลุ่มนี้มากแต่ลงทุนพัฒนาน้อย\n\n---\n\n## 🔎 วิเคราะห์รายแผนกเสี่ยงสูงสุด\n\n### 🔴 อันดับ 1 — วิจัยและพัฒนา (Risk: 76.0)\n| ปัจจัยเสี่ยง | รายละเอียด |\n|---|---|\n| Skill Coverage = **0%** | พนักงานทั้ง 3 คนไม่มี skill record ในระบบเลย — องค์กรไม่ทราบจริงว่าใครมีความสามารถอะไร |\n| Avg Training = **8 hrs** | ต่ำมากสำหรับแผนกที่ต้องนำเทคโนโลยี |\n| Project Value/หัว = **3.33M฿** | สูงที่สุดในองค์กร (โครงการ 10M ดูแลโดยคน 3 คน) |\n| ไม่มี Performance Review | ไม่มีข้อมูล review — ขาด feedback loop |\n> **ความเสี่ยง:** หากพนักงานแผนกนี้ลาออก 1 คน มูลค่าโครงการที่อยู่ในความรับผิดชอบจะกระจุกอยู่กับคนที่เหลือโดยไม่มีการ document ความสามารถ\n\n### 🔴 อันดับ 2 — บริหารทั่วไป (Risk: 70.0)\n| ปัจจัยเสี่ยง | รายละเอียด |\n|---|---|\n| Skill Coverage = **0%** | ไม่มี skill record |\n| Training = **0 hrs** | ไม่มีการอบรมเลย — เสี่ยง stagnation |\n| Headcount = **1** | Single point of failure |\n\n### 🟠 อันดับ 3 — ผลิต (Risk: 60.7)\n| ปัจจัยเสี่ยง | รายละเอียด |\n|---|---|\n| Skill Coverage = **33.3%** | มีเพียง 1 ใน 3 คนที่มี skill record |\n| Project Value/หัว = **2.67M฿** | สูงเป็นอันดับ 2 |\n| Avg YoE = **11 ปี** | ประสบการณ์สูงแต่ไม่ถูก document — เสี่ยง knowledge drain ถ้าเกษียณ |\n\n---\n\n## ⚠️ ข้อจำกัดของข้อมูล\n\n| ข้อจำกัด | ผลกระทบต่อการวิเคราะห์ |\n|---|---|\n| **Skill Coverage ต่ำทั้งองค์กร (max 50%)** | อาจสะท้อนว่าระบบ HR ยังบันทึกข้อมูลไม่ครบ ไม่ใช่พนักงานไม่มีทักษะจริง — ควรตรวจสอบก่อนสรุป |\n| **ไม่มีตาราง departments แยกต่างหาก** | แผนกถูกเก็บเป็น string ใน `employees.department` ซึ่งเสี่ยงต่อการ typo หรือ inconsistency |\n| **years_of_experience มาจาก skills table** | เป็น YoE ต่อทักษะ ไม่ใช่อายุงานรวม — ค่าเฉลี่ยจึงสะท้อนเฉพาะคนที่มี skill record เท่านั้น |\n| **Performance Review มีเพียง 7 จาก 25 พนักงาน** | แผนกที่ไม่มีข้อมูล review (วิจัยและพัฒนา, บริหารทั่วไป) ไม่สามารถวัดคุณภาพงานได้ |\n| **Project value บันทึกรายบุคคล** | โปรเจกต์เดียวอาจมีหลายคนร่วม แต่ถ้าบันทึกซ้ำจะ inflate มูลค่าของแผนก |\n| **Risk score ใช้ค่า max แบบ hard-coded (60 hrs, 10M)** | ถ้าข้อมูลเพิ่มและค่า max เปลี่ยน ต้องปรับ normalization ใหม่ ควรใช้ `MAX() OVER()` แทนใน production |\n| **บริหารทั่วไป headcount = 1** | ค่าเฉลี่ยทุกตัวไม่มีนัยสำคัญทางสถิติ |\n\n---\n\n## 💡 ข้อเสนอแนะเชิงปฏิบัติ\n\n```\nPriority Action Plan:\n────────────────────────────────────────────────────────\n🔴 วิจัยและพัฒนา  → เร่ง Skills Mapping + ทำ Knowledge Transfer Plan\n                    ก่อนที่ project 10M฿ จะตกอยู่ในความเสี่ยง\n🔴 บริหารทั่วไป   → จัดทำ Training Plan ทันที + พิจารณาสำรอง backup role\n🟠 ผลิต           → Document know-how ของพนักงานที่มี YoE สูง (11 ปี)\n                    วางแผน succession ก่อนเกษียณ\n🟠 การตลาด        → เพิ่ม skill record ให้ครบ + เพิ่ม training hours\n📊 ทั้งองค์กร     → เร่งบันทึก skills ให้ครบ เพราะ coverage รวม < 50%\n                    ทำให้ matrix นี้ยังไม่สะท้อนความเป็นจริงเต็มที่\n────────────────────────────────────────────────────────\n```",
+    "tool_trace": [
+      {
+        "step_id": 1,
+        "tool": "get_database_context",
+        "tool_call_id": "toolu_016QmQLNdJK2sE5ivZnHYit7"
+      },
+      {
+        "step_id": 2,
+        "tool": "preview_table",
+        "tool_call_id": "toolu_01FDW67z1y6BMm8GNirDqtQP"
+      },
+      {
+        "step_id": 2,
+        "tool": "preview_table",
+        "tool_call_id": "toolu_01XsZddb5sXbg1yFbnpVtdaB"
+      },
+      {
+        "step_id": 2,
+        "tool": "preview_table",
+        "tool_call_id": "toolu_01DgCtXhVDshc9ZTtwFL7L9Q"
+      },
+      {
+        "step_id": 2,
+        "tool": "preview_table",
+        "tool_call_id": "toolu_015rF97E4Pbu7TkkZMNZaGqV"
+      },
+      {
+        "step_id": 2,
+        "tool": "preview_table",
+        "tool_call_id": "toolu_01RS3qYht4qTiGcLBKoDxbcF"
+      },
+      {
+        "step_id": 3,
+        "tool": "execute_query_tool",
+        "tool_call_id": "toolu_013KMfPoMqBvSWWqRjphWQE3"
+      },
+      {
+        "step_id": 4,
+        "tool": "execute_query_tool",
+        "tool_call_id": "toolu_01P5BpZ897WZpBDdr83TjXAx"
+      },
+      {
+        "step_id": 5,
+        "tool": "execute_query_tool",
+        "tool_call_id": "toolu_018gbb736oz6Ycoa5x6YFCUf"
+      },
+      {
+        "step_id": 6,
+        "tool": "execute_query_tool",
+        "tool_call_id": "toolu_01HWuqMN99T2CWzSWCYdEArk"
+      },
+      {
+        "step_id": 7,
+        "tool": "execute_query_tool",
+        "tool_call_id": "toolu_01WqJ3hbwqWCUR2y8zzq62NW"
+      }
+    ]
+  }
+}
