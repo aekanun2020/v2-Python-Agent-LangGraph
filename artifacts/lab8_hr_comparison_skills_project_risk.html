@@ -1,0 +1,75 @@
+<!doctype html><html lang='th'><meta charset='utf-8'><title>Lab 8 Comparison</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#090e1c;color:#edf1ff;font:15px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}main{width:1220px;margin:25px auto}h1{color:#8be9fd;margin:0}.sub{color:#9ca8c7;margin:5px 0 18px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.card{background:#111a31;border:1px solid #2c3a60;border-radius:12px;padding:17px}.old{border-top:4px solid #ffb86c}.new{border-top:4px solid #50fa7b}h2{margin:0 0 11px;font-size:19px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.metric{background:#182440;border-radius:8px;padding:11px;text-align:center}.metric b{display:block;color:#50fa7b;font-size:20px}.old .metric b{color:#ffb86c}pre{white-space:pre-wrap;background:#0b1326;border-radius:8px;padding:12px;max-height:300px;overflow:hidden}.proof{margin-top:16px;background:#111a31;border-left:5px solid #bd93f9;padding:15px;border-radius:9px}code{color:#f1fa8c}footer{color:#8490ac;margin-top:10px;font-size:12px}</style><main>
+<h1>LAB 8 ORIGINAL vs LAB 8 PLANNERSTATE v2</h1><div class='sub'>Same question · same model: <code>anthropic/claude-sonnet-4.6</code> · same MCP endpoint</div>
+<div class='grid'><section class='card old'><h2>LAB 8 ORIGINAL — ReAct baseline</h2><div class='metrics'><div class='metric'><b>10</b>tool calls</div><div class='metric'><b>138,617</b>ms</div><div class='metric'><b>none</b>plan revisions</div></div><p>State: messages only · stops when model returns no tool call</p><pre>ได้ข้อมูลครบทั้งหมดแล้ว ขอสรุปผลการวิเคราะห์อย่างละเอียด
+
+---
+
+# 🏭 Workforce Risk Matrix — รายแผนก (พนักงานที่ยังปฏิบัติงาน)
+
+---
+
+## 📊 ภาพรวม Data Completeness ขององค์กร
+
+| ตัวชี้วัด | จำนวน | Coverage (%) |
+|---|---|---|
+| พนักงาน Active ทั้งหมด | 25 คน | — |
+| มี Skill Record | 7 คน | **28.0%** |
+| มี Training Record | 10 คน | **40.0%** |
+| มี Performance Review | 7 คน | **28.0%** |
+| มี Project Record | 5 คน | **20.0%** |
+
+&gt; ⚠️ **ข้อจำกัดสำคัญ:** ข้อมูลในฐานข้อมูลมีความครบถ้วนต่ำมาก — พนักงานกว่า 60–80% ไม่มีบันทึกในตาราง satellite ทำให้ค่าเฉลี่ยหลายตัวถูก underestimate อย่างมีนัยสำคัญ
+
+---
+
+## 🎯 Workforce Risk Matrix — จัดอันดับตามความเสี่ยง
+
+| อันดับ | แผนก | HC | Skill Coverage | ทักษะ/คน | Avg YoE | Training Hrs/คน | Perf Score | PV/หัว (บาท) | Skill Risk | Training Risk | PV Tier | **Composite Score** | **Risk Level** |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | วิจัยและพัฒนา | 3 | 0.0% | 0.00 | 0.0 | 8.0h | N/A | 3,333,333 | 🔴 สูง | 🔴 สูง | 🔴 ≥3M/หัว | **12** | 🚨 CRITICAL |
+| 2 | ผลิต | 3 | 33.3% | 0.67 | 11.0 | 8.0h | 4.30 | 2,666,667 | 🔴 สูง | 🔴 สูง | 🟡 1-3M/หัว | **8** | 🚨 CRITICAL |
+| 3 | เทคโนโลยีสารสนเทศ | 5 | 40.0% | 1.00 | 5.9 | 20.0h | 4.15 | 1,000,000 | 🔴 สูง | 🟡 กลาง | 🟡 1-3M/หัว | **6** | 🚨 CRITICAL |
+| 4 | การตลาด | 4 | 25.0% | 0.50 | 4.0 | 8.0h | 3.80 | 750,000 | 🔴 สูง | 🔴 สูง | 🟢 &lt;1M/หัว | **4** | ⚠️ HIGH |
+| 5 | การเงิน | 3 | 33.3% | 0.67 | 9.0 | 8.0h | 4.50 | 666,667 | 🔴 สูง | 🔴 สูง | 🟢 &lt;1M/หัว | **4** | ⚠️ HIGH |
+| 6 | ทรัพยากรบุคคล | 4 | 25.0% | 0.50 | 4.0 | 8.0h | 4.00 | 0 | 🔴 สูง | 🔴 สูง | 🟢 &lt;1M/หัว | **4** | ⚠️ HIGH |
+| 7 | บริหารทั่วไป | 1 | 0.0% | 0.00 | 0.0 | 0.0h | N/A | 0 | 🔴 สูง | 🔴 สูง | 🟢 &lt;1M/หัว | **4** | ⚠️ HIGH |
+| 8 | บัญชี | 2 | 50.0% | 1.00 | 9.0 | 8.0h | 4.20 | 0 | 🟡 กลาง | 🔴 สูง | 🟢 &lt;1M/หัว | **3** | ⚠</pre></section>
+<section class='card new'><h2>LAB 8 NEW — Planner + Reviewer</h2><div class='metrics'><div class='metric'><b>9</b>tool calls</div><div class='metric'><b>524,543</b>ms</div><div class='metric'><b>8</b>plan revisions</div></div><p>Steps completed: <b>6/6</b> · Answer gate: <b>APPROVED</b></p><pre>Flag columns ทุกตัวเป็น 0/1 จริงจาก SQL แล้ว ขั้น 6 สมบูรณ์ครับ
+
+---
+
+# 🏢 Workforce Risk Matrix — พนักงานที่ยังปฏิบัติงาน (25 คน | 8 แผนก)
+
+&gt; ผลลัพธ์ทุกตัวเลขและ flag มาจาก SQL query execution โดยตรง ไม่มีการคำนวณด้วยมือ
+
+---
+
+## 📊 Risk Matrix สมบูรณ์ (เรียงจากเสี่ยงสูงสุด)
+
+| Tier | Score | แผนก | คน | Skill Cov. | Avg Skill | Avg YoE | Training (h) | Review | Project Value | Value/หัว |
+|:---:|:---:|---|:---:|:---:|:---:|:---:|:---:|:---:|---:|---:|
+| 🔴 HIGH | **5** | วิจัยและพัฒนา | 3 | 0.0% | 0.00 | 0.00 | 8.0 | N/A | 10,000,000 | **3,333,333** |
+| 🔴 HIGH | **4** | ผลิต | 3 | 33.3% | 0.67 | 3.67 | 8.0 | 4.30 | 8,000,000 | **2,666,667** |
+| 🔴 HIGH | **4** | การตลาด | 4 | 25.0% | 0.50 | 1.00 | 8.0 | 3.80 | 3,000,000 | **750,000** |
+| 🔴 HIGH | **4** | บริหารทั่วไป | 1 | 0.0% | 0.00 | 0.00 | 0.0 | N/A | 0 | 0 |
+| 🟡 MEDIUM | **3** | การเงิน | 3 | 33.3% | 0.67 | 3.00 | 8.0 | 4.50 | 2,000,000 | 666,667 |
+| 🟡 MEDIUM | **3** | ทรัพยากรบุคคล | 4 | 25.0% | 0.50 | 1.00 | 8.0 | 4.00 | 0 | 0 |
+| 🟢 LOW | **1** | เทคโนโลยีสารสนเทศ | 5 | 40.0% | 1.00 | 2.37 | **20.0** | 4.15 | 5,000,000 | 1,000,000 |
+| 🟢 LOW | **1** | บัญชี | 2 | **50.0%** | **1.00** | **4.50** | 8.0 | 4.20 | 0 | 0 |
+
+---
+
+## 🚦 Risk Flag Matrix — ค่า 0/1 จาก SQL โดยตรง
+
+| แผนก | f1: Value &gt; Median | f2: Skill Cov &lt; 40% | f3: Avg Skill &lt; 1 | f4: Training &lt; 10h | f5: ไม่มี Review | **Score** |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| วิจัยและพัฒนา | **1** | **1** | **1** | **1** | **1** | **5** |
+| ผลิต | **1** | **1** | **1** | **1** | 0 | **4** |
+| การตลาด | **1** | **1** | **1** | **1** | 0 | **4** |
+| บริหารทั่วไป | 0 | **1** | **1** | **1** | **1** | **4** |
+| การเงิน | 0 | **1** | **1** | **1** | 0 | **3** |
+| ทรัพยากรบุคคล | 0 | **1** | **1** | **1** | 0 | **3** |
+| เทคโนโลยีสารสนเทศ | **1** | 0 | 0 | 0 | 0 </pre></section></div>
+<section class='proof'><b>WHAT THIS PROVES</b><br>Original: simple model↔tool loop, lower orchestration overhead.<br>v2: explicit plan, evidence per step, adaptive replanning and an answer approval gate. Metrics describe this run—not a universal benchmark.</section><section class='proof'><b>HR COMMUNITY + SCHEMA GROUNDING</b><br>People Analytics communities discuss performance gaps, learning behavior, skills, productivity and connecting people metrics to business outcomes.<br><b>Sources:</b> <a href='https://www.reddit.com/r/analytics/comments/13utqxk/hr_analytics/'>source 1</a> · <a href='https://www.reddit.com/r/analytics/comments/1r40o7l/what_does_people_analytics_work_actually_look/'>source 2</a> · <a href='https://www.shrm.org/in/executive-network/insights/how-chros-can-power-up-their-people-analytics--'>source 3</a><br><b>Validated MCP fields:</b> <code>employees.employee_id, employees.department, employees.status, skills.employee_id, skills.skill_name, skills.years_of_experience, training_records.hours, performance_reviews.overall_score, performance_reviews.review_date, projects.project_value</code></section>
+<footer>No API key or complete tool payload is stored in this artifact.</footer></main></html>

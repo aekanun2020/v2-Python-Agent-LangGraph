@@ -39,12 +39,25 @@ def render_comparison_html(summary: dict) -> str:
     baseline = summary["baseline"]
     planner = summary["planner_v2"]
     esc = html.escape
+    research = summary.get("research")
+    research_html = ""
+    if research:
+        links = " · ".join(
+            f"<a href='{esc(url)}'>source {index}</a>"
+            for index, url in enumerate(research["sources"], 1)
+        )
+        fields = ", ".join(research["required_fields"])
+        research_html = (
+            "<section class='proof'><b>HR COMMUNITY + SCHEMA GROUNDING</b><br>"
+            + esc(research["community_basis"])
+            + f"<br><b>Sources:</b> {links}<br><b>Validated MCP fields:</b> <code>{esc(fields)}</code></section>"
+        )
     return f"""<!doctype html><html lang='th'><meta charset='utf-8'><title>Lab 8 Comparison</title>
 <style>*{{box-sizing:border-box}}body{{margin:0;background:#090e1c;color:#edf1ff;font:15px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}}main{{width:1220px;margin:25px auto}}h1{{color:#8be9fd;margin:0}}.sub{{color:#9ca8c7;margin:5px 0 18px}}.grid{{display:grid;grid-template-columns:1fr 1fr;gap:16px}}.card{{background:#111a31;border:1px solid #2c3a60;border-radius:12px;padding:17px}}.old{{border-top:4px solid #ffb86c}}.new{{border-top:4px solid #50fa7b}}h2{{margin:0 0 11px;font-size:19px}}.metrics{{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}}.metric{{background:#182440;border-radius:8px;padding:11px;text-align:center}}.metric b{{display:block;color:#50fa7b;font-size:20px}}.old .metric b{{color:#ffb86c}}pre{{white-space:pre-wrap;background:#0b1326;border-radius:8px;padding:12px;max-height:300px;overflow:hidden}}.proof{{margin-top:16px;background:#111a31;border-left:5px solid #bd93f9;padding:15px;border-radius:9px}}code{{color:#f1fa8c}}footer{{color:#8490ac;margin-top:10px;font-size:12px}}</style><main>
 <h1>LAB 8 ORIGINAL vs LAB 8 PLANNERSTATE v2</h1><div class='sub'>Same question · same model: <code>{esc(summary['model'])}</code> · same MCP endpoint</div>
 <div class='grid'><section class='card old'><h2>LAB 8 ORIGINAL — ReAct baseline</h2><div class='metrics'><div class='metric'><b>{baseline['tool_calls']}</b>tool calls</div><div class='metric'><b>{baseline['elapsed_ms']:,}</b>ms</div><div class='metric'><b>none</b>plan revisions</div></div><p>State: messages only · stops when model returns no tool call</p><pre>{esc(baseline['answer'][:1800])}</pre></section>
 <section class='card new'><h2>LAB 8 NEW — Planner + Reviewer</h2><div class='metrics'><div class='metric'><b>{planner['tool_calls']}</b>tool calls</div><div class='metric'><b>{planner['elapsed_ms']:,}</b>ms</div><div class='metric'><b>{planner['revisions']}</b>plan revisions</div></div><p>Steps completed: <b>{planner['completed_steps']}/{planner['total_steps']}</b> · Answer gate: <b>{'APPROVED' if planner['approved'] else 'NOT APPROVED'}</b></p><pre>{esc(planner['answer'][:1800])}</pre></section></div>
-<section class='proof'><b>WHAT THIS PROVES</b><br>Original: simple model↔tool loop, lower orchestration overhead.<br>v2: explicit plan, evidence per step, adaptive replanning and an answer approval gate. Metrics describe this run—not a universal benchmark.</section>
+<section class='proof'><b>WHAT THIS PROVES</b><br>Original: simple model↔tool loop, lower orchestration overhead.<br>v2: explicit plan, evidence per step, adaptive replanning and an answer approval gate. Metrics describe this run—not a universal benchmark.</section>{research_html}
 <footer>No API key or complete tool payload is stored in this artifact.</footer></main></html>"""
 
 
