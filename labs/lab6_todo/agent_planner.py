@@ -50,7 +50,7 @@ def planner_tools() -> list[dict]:
     ]
 
 
-def run(question: str, registry: ToolRegistry, max_steps: int = 40):
+def run(question: str, registry: ToolRegistry, max_steps: int = 40, tool_validator=None):
     plan: PlannerState | None = None
     trace: list[dict] = []
     tools = planner_tools() + registry.openai_tools
@@ -97,6 +97,14 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 40):
                     active = [step for step in plan.steps if step.status == "in_progress"]
                     if len(active) != 1:
                         raise ValueError("ต้องมี plan step ที่ in_progress หนึ่งขั้นก่อนเรียก MCP")
+                    rejection = tool_validator(name, args) if tool_validator else None
+                    if rejection:
+                        revised = [
+                            PlanStep(step.id, step.description, step.status, list(step.evidence))
+                            for step in plan.steps
+                        ]
+                        plan.revise(revised, f"analytical contract rejected tool call: {rejection}")
+                        raise ValueError(f"ANALYTICAL CONTRACT: {rejection}; revise the query")
                     result = registry.dispatch(name, args)
                     call_id = call.id or str(uuid.uuid4())
                     plan.observe(active[0].id, tool=name, tool_call_id=call_id, result=result)

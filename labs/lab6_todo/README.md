@@ -51,11 +51,16 @@ make compare-lab6-hr
 ```bash
 make validate-hr-challenges
 make compare-lab6-hr HR_CHALLENGE=skills_project_risk
+make compare-lab6-hr-adversarial HR_CHALLENGE=skills_project_risk
 ```
 
 คำสั่งนี้รัน `agent_todo.py` และ `agent_planner.py` แบบเรียงลำดับด้วยคำถาม,
 model และ MCP เดียวกัน แล้วบันทึกผล JSON/HTML ใน `artifacts/` การเทียบนี้แยกจาก
 Lab 8 โดยสมบูรณ์และไม่มี LangGraph อยู่ใน execution path
+
+`skills_project_risk` ใช้ analytical contract เดียวกันทั้งสองฝั่ง: aggregation
+หนึ่งแถวต่อพนักงาน, flags `f1–f5` และ tier thresholds ตายตัว ส่วน adversarial mode
+จำลอง late grain audit หนึ่งครั้งเพื่อพิสูจน์ runtime rejection → revision → retry
 
 ผลจริงของ `skills_project_risk`: TodoWrite ใช้ MCP 10 calls / 169.306 วินาที;
 Pure Python Planner ใช้ 11 calls / 160.743 วินาที, completed 7/7 และ Answer Gate
