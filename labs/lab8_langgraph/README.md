@@ -70,6 +70,19 @@ python -m scripts.prove_planner_mcp
 driver เฉพาะส่วนตัดสินใจ แต่ `ToolNode` และ MCP call เป็นของจริง ส่วนการรัน
 `agent_langgraph.py` ใช้ OpenRouter LLM จริงทั้ง Planner, Reviewer และ tool selection
 
+## รันเปรียบเทียบกับ Lab 8 เดิม
+
+ไฟล์ `agent_langgraph_baseline.py` เก็บ graph แบบเดิม (`model → tools → model`) ไว้
+สำหรับเปรียบเทียบโดยไม่ปะปนกับ implementation ใหม่:
+
+```bash
+make compare-lab8
+```
+
+comparison runner ใช้ model, MCP tools และคำถามเดียวกัน วัด tool calls และ latency
+ของทั้งสองฝั่ง ส่วน Lab 8 ใหม่จะแสดง plan revisions, completed steps และสถานะ
+Answer Review เพิ่มเติมด้วย
+
 ### (2) Nodes — call_model และ tools
 
 ```python

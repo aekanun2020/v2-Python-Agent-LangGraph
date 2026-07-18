@@ -68,10 +68,49 @@ python labs/lab8_langgraph/agent_langgraph.py
 make test        # unit tests
 make proof       # real MCP, deterministic driver
 make run-planner # real OpenRouter + real MCP
+make compare-lab8 # รัน Lab 8 เดิมและใหม่ด้วยโจทย์/model/MCP เดียวกัน
 ```
 
 > `make proof` และ `make run-planner` อ่าน endpoint/key จาก `.env` ผ่าน `python-dotenv`
 > คีย์จริงจะไม่ถูกเก็บในภาพหลักฐานหรือ source code
+
+### เปรียบเทียบ Lab 8 เดิมกับ Lab 8 ใหม่
+
+```bash
+make compare-lab8
+```
+
+คำสั่งนี้รันสอง graph แบบเรียงลำดับโดยใช้คำถาม, `OPENROUTER_MODEL` และ
+`MCP_SERVER_URL` ชุดเดียวกัน:
+
+| เวอร์ชัน | State และเงื่อนไขจบ |
+| --- | --- |
+| Lab 8 เดิม | `messages` อย่างเดียว; จบเมื่อโมเดลไม่เรียก tool |
+| Lab 8 ใหม่ | `messages + PlannerState + evidence`; จบเมื่อ Answer Review อนุมัติ |
+
+ผลลัพธ์แสดงจำนวน tool calls, เวลารัน, plan revisions, จำนวนขั้นที่ completed และ
+answer-gate status พร้อมสร้างไฟล์ต่อไปนี้อัตโนมัติ:
+
+- `artifacts/lab8_comparison_result.json`
+- `artifacts/lab8_comparison_result.html`
+
+ตัวเลขนี้ใช้เปรียบเทียบ execution ของการรันครั้งนั้น ไม่ใช่ benchmark สากล เพราะ LLM
+มีความไม่แน่นอนและ latency ของ provider/MCP เปลี่ยนได้ในแต่ละรอบ
+
+ผล captured run วันที่ 18 กรกฎาคม 2026:
+
+![Lab 8 original vs PlannerState v2](artifacts/lab8_comparison_result.png)
+
+| Metric | Lab 8 เดิม | PlannerState v2 |
+| --- | ---: | ---: |
+| MCP tool calls | 6 | 4 |
+| ระยะเวลา | 75.943 วินาที | 174.755 วินาที |
+| Plan revisions | ไม่มี | 5 |
+| Completed steps | ไม่ได้เก็บ | 6/6 |
+| Answer approval gate | ไม่มี | APPROVED |
+
+ผลรอบนี้แสดง trade-off ชัดเจน: v2 ใช้ tool calls น้อยกว่าและมีหลักฐาน/approval
+ที่ตรวจสอบได้ แต่ใช้เวลามากกว่าเพราะเพิ่ม LLM calls สำหรับ planning และ review
 
 > หลักสูตร **Agentic AI Development with Python (หลักสูตรที่ 2)** —
 > เขียน Agent ด้วย Pure Python ทีละขั้น (Lab 1–7) แล้วเปรียบเทียบกับ LangGraph (Lab 8) ก่อน deploy เป็น API Service (Lab 9)
