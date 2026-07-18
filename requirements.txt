@@ -1,0 +1,19 @@
+# หลักสูตร Agentic AI Development with Python
+# ทดสอบบน Python 3.11 (Miniconda env: agentic-ai)
+
+# --- Lab 1–7: Pure Python Agent (เขียน agent loop / MCP client เอง) ---
+# Lab 2 เรียก LLM ผ่าน OpenRouter ด้วย OpenAI-compatible SDK
+openai
+python-dotenv
+httpx
+
+# --- Lab 8: LangGraph Agent + MCP (เทียบกับ Pure Python ของ Lab 1–7) ---
+langgraph==1.2.6
+langchain-openai==1.3.2
+langchain-mcp-adapters==0.3.0
+mcp==1.28.0
+
+# --- Lab 9: Deploy agent เป็น API service (FastAPI + Docker) ---
+fastapi>=0.116
+uvicorn[standard]>=0.34
+pydantic>=2.11.7

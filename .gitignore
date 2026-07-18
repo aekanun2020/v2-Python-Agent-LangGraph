@@ -1,0 +1,25 @@
+# ---- ความลับ: ห้าม commit คีย์จริงเด็ดขาด ----
+.env
+.env.*
+!.env.example
+
+# ---- Miniconda / สคริปต์ติดตั้งเฉพาะเครื่อง ----
+miniconda*
+Miniconda*
+*.sh
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# ---- Logs / ชั่วคราว ----
+*.log
+.DS_Store

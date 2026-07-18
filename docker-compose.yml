@@ -1,0 +1,31 @@
+# Lab 9 — docker-compose: Agent API Service (LangGraph + MCP)
+# หลักสูตร Agentic AI Development with Python — Module 3.3 (Capstone / Deploy)
+#
+# หมายเหตุขอบเขต (ตามที่ตกลงในคอร์ส):
+#   เรายึด "MCP MSSQL จริงตัวเดียว" เป็นแกน (สอดคล้องกับ Lab 4–8) จึงมีเพียง
+#   service `agent` ตัวเดียวใน stack นี้ ส่วน MCP MSSQL Server ของจริงรันอยู่
+#   ภายนอก (expose ผ่าน ngrok ตามหลักสูตรที่ 1) และ agent ชี้ไปด้วย MCP_SERVER_URL
+#
+#   ถ้าวันหน้าต้องการรัน MCP server ใน compose ด้วย ให้เพิ่ม service `mssql-mcp`
+#   (ที่มี Dockerfile ของ MCP server จากหลักสูตรที่ 1) เข้ามาใน network เดียวกัน
+#   แล้วเปลี่ยน MCP_SERVER_URL เป็น http://mssql-mcp:9000/mcp
+
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: labs/lab9_deploy/Dockerfile
+    image: agentic-lab9-agent:latest
+    ports:
+      - "8080:8080"
+    environment:
+      # อ่านค่า secret/URL จากไฟล์ .env (ไม่ commit คีย์จริง)
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_BASE_URL=${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-anthropic/claude-sonnet-4.6}
+      # MCP MSSQL จริง (external) — เปลี่ยน URL ที่ .env ได้โดยไม่ rebuild image
+      - MCP_SERVER_URL=${MCP_SERVER_URL}
+      # Retry strategy
+      - MCP_MAX_RETRIES=${MCP_MAX_RETRIES:-4}
+      - MCP_BACKOFF_BASE=${MCP_BACKOFF_BASE:-1.5}
+    restart: unless-stopped

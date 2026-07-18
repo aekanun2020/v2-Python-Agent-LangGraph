@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="th">
+<meta charset="utf-8">
+<title>PlannerState MCP Proof</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0b1020; color: #e7ecff; font: 16px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  main { width: 1180px; margin: 28px auto; }
+  h1 { margin: 0 0 8px; color: #8be9fd; font-size: 25px; }
+  .sub { color: #a9b4d0; margin-bottom: 20px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .card { background: #121a31; border: 1px solid #2a385f; border-radius: 12px; padding: 18px; }
+  .before { border-top: 4px solid #ffb86c; }
+  .after { border-top: 4px solid #50fa7b; }
+  h2 { font-size: 18px; margin: 0 0 12px; }
+  ol { padding-left: 24px; margin: 10px 0; }
+  li { margin: 8px 0; }
+  code { color: #f1fa8c; }
+  .call { margin: 18px 0; background: #08101f; border-left: 5px solid #bd93f9; padding: 15px 18px; }
+  .proof { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 18px; }
+  .metric { background: #17223d; border-radius: 10px; padding: 13px; text-align: center; }
+  .metric b { display: block; color: #50fa7b; font-size: 21px; }
+  .done { color: #50fa7b; } .pending { color: #a9b4d0; } .active { color: #ffb86c; }
+  footer { margin-top: 16px; color: #8f9ab6; font-size: 13px; }
+</style>
+<main>
+  <h1>REAL MCP + REVISABLE PlannerState PROOF</h1>
+  <div class="sub">Captured test result · endpoint: <code>https://bb36-184-22-21-43.ngrok-free.app/mcp</code></div>
+  <section class="call">
+    <b>[DISCOVERED TOOLS]</b> get_database_context · execute_query_tool · preview_table · get_database_info_tool · refresh_db_cache<br>
+    <b>[REAL TOOL CALL]</b> <code>get_database_context({})</code><br>
+    <b class="done">[REAL TOOL RESULT] success</b> · MCP returned <code>24,225 chars</code> of schema context
+  </section>
+  <div class="grid">
+    <section class="card before">
+      <h2>BEFORE — revision 1</h2>
+      <ol>
+        <li class="active">[in_progress] ค้น schema ผ่าน get_database_context</li>
+        <li class="pending">[pending] เดาว่าตารางน่าจะชื่อ employees</li>
+        <li class="pending">[pending] ตรวจผลและสรุป</li>
+      </ol>
+      <p><b>Assumption:</b> ยังไม่ทราบชื่อตารางและคอลัมน์จริง</p>
+    </section>
+    <section class="card after">
+      <h2>AFTER TOOL RESULT — revision 2</h2>
+      <ol>
+        <li class="done">[completed] ได้ schema จริง 24,225 chars</li>
+        <li class="active">[in_progress] เลือกตาราง/คอลัมน์/relationship จาก schema</li>
+        <li class="pending">[pending] สร้าง T-SQL ที่อิง schema และเรียก tool</li>
+        <li class="pending">[pending] ตรวจความครบถ้วนก่อนสรุป</li>
+      </ol>
+      <p><b>Replan:</b> ยกเลิกการเดาชื่อตารางและเพิ่มขั้นตรวจ relationship</p>
+    </section>
+  </div>
+  <section class="proof">
+    <div class="metric"><b>true</b>real tool call</div>
+    <div class="metric"><b>1 → 2</b>revision</div>
+    <div class="metric"><b>3 → 4</b>steps</div>
+    <div class="metric"><b>true</b>plan changed</div>
+    <div class="metric"><b>2/2</b>unit tests passed</div>
+  </section>
+  <section class="call">
+    <b>[LANGGRAPH END-TO-END]</b><br>
+    <code>planner → call_model → real ToolNode → capture_tool_result → review_plan → call_model → END</code><br>
+    graph_tool_calls=<b class="done">1</b> · graph_tool_name=<code>get_database_context</code> · graph_final_revision=<b class="done">2</b><br>
+    deterministic_driver=true <span style="color:#a9b4d0">(no LLM API key present; MCP tool call is real)</span>
+  </section>
+  <footer>Generated from the successful integration run of scripts/prove_planner_mcp.py</footer>
+</main>
+</html>
