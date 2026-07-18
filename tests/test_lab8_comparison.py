@@ -14,7 +14,7 @@ class Lab8ComparisonTests(unittest.TestCase):
         ]
         self.assertEqual(count_tool_calls(messages), 1)
 
-    def test_render_html_escapes_answer(self):
+    def test_render_html_is_compact_and_excludes_full_answers(self):
         summary = {
             "model": "model",
             "baseline": {"tool_calls": 1, "elapsed_ms": 10, "answer": "<unsafe>"},
@@ -25,7 +25,9 @@ class Lab8ComparisonTests(unittest.TestCase):
             },
         }
         rendered = render_comparison_html(summary)
-        self.assertIn("&lt;unsafe&gt;", rendered)
+        self.assertNotIn("<unsafe>", rendered)
+        self.assertNotIn("&lt;unsafe&gt;", rendered)
+        self.assertIn("KEY EVIDENCE FROM THIS RUN", rendered)
         self.assertIn("APPROVED", rendered)
 
 
