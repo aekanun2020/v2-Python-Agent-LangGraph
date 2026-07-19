@@ -12,7 +12,7 @@ load_dotenv()
 # ---- OpenRouter (LLM provider แบบ thin client — แนวคิดเดียวกับหลักสูตรที่ 1) ----
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 OPENROUTER_BASE_URL = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "anthropic/claude-sonnet-4.6")
+OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "qwen/qwen3.5-35b-a3b")
 
 # ---- MCP MSSQL Server จริงของหลักสูตรที่ 1 (Streamable HTTP) ----
 # ค่าเริ่มต้นชี้ localhost:9000 — ตั้งใน .env ให้เป็น URL ngrok ถ้า expose ออกมา

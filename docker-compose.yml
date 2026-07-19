@@ -22,7 +22,7 @@ services:
       # อ่านค่า secret/URL จากไฟล์ .env (ไม่ commit คีย์จริง)
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - OPENROUTER_BASE_URL=${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
-      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-anthropic/claude-sonnet-4.6}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-qwen/qwen3.5-35b-a3b}
       # MCP MSSQL จริง (external) — เปลี่ยน URL ที่ .env ได้โดยไม่ rebuild image
       - MCP_SERVER_URL=${MCP_SERVER_URL}
       # Retry strategy

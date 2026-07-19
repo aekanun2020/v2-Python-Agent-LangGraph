@@ -62,9 +62,12 @@ Lab 8 โดยสมบูรณ์และไม่มี LangGraph อยู
 หนึ่งแถวต่อพนักงาน, flags `f1–f5` และ tier thresholds ตายตัว ส่วน adversarial mode
 จำลอง late grain audit หนึ่งครั้งเพื่อพิสูจน์ runtime rejection → revision → retry
 
-ผลจริงของ `skills_project_risk`: TodoWrite ใช้ MCP 10 calls / 169.306 วินาที;
-Pure Python Planner ใช้ 11 calls / 160.743 วินาที, completed 7/7 และ Answer Gate
+ผล Qwen ปกติของ `skills_project_risk`: TodoWrite ใช้ MCP 7 calls / 77.564 วินาที;
+Pure Python Planner ใช้ 11 calls / 97.163 วินาที, completed 9/9 และ Answer Gate
 = APPROVED ดูภาพได้ที่ `../../artifacts/lab6_hr_comparison_skills_project_risk.png`
+
+ผล Qwen adversarial: Pure Planner ถูกปฏิเสธ query ก่อนส่ง MCP, ฟื้นตัวจน revision 6,
+completed 2/2 และ APPROVED โดยใช้ 16 MCP calls / 752.206 วินาที
 
 ---
 

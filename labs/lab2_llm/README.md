@@ -134,7 +134,7 @@ resp = llm.chat(messages=messages, max_tokens=max_tokens)
 [assistant] Agent Loop คือ...
 ------------------------------------------------------------
 [token] prompt=42 completion=68 total=110
-[model] anthropic/claude-sonnet-4.6
+[model] qwen/qwen3.5-35b-a3b
 ```
 
 ### `compare_models.py`
@@ -143,7 +143,7 @@ resp = llm.chat(messages=messages, max_tokens=max_tokens)
 ==============================================================================
 model                                   total_tok    sec  note
 ------------------------------------------------------------------------------
-anthropic/claude-sonnet-4.6                   185   2.31  Agent คือระบบที่...
+qwen/qwen3.5-35b-a3b                         185   2.31  Agent คือระบบที่...
 openai/gpt-oss-120b                           172   3.10  ...
 meta-llama/llama-3.1-8b-instruct              144   1.05  ...
 ```

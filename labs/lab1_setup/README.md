@@ -57,7 +57,7 @@ cp .env.example .env
 |--------|-----|----------|
 | `OPENROUTER_API_KEY` | `sk-or-v1-...` | ขอคีย์ได้ที่ https://openrouter.ai/keys |
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | endpoint มาตรฐาน OpenRouter |
-| `OPENROUTER_MODEL` | `anthropic/claude-sonnet-4.6` | โมเดลที่ทดสอบแล้ว |
+| `OPENROUTER_MODEL` | `qwen/qwen3.5-35b-a3b` | โมเดลที่ทดสอบแล้ว |
 | `MCP_SERVER_URL` | `https://<subdomain>.ngrok-free.app/mcp` | URL ของ MCP MSSQL Server จริง (expose ผ่าน ngrok) |
 
 > ⚠️ ไฟล์ `.env` ถูก `.gitignore` ไว้แล้ว — **ห้าม commit คีย์จริงขึ้น repo เด็ดขาด**
@@ -107,7 +107,7 @@ python labs/lab1_setup/check_env.py
 Lab 1 — ตรวจสอบสภาพแวดล้อมการพัฒนา (หลักสูตรที่ 2)
 ============================================================
 [1/2] ตรวจ OpenRouter (LLM) ...
-      โมเดล anthropic/claude-sonnet-4.6 ตอบ: 'พร้อม'
+      โมเดล qwen/qwen3.5-35b-a3b ตอบ: 'พร้อม'
 [2/2] ตรวจ MCP MSSQL Server ...
       เชื่อม https://...ngrok-free.app/mcp
       serverInfo: mssql-streamable-http-server — ค้นพบ 5 tools

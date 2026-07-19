@@ -37,7 +37,10 @@ class PlannerState:
     answer_approved: bool = False
 
     def step(self, step_id: int) -> PlanStep:
-        return next(step for step in self.steps if step.id == step_id)
+        match = next((step for step in self.steps if step.id == step_id), None)
+        if match is None:
+            raise ValueError(f"unknown step id {step_id}; use a step id from current PlannerState")
+        return match
 
     def start(self, step_id: int) -> None:
         target = self.step(step_id)
@@ -71,8 +74,8 @@ class PlannerState:
             previous = old.get(step.id)
             if previous and previous.evidence:
                 step.evidence = list(previous.evidence)
-                if step.status == "completed" and not step.evidence:
-                    step.status = "in_progress"
+            if step.status == "completed" and not step.evidence:
+                step.status = "pending"
         self.steps = steps
         self.revision += 1
         self.last_reason = reason
@@ -95,4 +98,3 @@ class PlannerState:
                 f"(evidence={len(step.evidence)})"
             )
         return "\n".join(lines)
-

@@ -96,7 +96,7 @@ async def run_comparison(question: str) -> dict:
 
     return {
         "question": question,
-        "model": os.environ.get("OPENROUTER_MODEL", "anthropic/claude-sonnet-4.6"),
+        "model": os.environ.get("OPENROUTER_MODEL", "qwen/qwen3.5-35b-a3b"),
         "mcp_endpoint": MCP_SERVER_URL,
         "baseline": {
             "tool_calls": count_tool_calls(baseline_result["messages"]),

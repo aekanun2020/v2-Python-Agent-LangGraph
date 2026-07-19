@@ -30,6 +30,16 @@ class PurePythonPlannerTests(unittest.TestCase):
         self.assertEqual(self.plan.revision, 2)
         self.assertEqual(len(self.plan.step(1).evidence), 1)
 
+    def test_replan_cannot_smuggle_unsupported_completed_step(self):
+        self.plan.revise([PlanStep(1, "query", "completed")], "model claimed done")
+        self.assertEqual(self.plan.step(1).status, "pending")
+        with self.assertRaisesRegex(ValueError, "incomplete"):
+            self.plan.approve_answer()
+
+    def test_unknown_step_id_is_feedback_not_stop_iteration(self):
+        with self.assertRaisesRegex(ValueError, "unknown step id 99"):
+            self.plan.start(99)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -38,7 +38,10 @@ cp .env.example .env
 ```dotenv
 OPENROUTER_API_KEY=ใส่คีย์ของผู้เรียน
 MCP_SERVER_URL=https://your-mcp-server.example/mcp
+OPENROUTER_MODEL=qwen/qwen3.5-35b-a3b
 ```
+
+ผลทดลองและ captured screens ใน README นี้ใช้ `qwen/qwen3.5-35b-a3b` เท่านั้น
 
 ตรวจ Pure Python Planner โดยไม่เรียก LLM:
 
@@ -88,6 +91,18 @@ answer-gate status แล้วสร้าง:
 - `artifacts/lab6_hr_comparison_<challenge>.json`
 - `artifacts/lab6_hr_comparison_<challenge>.html`
 
+ผล Qwen comparison ปกติ:
+
+![Qwen TodoWrite vs Pure Python Planner](artifacts/lab6_hr_comparison_skills_project_risk.png)
+
+| Metric | Qwen TodoWrite | Qwen Pure Python Planner |
+| --- | ---: | ---: |
+| MCP calls | 7 | 11 |
+| ระยะเวลา | 77.564 วินาที | 97.163 วินาที |
+| Completed | todo 7/7 | plan 9/9 |
+| Final revision | ไม่มี | 1 |
+| Answer gate | ไม่มี | APPROVED |
+
 ### HR challenges และ analytical contract
 
 โจทย์ benchmark ไม่ได้แต่งขึ้นลอย ๆ แต่สกัดจากหัวข้อที่ชุมชน People Analytics
@@ -128,16 +143,16 @@ query ใหม่ได้จริง แยกผลไว้ที่ `artif
 
 ![Pure Python adversarial replanning](artifacts/lab6_hr_adversarial_skills_project_risk.png)
 
-| Metric | TodoWrite + contract | Pure Python Planner + contract |
+| Metric | Qwen TodoWrite + contract | Qwen Pure Python Planner + contract |
 | --- | ---: | ---: |
-| MCP calls | 9 | 7 |
-| ระยะเวลา | 137.842 วินาที | 151.850 วินาที |
+| MCP calls | 3 | 16 |
+| ระยะเวลา | 44.581 วินาที | 752.206 วินาที |
 | Injected late grain rejection | ไม่ได้ทดสอบ runtime recovery | TRIGGERED |
-| Final revision | ไม่มี | 2 |
-| Completed steps | todo 4/4 | plan 3/3 |
+| Final revision | ไม่มี | 6 |
+| Completed steps | todo 4/5 | plan 2/2 |
 | Answer gate | ไม่มี | APPROVED |
 
-หลักฐานสำคัญ: validator ปฏิเสธ query ก่อนส่งไป MCP, Planner เพิ่ม revision 1 → 2,
+หลักฐานสำคัญ: validator ปฏิเสธ query ก่อนส่งไป MCP, Planner แก้แผนจน revision 6,
 สร้าง query ใหม่ แล้วได้ risk matrix `f1–f5` ตาม contract เดียวกับ baseline จนครบ
 
 ### LangGraph (optional comparison)

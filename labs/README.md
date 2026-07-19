@@ -89,7 +89,7 @@ cp .env.example .env
 
 - `OPENROUTER_API_KEY` — ขอที่ https://openrouter.ai/keys
 - `OPENROUTER_BASE_URL` — `https://openrouter.ai/api/v1`
-- `OPENROUTER_MODEL` — `anthropic/claude-sonnet-4.6`
+- `OPENROUTER_MODEL` — `qwen/qwen3.5-35b-a3b`
 - `MCP_SERVER_URL` — URL ของ MCP MSSQL Server จริง (Streamable HTTP, ลงท้าย `/mcp`)
 
 ---
