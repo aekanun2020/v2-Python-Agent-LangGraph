@@ -155,6 +155,29 @@ query ใหม่ได้จริง แยกผลไว้ที่ `artif
 หลักฐานสำคัญ: validator ปฏิเสธ query ก่อนส่งไป MCP, Planner แก้แผนจน revision 6,
 สร้าง query ใหม่ แล้วได้ risk matrix `f1–f5` ตาม contract เดียวกับ baseline จนครบ
 
+### ข้อสรุป: วิธีใหม่ดีกว่าของเดิมหรือไม่
+
+ผลนี้ **ยังไม่พิสูจน์ว่า Pure Python Planner ดีกว่า TodoWrite ในทุกด้าน** ของเดิม
+เร็วกว่าและใช้ MCP calls น้อยกว่าอย่างชัดเจน ส่วน Planner ใหม่ให้ execution assurance
+สูงกว่า: บังคับ evidence ต่อขั้น, ป้องกันการจบก่อนงานครบ, ตรวจ analytical contract
+และฟื้นตัวจาก action ที่ถูกปฏิเสธได้
+
+| สิ่งที่ผลทดลองรองรับ | ข้อสรุป |
+| --- | --- |
+| Latency และ MCP calls | TodoWrite ดีกว่า |
+| Completion discipline | Pure Python Planner ดีกว่า |
+| Evidence traceability | Pure Python Planner ดีกว่า |
+| Recovery หลัง runtime rejection | Pure Python Planner พิสูจน์ได้ |
+| Numerical correctness | ยังสรุปไม่ได้ |
+| คุณภาพ business insight | ยังสรุปไม่ได้ |
+| Overall intelligence | ยังสรุปไม่ได้ |
+| Production readiness | ต้องทดสอบเพิ่มทั้งคู่ |
+
+ข้อจำกัดของข้อสรุปนี้คือเป็น single run และ adversarial fault injection ใช้พิสูจน์
+recovery path ของ Planner ไม่ใช่ head-to-head correctness test ที่สมบูรณ์ จึงควรตีความว่า
+วิธีใหม่เหมาะกับงานที่ความผิดพลาดหรือการจบไม่ครบมีต้นทุนสูง แต่ overhead ปัจจุบัน
+ยังมากเกินไปสำหรับเปิดใช้กับทุกคำถาม
+
 ### LangGraph (optional comparison)
 
 Lab 8 เก็บไว้เพื่อให้ผู้เรียนเห็นว่า framework ห่อ state graph และ routing อย่างไร
