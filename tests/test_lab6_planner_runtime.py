@@ -1,6 +1,7 @@
 import unittest
 
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
+from labs.lab6_todo.agent_planner import normalize_plan_descriptions
 
 
 class PurePythonPlannerTests(unittest.TestCase):
@@ -39,6 +40,18 @@ class PurePythonPlannerTests(unittest.TestCase):
     def test_unknown_step_id_is_feedback_not_stop_iteration(self):
         with self.assertRaisesRegex(ValueError, "unknown step id 99"):
             self.plan.start(99)
+
+    def test_plan_write_normalizes_qwen_object_steps(self):
+        normalized = normalize_plan_descriptions([
+            {"description": "ตรวจ schema"},
+            {"text": "query ข้อมูล"},
+            "ตรวจจำนวนแถว",
+        ])
+        self.assertEqual(normalized, ["ตรวจ schema", "query ข้อมูล", "ตรวจจำนวนแถว"])
+
+    def test_plan_write_rejects_malformed_step_without_crashing(self):
+        with self.assertRaisesRegex(ValueError, r"steps\[1\]"):
+            normalize_plan_descriptions([{"status": "pending"}])
 
 
 if __name__ == "__main__":

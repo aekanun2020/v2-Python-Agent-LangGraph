@@ -39,7 +39,8 @@ python labs/lab6_todo/agent_planner.py
 
 คำสั่งนี้รัน [agent_planner.py](labs/lab6_todo/agent_planner.py) ด้วยโจทย์ HR ตัวอย่าง
 ใน Rules mode Agent จะสร้างแผน, เรียก MCP, ตรวจ Observation, ผูก Evidence และแสดง
-คำตอบใน terminal
+คำตอบใน terminal ตัว agent ใช้ schema ที่ MCP เปิดให้ จึงถามโดเมนอื่นในฐานเดียวกันได้
+เช่นตารางสินเชื่อ โดย HR เป็นเพียงโจทย์ default และชุด benchmark ของ repository
 
 ถ้าต้องการทดลอง Shadow Router ตัวล่าสุด:
 

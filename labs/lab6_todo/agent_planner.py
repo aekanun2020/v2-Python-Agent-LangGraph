@@ -23,7 +23,7 @@ from labs.lab6_todo.observation_router import (
     assess_observation_risk, routed_decision, validate_routing_mode,
 )
 
-SYSTEM = """คุณคือ HR data agent ที่ทำงานตามแผนและหลักฐานจริง
+SYSTEM = """คุณคือ data agent ที่ทำงานตามแผน, schema และหลักฐานจริงจาก MCP
 ก่อนเรียก MCP ต้องใช้ plan_write แล้ว plan_start ทีละขั้น
 ทุก plan step ต้องเป็นขั้นค้น/ตรวจข้อมูลด้วย MCP อย่าสร้างขั้น "สรุปคำตอบ" แยกต่างหาก
 ผล MCP จะถูก runtime ผูกเป็น evidence ของขั้นที่ in_progress โดยอัตโนมัติ
@@ -35,6 +35,26 @@ NON_EVIDENCE_STEP_WORDS = (
     "summary", "summarize", "synthesis", "synthesize", "final", "answer", "report",
     "insight", "recommend", "interpret", "evaluate", "assess", "limitation",
 )
+
+
+def normalize_plan_descriptions(raw_steps) -> list[str]:
+    """Tolerate a common model deviation: [{"description": "..."}] vs ["..."]."""
+    if not isinstance(raw_steps, list) or not raw_steps:
+        raise ValueError("plan_write.steps must be a non-empty array")
+    descriptions: list[str] = []
+    for index, item in enumerate(raw_steps, start=1):
+        if isinstance(item, str):
+            text = item
+        elif isinstance(item, dict):
+            text = item.get("description") or item.get("text") or item.get("title")
+        else:
+            text = None
+        if not isinstance(text, str) or not text.strip():
+            raise ValueError(
+                f"plan_write.steps[{index}] must be a string or object with description"
+            )
+        descriptions.append(text.strip())
+    return descriptions
 
 
 def validate_plan_descriptions(descriptions: list[str]) -> None:
@@ -106,11 +126,15 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                          "tool_calls": [call.model_dump() for call in message.tool_calls]})
         for call in message.tool_calls:
             name = call.function.name
-            args = json.loads(call.function.arguments or "{}")
             try:
+                args = json.loads(call.function.arguments or "{}")
                 if name == "plan_write":
-                    validate_plan_descriptions(args["steps"])
-                    plan = PlannerState(args["goal"], [PlanStep(i + 1, text) for i, text in enumerate(args["steps"])])
+                    descriptions = normalize_plan_descriptions(args["steps"])
+                    validate_plan_descriptions(descriptions)
+                    plan = PlannerState(
+                        args["goal"],
+                        [PlanStep(i + 1, text) for i, text in enumerate(descriptions)],
+                    )
                     result = plan.render()
                 elif plan is None:
                     raise ValueError("ต้องเรียก plan_write ก่อน tool อื่น")
@@ -187,7 +211,7 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                     if not dynamic_observation:
                         trace.append({"step_id": active[0].id, "tool": name, "tool_call_id": call_id})
                     print(f"[EVIDENCE] step={active[0].id} tool={name} id={call_id}")
-            except (KeyError, TypeError, ValueError) as exc:
+            except (AttributeError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
                 result = f"[RUNTIME REJECTED] {exc}"
                 print(result)
             messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
