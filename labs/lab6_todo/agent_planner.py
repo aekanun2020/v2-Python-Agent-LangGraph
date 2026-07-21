@@ -7,6 +7,7 @@ the answer gate; the model only proposes actions through tools.
 from __future__ import annotations
 
 import json
+import argparse
 import os
 import sys
 import uuid
@@ -194,20 +195,28 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
 
 
 def main():
-    registry = ToolRegistry()
-    registry.add_server(config.MCP_SERVER_URL)
-    question = sys.argv[1] if len(sys.argv) > 1 else (
+    default_question = (
         "สร้าง workforce risk matrix รายแผนกจาก skills, training, performance และ projects "
         "โดยตรวจ schema และป้องกันการ join ที่ทำให้ยอดซ้ำ"
     )
+    parser = argparse.ArgumentParser(description="Pure Python evidence-driven HR agent")
+    parser.add_argument("question", nargs="?", default=default_question,
+                        help="คำถาม HR; ถ้าไม่ระบุจะใช้ workforce-risk example")
+    parser.add_argument(
+        "--routing-mode", choices=("rules", "shadow", "enforce"),
+        default=os.environ.get("OBSERVATION_ROUTING_MODE", "rules"),
+        help="rules=ไม่เรียก reviewer, shadow=review แต่ไม่ block, enforce=review และ block",
+    )
+    args = parser.parse_args()
+    registry = ToolRegistry()
+    registry.add_server(config.MCP_SERVER_URL)
     try:
         prompt_review = os.environ.get("PROMPT_SEMANTIC_REVIEW", "0").lower() in (
             "1", "true", "yes"
         )
-        routing_mode = os.environ.get("OBSERVATION_ROUTING_MODE", "rules")
-        run(question, registry, dynamic_observation=True,
+        run(args.question, registry, dynamic_observation=True,
             prompt_semantic_review=prompt_review,
-            observation_routing_mode=routing_mode)
+            observation_routing_mode=args.routing_mode)
     finally:
         registry.close()
 

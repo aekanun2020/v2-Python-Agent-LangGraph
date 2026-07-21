@@ -13,13 +13,13 @@ proof-pure-planner:
 	$(PYTHON) -m scripts.prove_pure_python_planner
 
 run-agent:
-	OBSERVATION_ROUTING_MODE=rules $(PYTHON) labs/lab6_todo/agent_planner.py
+	$(PYTHON) labs/lab6_todo/agent_planner.py --routing-mode rules
 
 run-agent-shadow:
-	OBSERVATION_ROUTING_MODE=shadow $(PYTHON) labs/lab6_todo/agent_planner.py
+	$(PYTHON) labs/lab6_todo/agent_planner.py --routing-mode shadow
 
 run-agent-enforce:
-	OBSERVATION_ROUTING_MODE=enforce $(PYTHON) labs/lab6_todo/agent_planner.py
+	$(PYTHON) labs/lab6_todo/agent_planner.py --routing-mode enforce
 
 # ชื่อเดิม เก็บไว้ไม่ให้บทเรียน/สคริปต์เก่าพัง
 run-pure-planner: run-agent
