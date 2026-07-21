@@ -155,6 +155,9 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
             else:
                 try:
                     final_answer = require_final_answer(message.content)
+                    # Do not spend a reviewer call—or ask it for more evidence—until
+                    # the deterministic planner proves every step is complete.
+                    plan.approve_answer()
                     validate_final_semantics(question, final_answer)
                     if routing_mode in ("shadow", "enforce"):
                         final_review = review_final_answer(
@@ -172,16 +175,17 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                             f"reason={final_review.reason}"
                         )
                         if final_decision != "accept":
+                            plan.answer_approved = False
                             raise ValueError(
                                 "final semantic reviewer rejected: "
                                 f"decision={final_review.decision}; {final_review.reason}; "
                                 f"next={final_review.suggested_next_action}"
                             )
-                    plan.approve_answer()
                     print(f"[ANSWER APPROVED] revision={plan.revision} tool_calls={len(trace)}")
                     print(final_answer)
                     return {"answer": final_answer, "planner": plan, "tool_trace": trace}
                 except ValueError as exc:
+                    plan.answer_approved = False
                     feedback = str(exc)
             print(f"[ANSWER REJECTED] {feedback}")
             messages.append({"role": "assistant", "content": message.content or ""})
@@ -292,6 +296,10 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                         "tool_arguments": args,
                         "result": result,
                     })
+                    result += (
+                        "\n\n[RUNTIME STATE]\n" + plan.render()
+                        + f"\nหลักฐานถูกรับแล้ว; next transition: plan_complete(step_id={active[0].id})"
+                    )
                     if dynamic_observation:
                         accepted_facts.update(extract_numeric_facts(result))
                     if not dynamic_observation:
@@ -299,6 +307,8 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                     print(f"[EVIDENCE] step={active[0].id} tool={name} id={call_id}")
             except (AttributeError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
                 result = f"[RUNTIME REJECTED] {exc}"
+                if plan is not None:
+                    result += "\n[CURRENT PLAN]\n" + plan.render()
                 print(result)
             messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
     raise RuntimeError(f"planner exceeded max_steps={max_steps}")
