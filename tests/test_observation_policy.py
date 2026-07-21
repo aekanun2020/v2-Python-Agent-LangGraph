@@ -69,6 +69,49 @@ class DynamicObservationPolicyTests(unittest.TestCase):
         self.assertIn("semantic:active_employee_population", obs.passed)
         self.assertIn("semantic:department_grain", obs.passed)
 
+    def test_percentage_without_denominator_is_retried(self):
+        obs = observe_result(
+            step_description="คำนวณเปอร์เซ็นต์ skill coverage",
+            tool="execute_query_tool", result='[{"skilled":20}]',
+            tool_arguments={"query": "SELECT COUNT(*) AS skilled FROM skills"},
+            semantic_checks=True,
+        )
+        self.assertEqual(obs.decision, "retry")
+        self.assertIn("semantic:explicit_denominator", obs.failed)
+
+    def test_training_without_latest_pre_review_window_is_retried(self):
+        obs = observe_result(
+            step_description="รวมชั่วโมงอบรมก่อน review ล่าสุด",
+            tool="execute_query_tool", result='[{"hours":40}]',
+            tool_arguments={"query": "SELECT SUM(hours) AS hours FROM training_records"},
+            semantic_checks=True,
+        )
+        self.assertEqual(obs.decision, "retry")
+        self.assertIn("semantic:pre_review_time_window", obs.failed)
+        self.assertIn("semantic:latest_review_anchor", obs.failed)
+
+    def test_raw_multi_satellite_join_is_retried(self):
+        obs = observe_result(
+            step_description="join skills และ projects โดยป้องกันยอดซ้ำ",
+            tool="execute_query_tool", result='[{"rows":100}]',
+            tool_arguments={"query": (
+                "SELECT COUNT(*) rows FROM employees e JOIN skills s ON e.employee_id=s.employee_id "
+                "JOIN projects p ON e.employee_id=p.employee_id"
+            )}, semantic_checks=True,
+        )
+        self.assertEqual(obs.decision, "retry")
+        self.assertIn("semantic:safe_join_cardinality", obs.failed)
+
+    def test_cross_evidence_contradiction_is_retried(self):
+        obs = observe_result(
+            step_description="ยืนยัน active headcount กับหลักฐานก่อนหน้า",
+            tool="execute_query_tool", result='{"active_headcount":100}',
+            tool_arguments={"query": "SELECT COUNT(*) active_headcount FROM employees"},
+            semantic_checks=True, prior_facts={"active_headcount": 88},
+        )
+        self.assertEqual(obs.decision, "retry")
+        self.assertIn("semantic:cross_evidence_consistency", obs.failed)
+
 
 if __name__ == "__main__":
     unittest.main()

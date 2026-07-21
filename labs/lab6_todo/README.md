@@ -45,6 +45,7 @@ make run-pure-planner
 make compare-lab6-hr
 make compare-observation-policy-hr
 make compare-semantic-observation-hr
+make compare-semantic-matrix-hr
 ```
 
 ความแตกต่างสำคัญ: LLM ยังใช้ reasoning เพื่อสร้าง/แก้แผน แต่ไม่มีสิทธิ์เปลี่ยน
@@ -97,6 +98,13 @@ execute สำเร็จจริง โดย step ต้องการ acti
 Structural checks ยอมรับ query ผิด ส่วน Semantic Policy ตรวจพบ missing population filter
 และ department grain, ปฏิเสธ evidence แล้วรับ corrected retry ดูภาพที่
 `../../artifacts/lab6_hr_semantic_observation.png`
+
+`make compare-semantic-matrix-hr` ขยายเป็น 4 adversarial contracts: denominator,
+pre-review/latest-review temporal window, multi-satellite join cardinality และ
+cross-evidence contradiction ผล captured run ผ่าน 4/4 ด้วย 9 live MCP calls;
+wrong queries ทุกตัว execute สำเร็จและ structural checks รับ แต่ semantic policy
+ตัดสิน `retry` ทั้งหมด ก่อนรับ corrected queries เป็น `accept` ดูภาพที่
+`../../artifacts/lab6_hr_semantic_matrix.png`
 
 ---
 

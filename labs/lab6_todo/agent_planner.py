@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from labs.core import config, llm
 from labs.core.registry import ToolRegistry
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
-from labs.lab6_todo.observation_policy import observe_result
+from labs.lab6_todo.observation_policy import extract_numeric_facts, observe_result
 
 SYSTEM = """คุณคือ HR data agent ที่ทำงานตามแผนและหลักฐานจริง
 ก่อนเรียก MCP ต้องใช้ plan_write แล้ว plan_start ทีละขั้น
@@ -70,6 +70,7 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
         dynamic_observation: bool = False):
     plan: PlannerState | None = None
     trace: list[dict] = []
+    accepted_facts: dict[str, float] = {}
     tools = planner_tools() + registry.openai_tools
     messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": question}]
 
@@ -130,7 +131,8 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                     if dynamic_observation:
                         observation = observe_result(
                             step_description=active[0].description, tool=name, result=result,
-                            tool_arguments=args, semantic_checks=True
+                            tool_arguments=args, semantic_checks=True,
+                            prior_facts=accepted_facts or None,
                         )
                         trace.append({"step_id": active[0].id, "tool": name,
                                       "tool_call_id": call_id, "observation": observation.as_dict()})
@@ -144,6 +146,8 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                             continue
                     plan.observe(active[0].id, tool=name, tool_call_id=call_id, result=result,
                                  observation=observation.as_dict() if observation else None)
+                    if dynamic_observation:
+                        accepted_facts.update(extract_numeric_facts(result))
                     if not dynamic_observation:
                         trace.append({"step_id": active[0].id, "tool": name, "tool_call_id": call_id})
                     print(f"[EVIDENCE] step={active[0].id} tool={name} id={call_id}")

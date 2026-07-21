@@ -1,0 +1,77 @@
+{
+  "experiment": "semantic_observation_adversarial_matrix",
+  "model": "not used — semantic policy layer isolated",
+  "mcp_endpoint": "https://bb36-184-22-21-43.ngrok-free.app/mcp",
+  "elapsed_ms": 1562,
+  "live_mcp_calls": 9,
+  "cases": [
+    {
+      "id": "denominator",
+      "step": "คำนวณเปอร์เซ็นต์พนักงานที่มี skills",
+      "live_calls": 2,
+      "wrong_execution_succeeded": true,
+      "wrong_sql": "SELECT COUNT(DISTINCT employee_id) AS skilled_employees FROM skills",
+      "correct_sql": "SELECT 100.0 * COUNT(DISTINCT s.employee_id) / NULLIF(COUNT(DISTINCT e.employee_id), 0) AS pct_skill_coverage FROM employees e LEFT JOIN skills s ON e.employee_id = s.employee_id",
+      "structural_wrong_decision": "accept",
+      "semantic_wrong_decision": "retry",
+      "semantic_failed": [
+        "semantic:explicit_denominator"
+      ],
+      "correct_decision": "accept",
+      "passed": true
+    },
+    {
+      "id": "temporal_window",
+      "step": "รวมชั่วโมงอบรมก่อน review ล่าสุด",
+      "live_calls": 2,
+      "wrong_execution_succeeded": true,
+      "wrong_sql": "SELECT SUM(hours) AS pre_review_hours FROM training_records",
+      "correct_sql": "WITH latest_review AS (SELECT employee_id, review_date, ROW_NUMBER() OVER (PARTITION BY employee_id ORDER BY review_date DESC) rn FROM performance_reviews) SELECT SUM(t.hours) AS pre_review_hours FROM latest_review lr LEFT JOIN training_records t ON t.employee_id = lr.employee_id AND t.end_date <= lr.review_date WHERE lr.rn = 1",
+      "structural_wrong_decision": "accept",
+      "semantic_wrong_decision": "retry",
+      "semantic_failed": [
+        "semantic:pre_review_time_window",
+        "semantic:latest_review_anchor"
+      ],
+      "correct_decision": "accept",
+      "passed": true
+    },
+    {
+      "id": "join_cardinality",
+      "step": "join skills และ projects โดยป้องกันยอดซ้ำ",
+      "live_calls": 2,
+      "wrong_execution_succeeded": true,
+      "wrong_sql": "SELECT COUNT(*) AS joined_rows FROM employees e JOIN skills s ON e.employee_id = s.employee_id JOIN projects p ON e.employee_id = p.employee_id",
+      "correct_sql": "WITH skill_emp AS (SELECT employee_id, COUNT(*) skill_count FROM skills GROUP BY employee_id), project_emp AS (SELECT employee_id, SUM(project_value) project_value FROM projects GROUP BY employee_id) SELECT COUNT(*) AS joined_rows FROM employees e LEFT JOIN skill_emp s ON e.employee_id = s.employee_id LEFT JOIN project_emp p ON e.employee_id = p.employee_id",
+      "structural_wrong_decision": "accept",
+      "semantic_wrong_decision": "retry",
+      "semantic_failed": [
+        "semantic:safe_join_cardinality"
+      ],
+      "correct_decision": "accept",
+      "passed": true
+    },
+    {
+      "id": "cross_evidence",
+      "step": "ยืนยัน active headcount กับหลักฐานก่อนหน้า",
+      "live_calls": 3,
+      "prior_facts": {
+        "active_headcount": 25.0
+      },
+      "wrong_execution_succeeded": true,
+      "wrong_sql": "SELECT COUNT(*) + 1 AS active_headcount FROM employees WHERE status = N'ปฏิบัติงาน'",
+      "correct_sql": "SELECT COUNT(*) AS active_headcount FROM employees WHERE status = N'ปฏิบัติงาน'",
+      "structural_wrong_decision": "accept",
+      "semantic_wrong_decision": "retry",
+      "semantic_failed": [
+        "semantic:cross_evidence_consistency"
+      ],
+      "correct_decision": "accept",
+      "passed": true
+    }
+  ],
+  "passed_cases": 4,
+  "total_cases": 4,
+  "supported": true,
+  "scope_limit": "Rule-grounded semantics for four declared contracts; not open-ended semantic understanding."
+}

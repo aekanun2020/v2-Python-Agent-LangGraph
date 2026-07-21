@@ -66,6 +66,7 @@ make run-pure-planner   # Pure Python Planner + OpenRouter + MCP
 make compare-lab6-hr # TodoWrite เดิม vs Pure Python Planner บนโจทย์ HR เดียวกัน
 make compare-observation-policy-hr # controlled proof ด้วย MCP จริง ไม่ต้องใช้ LLM key
 make compare-semantic-observation-hr # successful-but-wrong semantic proof
+make compare-semantic-matrix-hr # denominator/time/join/contradiction matrix
 ```
 
 > คำสั่ง end-to-end อ่าน endpoint/key จาก `.env` ผ่าน `python-dotenv`
@@ -261,6 +262,34 @@ make compare-semantic-observation-hr
 ขอบเขตปัจจุบันยังเป็น hard semantic contract สองชนิด ไม่ใช่ semantic understanding
 ทั่วไป ขั้นถัดไปควรเพิ่ม denominator, temporal window, join cardinality และ
 cross-evidence contradiction โดยมี adversarial case และ expected decision แยกกัน
+
+#### Semantic adversarial matrix 4 ประเภท
+
+เพิ่ม policy และ controlled case อีกสี่ประเภทแล้ว แต่ละ wrong query ต้อง execute สำเร็จ
+บน MCP จริง, ผ่าน structural checks และถูก semantic policy ปฏิเสธก่อน evidence admission:
+
+```bash
+make compare-semantic-matrix-hr
+```
+
+![Semantic Observation adversarial HR matrix](artifacts/lab6_hr_semantic_matrix.png)
+
+| Semantic risk | Structural decision | Semantic decision | Corrected retry |
+| --- | ---: | ---: | ---: |
+| Percentage ไม่มี denominator | `accept` | `retry` | `accept` |
+| Training ไม่ผูก pre-review/latest-review window | `accept` | `retry` | `accept` |
+| Raw multi-satellite join ทำให้ fan-out | `accept` | `retry` | `accept` |
+| Metric ขัดกับ prior evidence | `accept` | `retry` | `accept` |
+
+ผลรวม: 4/4 cases ผ่าน, 9 live MCP calls และ wrong evidence admitted = 0
+
+Cross-evidence policy อ่าน numeric facts จาก evidence ก่อนหน้า แล้วเปรียบเทียบเฉพาะ
+metric key ที่ตรงกัน ส่วน policy อื่นตรวจ SQL semantics ที่อนุมานจาก active step
+ทั้งหมดเป็น deterministic hard policy จึงตรวจซ้ำได้และไม่ให้โมเดลลดเกณฑ์เอง
+
+ข้อจำกัดยังคงสำคัญ: นี่คือ **rule-grounded semantic assurance** สำหรับ contract ที่
+ประกาศไว้ ไม่ใช่ open-ended semantic understanding หากโจทย์ใช้ถ้อยคำหรือ SQL pattern
+นอก vocabulary ปัจจุบัน ต้องเพิ่ม contract/parser หรือใช้ semantic reviewer อีกชั้น
 
 ### LangGraph (optional comparison)
 

@@ -82,11 +82,50 @@ def _semantic_requirements(step_description: str) -> list[str]:
         requirements.append("department_grain")
     if any(word in step for word in ("เปอร์เซ็นต์", "ร้อยละ", "percent", "percentage", " pct")):
         requirements.append("explicit_denominator")
+    if (any(word in step for word in ("ก่อน", "before", "pre-review"))
+            and any(word in step for word in ("review", "ประเมิน"))):
+        requirements.append("pre_review_time_window")
+    if (any(word in step for word in ("ล่าสุด", "latest"))
+            and any(word in step for word in ("review", "ประเมิน"))):
+        requirements.append("latest_review_anchor")
+    if any(word in step for word in (
+        "ยอดซ้ำ", "แถวซ้ำ", "fan-out", "fanout", "join cardinality", "aggregate ก่อน join"
+    )):
+        requirements.append("safe_join_cardinality")
+    if any(word in step for word in (
+        "หลักฐานก่อนหน้า", "prior evidence", "cross-evidence", "cross evidence"
+    )):
+        requirements.append("cross_evidence_consistency")
     return requirements
 
 
+def extract_numeric_facts(result: str) -> dict[str, float]:
+    facts: dict[str, float] = {}
+    try:
+        parsed = json.loads(result)
+        rows = parsed if isinstance(parsed, list) else parsed.get("rows", parsed.get("data", [parsed]))
+        if isinstance(rows, dict):
+            rows = [rows]
+        if isinstance(rows, list):
+            for row in rows:
+                if isinstance(row, dict):
+                    for key, value in row.items():
+                        if isinstance(value, (int, float)):
+                            facts[str(key).lower()] = float(value)
+    except (json.JSONDecodeError, AttributeError):
+        pass
+    lines = [line.strip() for line in result.splitlines() if line.strip()]
+    for index in range(len(lines) - 1):
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", lines[index]):
+            match = re.fullmatch(r"[-+]?\d+(?:\.\d+)?", lines[index + 1].replace(",", ""))
+            if match:
+                facts[lines[index].lower()] = float(match.group())
+    return facts
+
+
 def _check_query_semantics(requirements: list[str], tool_arguments: dict | None,
-                           result: str) -> tuple[list[str], list[str]]:
+                           result: str, prior_facts: dict[str, float] | None = None
+                           ) -> tuple[list[str], list[str]]:
     args = tool_arguments or {}
     sql = re.sub(r"\s+", " ", str(args.get("query", ""))).lower()
     payload = result.lower()
@@ -102,13 +141,40 @@ def _check_query_semantics(requirements: list[str], tool_arguments: dict | None,
             ok = ("/" in sql or "nullif" in sql) and any(
                 token in sql for token in ("count(", "sum(", "total", "headcount")
             )
+        elif requirement == "pre_review_time_window":
+            ok = bool(re.search(
+                r"(?:training|\bt\.)[^;]*(?:end_date|start_date)\s*<=\s*[^;]*review_date",
+                sql,
+            ))
+        elif requirement == "latest_review_anchor":
+            ok = bool(
+                re.search(r"row_number\s*\(\s*\)\s*over[^;]*order\s+by[^;]*review_date\s+desc", sql)
+                or re.search(r"max\s*\(\s*(?:\w+\.)?review_date\s*\)", sql)
+            )
+        elif requirement == "safe_join_cardinality":
+            joined_satellites = sum(
+                bool(re.search(rf"\bjoin\s+(?:dbo\.)?{table}\b", sql))
+                for table in ("skills", "training_records", "performance_reviews", "projects")
+            )
+            employee_aggregates = len(re.findall(r"group\s+by\s+(?:\w+\.)?employee_id", sql))
+            ok = joined_satellites < 2 or ("with " in sql and employee_aggregates >= joined_satellites)
         (passed if ok else failed).append(requirement)
+    if prior_facts and "cross_evidence_consistency" in requirements:
+        current = extract_numeric_facts(result)
+        shared = set(current) & {key.lower() for key in prior_facts}
+        contradictions = [
+            key for key in shared
+            if abs(current[key] - float(next(value for old_key, value in prior_facts.items()
+                                             if old_key.lower() == key))) > 1e-9
+        ]
+        (failed if contradictions else passed).append("cross_evidence_consistency")
     return passed, failed
 
 
 def observe_result(*, step_description: str, tool: str, result: str,
                    tool_arguments: dict | None = None,
-                   semantic_checks: bool = False) -> ObservationState:
+                   semantic_checks: bool = False,
+                   prior_facts: dict[str, float] | None = None) -> ObservationState:
     """Select and execute deterministic checks for this step/tool/result tuple."""
     result_type = _result_type(tool, result)
     step = step_description.lower()
@@ -123,6 +189,8 @@ def observe_result(*, step_description: str, tool: str, result: str,
     requirements = _semantic_requirements(step_description) if semantic_checks else []
     if requirements:
         modules.append("semantic_contract")
+    if "cross_evidence_consistency" in requirements:
+        modules.append("cross_evidence_consistency")
 
     state = ObservationState(result_type=result_type, policy_modules=modules,
                              semantic_requirements=requirements)
@@ -160,7 +228,7 @@ def observe_result(*, step_description: str, tool: str, result: str,
         return state
 
     semantic_passed, semantic_failed = _check_query_semantics(
-        requirements, tool_arguments, result
+        requirements, tool_arguments, result, prior_facts
     )
     state.passed.extend(f"semantic:{item}" for item in semantic_passed)
     if semantic_failed:
