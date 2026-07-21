@@ -47,6 +47,10 @@ aggregate (for example regrouping category rows into 0-2 years) is supported onl
 the exact value is present in accepted evidence or its formula and weighting are stated
 and numerically correct. If a new MCP query is required, use query_more. If the evidence
 is sufficient but wording/arithmetic must be corrected, use retry.
+Never infer a row-level majority or proportion from similar column averages. Such a
+claim requires direct row-level numerator/denominator evidence. Do not relabel
+loan_amnt as approved amount; funded_amnt may only be described as a funding proxy
+unless the evidence explicitly defines an approval decision.
 
 Decision meanings:
 - accept: every material claim and number is entailed by accepted evidence

@@ -26,6 +26,36 @@ class PurePythonPlannerTests(unittest.TestCase):
                 "ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน",
                 "ข้อจำกัดคือไม่มีข้อมูล annual_inc, dti และ home_ownership",
             )
+
+    def test_final_gate_rejects_loan_amount_as_approved_amount(self):
+        with self.assertRaisesRegex(ValueError, "loan_amnt"):
+            validate_final_semantics(
+                "ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน",
+                "ข้อมูลนี้เป็นวงเงินกู้ที่อนุมัติ (loan_amnt)",
+            )
+
+    def test_final_gate_requires_row_level_evidence_for_majority_claim(self):
+        answer = "ค่าเฉลี่ยใกล้กัน แสดงว่าคำขอส่วนใหญ่ได้รับการอนุมัติเต็มจำนวน"
+        aggregate_only = [{"tool_arguments": {"query": (
+            "SELECT AVG(loan_amnt), AVG(funded_amnt) FROM loans_fact"
+        )}}]
+        with self.assertRaisesRegex(ValueError, "row-level proportion"):
+            validate_final_semantics(
+                "ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน",
+                answer,
+                aggregate_only,
+            )
+
+    def test_final_gate_accepts_majority_claim_with_direct_ratio_evidence(self):
+        ratio = [{"tool_arguments": {"query": (
+            "SELECT AVG(CASE WHEN funded_amnt = loan_amnt THEN 1.0 ELSE 0 END) "
+            "AS fully_funded_ratio FROM loans_fact"
+        )}}]
+        validate_final_semantics(
+            "ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน",
+            "หลักฐาน row-level แสดงว่าคำขอส่วนใหญ่ได้รับ funding เต็มจำนวน",
+            ratio,
+        )
     def setUp(self):
         self.plan = PlannerState("goal", [PlanStep(1, "query")])
         self.plan.start(1)

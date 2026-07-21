@@ -70,7 +70,8 @@ def require_final_answer(content) -> str:
     return content.strip()
 
 
-def validate_final_semantics(question: str, answer: str) -> None:
+def validate_final_semantics(question: str, answer: str,
+                             accepted_evidence: list[dict] | None = None) -> None:
     """Reject known claim-level category errors that SQL validation cannot see."""
     goal = question.lower()
     text = answer.lower()
@@ -79,6 +80,10 @@ def validate_final_semantics(question: str, answer: str) -> None:
     ))
     failures: list[str] = []
     if approval_amount_goal:
+        if re.search(r"วงเงิน(?:กู้)?ที่อนุมัติ\s*\(\s*loan_amnt\s*\)", text):
+            failures.append(
+                "ห้ามเรียก loan_amnt ว่าวงเงินที่อนุมัติ; ใช้ funded_amnt เป็น proxy ของยอด funding"
+            )
         if any(token in text for token in ("อัตราการอนุมัติ", "approval rate")):
             failures.append(
                 "ห้ามตีความ loan_status (เช่น Current/Fully Paid) เป็นการอนุมัติ"
@@ -94,6 +99,26 @@ def validate_final_semantics(question: str, answer: str) -> None:
             failures.append(
                 "ห้ามอ้างว่า annual_inc/dti/home_ownership ไม่มี เพราะ MCP schema มี field เหล่านี้"
             )
+        majority_full_funding = bool(re.search(
+            r"(?:ส่วนใหญ่[^.\n]{0,80}(?:เต็มจำนวน|อนุมัติเต็ม)|"
+            r"most[^.\n]{0,80}(?:fully funded|full amount))",
+            text,
+        ))
+        if majority_full_funding:
+            queries = " ".join(
+                str(item.get("tool_arguments", {}).get("query", "")).lower()
+                for item in (accepted_evidence or [])
+            )
+            has_row_level_ratio = (
+                "loan_amnt" in queries and "funded_amnt" in queries
+                and "case" in queries
+                and any(token in queries for token in ("count(", "sum(", "avg("))
+            )
+            if not has_row_level_ratio:
+                failures.append(
+                    "ค่าเฉลี่ยที่ใกล้กันพิสูจน์ไม่ได้ว่าส่วนใหญ่ได้ funding เต็มจำนวน; "
+                    "ต้องมี row-level proportion จาก SQL evidence"
+                )
     if failures:
         raise ValueError("final semantic gate rejected: " + "; ".join(failures))
 
@@ -158,7 +183,7 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                     # Do not spend a reviewer call—or ask it for more evidence—until
                     # the deterministic planner proves every step is complete.
                     plan.approve_answer()
-                    validate_final_semantics(question, final_answer)
+                    validate_final_semantics(question, final_answer, accepted_evidence)
                     if routing_mode in ("shadow", "enforce"):
                         final_review = review_final_answer(
                             goal=question,
