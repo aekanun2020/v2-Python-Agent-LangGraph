@@ -106,6 +106,7 @@ def _semantic_requirements(step_description: str, goal_description: str | None =
         requirements.append("loan_amount_metric")
     if any(word in context for word in ("อนุมัติวงเงิน", "approved amount", "approval amount")):
         requirements.append("funded_amount_proxy")
+        requirements.append("loan_status_not_approval")
     return requirements
 
 
@@ -176,6 +177,14 @@ def _check_query_semantics(requirements: list[str], tool_arguments: dict | None,
             ok = any(token in sql for token in ("loan_amnt", "funded_amnt"))
         elif requirement == "funded_amount_proxy":
             ok = "funded_amnt" in sql
+        elif requirement == "loan_status_not_approval":
+            # Loan status describes performance after origination.  It cannot be
+            # relabelled as an approval decision (for example Current/Fully Paid).
+            uses_status = "loan_status" in sql
+            labels_approval = any(token in sql for token in (
+                "approval", "approved", "approve_rate", "approval_rate", "อนุมัติ"
+            ))
+            ok = not (uses_status and labels_approval)
         (passed if ok else failed).append(requirement)
     if prior_facts and "cross_evidence_consistency" in requirements:
         current = extract_numeric_facts(result)

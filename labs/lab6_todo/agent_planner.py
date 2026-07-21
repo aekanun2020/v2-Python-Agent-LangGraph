@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import argparse
 import os
+import re
 import sys
 import uuid
 
@@ -26,6 +27,8 @@ from labs.lab6_todo.observation_router import (
 SYSTEM = """คุณคือ data agent ที่ทำงานตามแผน, schema และหลักฐานจริงจาก MCP
 รักษาความหมายของ dimension และ metric จากคำถามเดิม ห้ามแทนคำที่คล้ายกันเอง
 หากข้อมูลมีเพียง proxy ให้ระบุ proxy และข้อจำกัด ห้ามอ้างเหตุและผลจาก association
+loan_status เช่น Current/Fully Paid/Charged Off คือผลหลังปล่อยกู้ ไม่ใช่ผลการอนุมัติ
+ห้ามระบุสกุลเงินถ้า schema หรือ evidence ไม่ได้บอกหน่วย และห้ามกล่าวว่า field ไม่มีโดยไม่ตรวจ schema
 ก่อนเรียก MCP ต้องใช้ plan_write แล้ว plan_start ทีละขั้น
 ทุก plan step ต้องเป็นขั้นค้น/ตรวจข้อมูลด้วย MCP อย่าสร้างขั้น "สรุปคำตอบ" แยกต่างหาก
 ผล MCP จะถูก runtime ผูกเป็น evidence ของขั้นที่ in_progress โดยอัตโนมัติ
@@ -65,6 +68,34 @@ def require_final_answer(content) -> str:
             "final answer is empty; return a non-empty user-facing synthesis from accepted evidence"
         )
     return content.strip()
+
+
+def validate_final_semantics(question: str, answer: str) -> None:
+    """Reject known claim-level category errors that SQL validation cannot see."""
+    goal = question.lower()
+    text = answer.lower()
+    approval_amount_goal = any(token in goal for token in (
+        "อนุมัติวงเงิน", "approved amount", "approval amount"
+    ))
+    failures: list[str] = []
+    if approval_amount_goal:
+        if any(token in text for token in ("อัตราการอนุมัติ", "approval rate")):
+            failures.append(
+                "ห้ามตีความ loan_status (เช่น Current/Fully Paid) เป็นการอนุมัติ"
+            )
+        if any(token in text for token in ("บาท", " thb", " usd", "$")):
+            failures.append("ห้ามระบุสกุลเงินเมื่อ evidence ไม่มี currency metadata")
+        missing_claim = re.search(
+            r"(?:ไม่มีข้อมูล|ไม่มี\s*(?:field|ฟิลด์))[^.\n]{0,120}"
+            r"(?:annual_inc|\bdti\b|home_ownership)",
+            text,
+        )
+        if missing_claim:
+            failures.append(
+                "ห้ามอ้างว่า annual_inc/dti/home_ownership ไม่มี เพราะ MCP schema มี field เหล่านี้"
+            )
+    if failures:
+        raise ValueError("final semantic gate rejected: " + "; ".join(failures))
 
 
 def validate_plan_descriptions(descriptions: list[str]) -> None:
@@ -122,6 +153,7 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
             else:
                 try:
                     final_answer = require_final_answer(message.content)
+                    validate_final_semantics(question, final_answer)
                     plan.approve_answer()
                     print(f"[ANSWER APPROVED] revision={plan.revision} tool_calls={len(trace)}")
                     print(final_answer)

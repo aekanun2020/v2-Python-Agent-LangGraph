@@ -1,10 +1,31 @@
 import unittest
 
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
-from labs.lab6_todo.agent_planner import normalize_plan_descriptions, require_final_answer
+from labs.lab6_todo.agent_planner import (
+    normalize_plan_descriptions, require_final_answer, validate_final_semantics,
+)
 
 
 class PurePythonPlannerTests(unittest.TestCase):
+    def test_final_semantic_gate_rejects_status_as_approval_and_currency(self):
+        with self.assertRaisesRegex(ValueError, "loan_status"):
+            validate_final_semantics(
+                "ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน",
+                "อัตราการอนุมัติสูงสุด 88% และวงเงินเฉลี่ย 16,403 บาท",
+            )
+
+    def test_final_semantic_gate_accepts_funded_amount_proxy_without_currency(self):
+        validate_final_semantics(
+            "ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน",
+            "ค่าเฉลี่ย funded_amnt สูงขึ้นตามบางกลุ่มอายุงาน แต่เป็น association เท่านั้น",
+        )
+
+    def test_final_semantic_gate_rejects_false_missing_control_claim(self):
+        with self.assertRaisesRegex(ValueError, "MCP schema"):
+            validate_final_semantics(
+                "ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน",
+                "ข้อจำกัดคือไม่มีข้อมูล annual_inc, dti และ home_ownership",
+            )
     def setUp(self):
         self.plan = PlannerState("goal", [PlanStep(1, "query")])
         self.plan.start(1)
