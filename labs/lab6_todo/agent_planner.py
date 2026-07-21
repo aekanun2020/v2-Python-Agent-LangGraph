@@ -57,6 +57,14 @@ def normalize_plan_descriptions(raw_steps) -> list[str]:
     return descriptions
 
 
+def require_final_answer(content) -> str:
+    if not isinstance(content, str) or not content.strip():
+        raise ValueError(
+            "final answer is empty; return a non-empty user-facing synthesis from accepted evidence"
+        )
+    return content.strip()
+
+
 def validate_plan_descriptions(descriptions: list[str]) -> None:
     invalid = [text for text in descriptions if any(word in text.lower() for word in NON_EVIDENCE_STEP_WORDS)]
     if invalid:
@@ -111,15 +119,23 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                 feedback = "Answer gate rejected: ยังไม่มี plan_write"
             else:
                 try:
+                    final_answer = require_final_answer(message.content)
                     plan.approve_answer()
                     print(f"[ANSWER APPROVED] revision={plan.revision} tool_calls={len(trace)}")
-                    print(message.content)
-                    return {"answer": message.content, "planner": plan, "tool_trace": trace}
+                    print(final_answer)
+                    return {"answer": final_answer, "planner": plan, "tool_trace": trace}
                 except ValueError as exc:
                     feedback = str(exc)
             print(f"[ANSWER REJECTED] {feedback}")
             messages.append({"role": "assistant", "content": message.content or ""})
-            messages.append({"role": "user", "content": f"[RUNTIME GATE] {feedback}. ทำงานต่อและเรียก tool ที่จำเป็น"})
+            if plan is not None and all(step.status == "completed" for step in plan.steps):
+                instruction = (
+                    "ทุกขั้น completed แล้ว ห้ามเรียก tool เพิ่ม; เขียน final answer ที่ไม่ว่าง "
+                    "โดยสรุปจาก accepted evidence ให้ผู้ใช้อ่านได้ทันที"
+                )
+            else:
+                instruction = "ทำงานต่อและเรียก tool ที่จำเป็น"
+            messages.append({"role": "user", "content": f"[RUNTIME GATE] {feedback}. {instruction}"})
             continue
 
         messages.append({"role": "assistant", "content": message.content or "",

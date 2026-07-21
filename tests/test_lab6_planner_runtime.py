@@ -1,7 +1,7 @@
 import unittest
 
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
-from labs.lab6_todo.agent_planner import normalize_plan_descriptions
+from labs.lab6_todo.agent_planner import normalize_plan_descriptions, require_final_answer
 
 
 class PurePythonPlannerTests(unittest.TestCase):
@@ -52,6 +52,15 @@ class PurePythonPlannerTests(unittest.TestCase):
     def test_plan_write_rejects_malformed_step_without_crashing(self):
         with self.assertRaisesRegex(ValueError, r"steps\[1\]"):
             normalize_plan_descriptions([{"status": "pending"}])
+
+    def test_answer_gate_rejects_none_or_blank_content(self):
+        for content in (None, "", "   "):
+            with self.subTest(content=content):
+                with self.assertRaisesRegex(ValueError, "final answer is empty"):
+                    require_final_answer(content)
+
+    def test_answer_gate_normalizes_nonempty_content(self):
+        self.assertEqual(require_final_answer("  สรุปผลแล้ว  "), "สรุปผลแล้ว")
 
 
 if __name__ == "__main__":
