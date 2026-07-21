@@ -82,6 +82,27 @@ class PurePythonPlannerTests(unittest.TestCase):
         self.plan.approve_answer()
         self.assertTrue(self.plan.answer_approved)
 
+    def test_start_and_complete_are_idempotent_after_evidence_completion(self):
+        self.plan.observe(1, tool="sql", tool_call_id="1", result="one row")
+        self.plan.complete(1)
+        self.plan.start(1)
+        self.plan.complete(1)
+        self.assertEqual(self.plan.step(1).status, "completed")
+
+    def test_replan_cannot_reopen_completed_evidence(self):
+        self.plan.observe(1, tool="sql", tool_call_id="1", result="one row")
+        self.plan.complete(1)
+        self.plan.revise([PlanStep(1, "query again", "pending")], "model changed its mind")
+        self.assertEqual(self.plan.step(1).status, "completed")
+        self.assertEqual(len(self.plan.step(1).evidence), 1)
+
+    def test_replan_cannot_drop_completed_evidence(self):
+        self.plan.observe(1, tool="sql", tool_call_id="1", result="one row")
+        self.plan.complete(1)
+        self.plan.revise([PlanStep(2, "future query", "pending")], "replace future work")
+        self.assertEqual(self.plan.step(1).status, "completed")
+        self.assertEqual(self.plan.step(2).status, "pending")
+
     def test_evidence_must_bind_to_active_step(self):
         other = PlannerState("goal", [PlanStep(1, "a"), PlanStep(2, "b")])
         other.start(1)

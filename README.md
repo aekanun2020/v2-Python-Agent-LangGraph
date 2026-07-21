@@ -97,6 +97,8 @@ orchestration framework:
 - Dynamic Observation Policy เลือก hard checks จาก active step + tool + result type
 - MCP result ถูกผูกกับ active step เป็น evidence เฉพาะเมื่อ observation ตัดสิน `accept`
 - step ที่ไม่มีหลักฐานเปลี่ยนเป็น `completed` ไม่ได้
+- accepted observation ทำให้ Python auto-complete active step; model ไม่ต้องจัดการ
+  transition เชิงกล และ replan เปิดหรือลบ completed evidence เดิมไม่ได้
 - analytical contract กำหนด aggregation grain และสูตรเดียวกันทุก Agent
 - validator ปฏิเสธ SQL ที่เสี่ยง fan-out และทำให้ Planner แก้แผน
 - final answer ผ่านได้เมื่อ runtime gate อนุมัติเท่านั้น

@@ -32,7 +32,8 @@ loan_status เช่น Current/Fully Paid/Charged Off คือผลหลั
 ก่อนเรียก MCP ต้องใช้ plan_write แล้ว plan_start ทีละขั้น
 ทุก plan step ต้องเป็นขั้นค้น/ตรวจข้อมูลด้วย MCP อย่าสร้างขั้น "สรุปคำตอบ" แยกต่างหาก
 ผล MCP จะถูก runtime ผูกเป็น evidence ของขั้นที่ in_progress โดยอัตโนมัติ
-หลังได้หลักฐานให้เรียก plan_complete; ถ้าหลักฐานทำให้แผนเดิมไม่พอให้ plan_revise
+เมื่อ observation รับหลักฐาน runtime จะ complete ขั้นนั้นอัตโนมัติ ไม่ต้องเรียก plan_complete ซ้ำ
+ถ้าหลักฐานทำให้แผนเดิมไม่พอให้ plan_revise
 ตอบสุดท้ายได้เมื่อทุกขั้น completed เท่านั้น ใช้ T-SQL TOP ไม่ใช้ LIMIT"""
 
 NON_EVIDENCE_STEP_WORDS = (
@@ -322,6 +323,8 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                                 continue
                     plan.observe(active[0].id, tool=name, tool_call_id=call_id, result=result,
                                  observation=observation.as_dict() if observation else None)
+                    if dynamic_observation:
+                        plan.complete(active[0].id)
                     accepted_evidence.append({
                         "step_id": active[0].id,
                         "step_description": active[0].description,
@@ -331,7 +334,9 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                     })
                     result += (
                         "\n\n[RUNTIME STATE]\n" + plan.render()
-                        + f"\nหลักฐานถูกรับแล้ว; next transition: plan_complete(step_id={active[0].id})"
+                        + "\nหลักฐานถูกรับและ step completed อัตโนมัติ; "
+                        "next transition: plan_start(step_id ของ pending step ถัดไป) "
+                        "หรือเขียน final answer เมื่อทุก step completed"
                     )
                     if dynamic_observation:
                         accepted_facts.update(extract_numeric_facts(result))

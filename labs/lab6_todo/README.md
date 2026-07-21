@@ -23,7 +23,9 @@
 - มี `PlannerState`, revision และสถานะของแต่ละขั้น
 - Dynamic Observation Policy ตรวจ active step + tool + result type ก่อนรับหลักฐาน
 - MCP result ถูกผูกกับ step ที่ `in_progress` เมื่อ observation ตัดสิน `accept`
-- `plan_complete` ถูกปฏิเสธทันทีถ้ายังไม่มี tool evidence
+- เมื่อ Observation รับ tool evidence แล้ว Python runtime จะ complete step อัตโนมัติ;
+  `plan_complete` ที่เรียกซ้ำเป็น idempotent และขั้นที่ไม่มี evidence ยัง complete ไม่ได้
+- `plan_revise` แก้ future work ได้ แต่เปิดหรือลบ completed evidence เดิมไม่ได้
 - แก้แผนระหว่างทำงานผ่าน `plan_revise` และรักษาหลักฐานเดิม
 - final answer ถูก runtime gate ปฏิเสธจนกว่าทุกขั้นเสร็จและมีหลักฐาน
 - `shadow/enforce` ส่ง final answer พร้อม accepted MCP evidence ให้ independent reviewer;

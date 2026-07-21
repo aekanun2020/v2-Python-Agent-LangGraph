@@ -45,6 +45,8 @@ class PlannerState:
 
     def start(self, step_id: int) -> None:
         target = self.step(step_id)
+        if target.status == "completed" and target.evidence:
+            return
         if target.status not in ("pending", "in_progress"):
             raise ValueError(f"step {step_id} cannot start from {target.status}")
         for step in self.steps:
@@ -63,6 +65,8 @@ class PlannerState:
 
     def complete(self, step_id: int) -> None:
         target = self.step(step_id)
+        if target.status == "completed" and target.evidence:
+            return
         if target.status != "in_progress":
             raise ValueError("only an in-progress step can be completed")
         if not target.evidence:
@@ -72,12 +76,31 @@ class PlannerState:
     def revise(self, steps: list[PlanStep], reason: str) -> None:
         """Replace future work while preserving evidence for matching step ids."""
         old = {step.id: step for step in self.steps}
+        proposed_ids = {step.id for step in steps}
+        if len(proposed_ids) != len(steps):
+            raise ValueError("revised plan contains duplicate step ids")
         for step in steps:
             previous = old.get(step.id)
             if previous and previous.evidence:
                 step.evidence = list(previous.evidence)
+            if previous and previous.status == "completed" and previous.evidence:
+                # A model may revise future work, but cannot reopen accepted work.
+                step.status = "completed"
             if step.status == "completed" and not step.evidence:
                 step.status = "pending"
+        for previous in old.values():
+            if (previous.id not in proposed_ids and previous.status == "completed"
+                    and previous.evidence):
+                steps.append(PlanStep(
+                    previous.id, previous.description, "completed", list(previous.evidence)
+                ))
+        active_seen = False
+        for step in sorted(steps, key=lambda item: item.id):
+            if step.status == "in_progress":
+                if active_seen:
+                    step.status = "pending"
+                active_seen = True
+        steps.sort(key=lambda item: item.id)
         self.steps = steps
         self.revision += 1
         self.last_reason = reason
