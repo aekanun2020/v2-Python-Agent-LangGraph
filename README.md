@@ -95,6 +95,8 @@ orchestration framework:
 
 - Python เป็นเจ้าของ `PlannerState` และตรวจ state transition
 - Dynamic Observation Policy เลือก hard checks จาก active step + tool + result type
+- Runtime สร้าง dynamic goal contract ก่อนวางแผนและส่งชื่อ dimension, metric,
+  population constraint ที่ต้องใช้ให้ model; failed checks คืน actionable SQL fix
 - MCP result ถูกผูกกับ active step เป็น evidence เฉพาะเมื่อ observation ตัดสิน `accept`
 - step ที่ไม่มีหลักฐานเปลี่ยนเป็น `completed` ไม่ได้
 - accepted observation ทำให้ Python auto-complete active step; model ไม่ต้องจัดการ

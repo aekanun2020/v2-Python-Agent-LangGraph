@@ -2,12 +2,24 @@ import unittest
 
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
 from labs.lab6_todo.agent_planner import (
-    normalize_plan_descriptions, require_final_answer, validate_final_semantics,
-    validate_plan_descriptions,
+    build_goal_contract, normalize_plan_descriptions, require_final_answer,
+    semantic_recovery_hint, validate_final_semantics, validate_plan_descriptions,
 )
 
 
 class PurePythonPlannerTests(unittest.TestCase):
+    def test_dynamic_goal_contract_names_required_fields_and_forbidden_status(self):
+        contract = build_goal_contract("ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน")
+        self.assertIn("emp_length_dim", contract)
+        self.assertIn("funded_amnt", contract)
+        self.assertIn("do not JOIN or filter loan_status", contract)
+
+    def test_semantic_failure_has_executable_recovery_hint(self):
+        hint = semantic_recovery_hint([
+            "semantic:employment_length_dimension", "semantic:funded_amount_proxy"
+        ])
+        self.assertIn("GROUP BY d.emp_length", hint)
+        self.assertIn("f.funded_amnt", hint)
     def test_summary_statistics_is_an_mcp_verifiable_step(self):
         validate_plan_descriptions([
             "คำนวณสถิติสรุปวงเงินกู้โดยเฉลี่ยตามระยะเวลาการทำงาน"

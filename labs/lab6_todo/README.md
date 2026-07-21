@@ -22,6 +22,8 @@
 
 - มี `PlannerState`, revision และสถานะของแต่ละขั้น
 - Dynamic Observation Policy ตรวจ active step + tool + result type ก่อนรับหลักฐาน
+- Dynamic goal contract แปลงโจทย์เป็นข้อกำหนด field/population ก่อน `plan_write`
+  และ semantic retry ส่ง `[ACTIONABLE FIX]` ที่ระบุ JOIN/GROUP BY/metric ตรงๆ
 - MCP result ถูกผูกกับ step ที่ `in_progress` เมื่อ observation ตัดสิน `accept`
 - เมื่อ Observation รับ tool evidence แล้ว Python runtime จะ complete step อัตโนมัติ;
   `plan_complete` ที่เรียกซ้ำเป็น idempotent และขั้นที่ไม่มี evidence ยัง complete ไม่ได้

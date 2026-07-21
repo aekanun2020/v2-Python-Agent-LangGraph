@@ -141,6 +141,54 @@ def validate_plan_descriptions(descriptions: list[str]) -> None:
         )
 
 
+def build_goal_contract(question: str) -> str:
+    """Turn known goal semantics into actionable, pre-plan runtime constraints."""
+    goal = question.lower()
+    rules: list[str] = []
+    if any(token in goal for token in (
+        "ระยะเวลาการทำงาน", "อายุงาน", "employment length", "employment tenure"
+    )):
+        rules.append(
+            "Dimension contract: JOIN emp_length_dim and GROUP BY emp_length_dim.emp_length."
+        )
+    if any(token in goal for token in (
+        "อนุมัติวงเงิน", "approved amount", "approval amount"
+    )):
+        rules.extend([
+            "Metric contract: SELECT/aggregate loans_fact.funded_amnt as a funding proxy; "
+            "loan_amnt alone is insufficient.",
+            "Population contract: do not JOIN or filter loan_status/loan_status_dim; "
+            "Current/Fully Paid are post-origination outcomes, not approval decisions.",
+            "Answer contract: state that no Approved/Rejected field exists and do not "
+            "claim approval rate or causal effect.",
+        ])
+    if not rules:
+        return ""
+    return "[DYNAMIC GOAL CONTRACT — runtime authority]\n" + "\n".join(
+        f"- {rule}" for rule in rules
+    )
+
+
+def semantic_recovery_hint(failed: list[str]) -> str:
+    hints = {
+        "semantic:employment_length_dimension": (
+            "JOIN emp_length_dim d ON loans_fact.emp_length_id=d.emp_length_id "
+            "และ GROUP BY d.emp_length"
+        ),
+        "semantic:loan_amount_metric": (
+            "SELECT/aggregate f.loan_amnt หรือ f.funded_amnt ตาม metric contract"
+        ),
+        "semantic:funded_amount_proxy": (
+            "ต้อง SELECT/aggregate f.funded_amnt; loan_amnt อย่างเดียวไม่ผ่าน"
+        ),
+        "semantic:loan_status_not_approval": (
+            "ลบ JOIN/WHERE ที่อ้าง loan_status หรือ loan_status_dim ออกจาก query"
+        ),
+    }
+    selected = [hints[item] for item in failed if item in hints]
+    return " | ".join(selected)
+
+
 def planner_tools() -> list[dict]:
     def tool(name, description, properties, required):
         return {"type": "function", "function": {"name": name, "description": description,
@@ -177,7 +225,11 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
         "enforce" if prompt_semantic_review else observation_routing_mode
     )
     tools = planner_tools() + registry.openai_tools
-    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": question}]
+    messages = [{"role": "system", "content": SYSTEM}]
+    goal_contract = build_goal_contract(question)
+    if goal_contract:
+        messages.append({"role": "system", "content": goal_contract})
+    messages.append({"role": "user", "content": question})
 
     for turn in range(1, max_steps + 1):
         response = llm.chat(messages=messages, tools=tools)
@@ -294,9 +346,12 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                         print(f"[OBSERVATION] step={active[0].id} type={observation.result_type} "
                               f"decision={observation.decision} reason={observation.reason}")
                         if observation.decision != "accept":
+                            recovery = semantic_recovery_hint(observation.failed)
                             result += "\n\n[OBSERVATION POLICY]\n" + json.dumps(
                                 observation.as_dict(), ensure_ascii=False
                             ) + "\nผลนี้ยังไม่ถูกบันทึกเป็น evidence; retry/query_more/replan ตาม decision"
+                            if recovery:
+                                result += "\n[ACTIONABLE FIX] " + recovery
                             messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
                             continue
                         if routing_mode in ("shadow", "enforce") and risk.reviewer_required:
