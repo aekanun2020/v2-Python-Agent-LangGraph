@@ -112,6 +112,41 @@ class DynamicObservationPolicyTests(unittest.TestCase):
         self.assertEqual(obs.decision, "retry")
         self.assertIn("semantic:cross_evidence_consistency", obs.failed)
 
+    def test_original_goal_rejects_loan_vintage_substitution(self):
+        obs = observe_result(
+            goal_description="ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน",
+            step_description="วิเคราะห์ผลสินเชื่อตามปี",
+            tool="execute_query_tool",
+            tool_arguments={"query": (
+                "SELECT issue_year, COUNT(*) FROM loans_fact GROUP BY issue_year"
+            )},
+            result='[{"issue_year":2019,"count":100}]',
+            semantic_checks=True,
+        )
+        self.assertEqual(obs.decision, "retry")
+        self.assertIn("semantic:employment_length_dimension", obs.failed)
+        self.assertIn("semantic:loan_amount_metric", obs.failed)
+        self.assertIn("semantic:funded_amount_proxy", obs.failed)
+
+    def test_original_goal_accepts_employment_length_and_funded_amount(self):
+        obs = observe_result(
+            goal_description="ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน",
+            step_description="เปรียบเทียบวงเงินตามอายุงาน",
+            tool="execute_query_tool",
+            tool_arguments={"query": (
+                "SELECT d.emp_length, AVG(f.loan_amnt) avg_requested, "
+                "AVG(f.funded_amnt) avg_funded FROM loans_fact f "
+                "JOIN emp_length_dim d ON f.emp_length_id=d.emp_length_id "
+                "GROUP BY d.emp_length"
+            )},
+            result='[{"emp_length":"10+ years","avg_funded":15000}]',
+            semantic_checks=True,
+        )
+        self.assertEqual(obs.decision, "accept")
+        self.assertIn("semantic:employment_length_dimension", obs.passed)
+        self.assertIn("semantic:loan_amount_metric", obs.passed)
+        self.assertIn("semantic:funded_amount_proxy", obs.passed)
+
 
 if __name__ == "__main__":
     unittest.main()

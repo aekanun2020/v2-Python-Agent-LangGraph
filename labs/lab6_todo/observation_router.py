@@ -26,7 +26,8 @@ class RiskAssessment:
 
 HIGH_REQUIREMENTS = {
     "pre_review_time_window", "latest_review_anchor", "safe_join_cardinality",
-    "cross_evidence_consistency",
+    "cross_evidence_consistency", "employment_length_dimension",
+    "loan_amount_metric", "funded_amount_proxy",
 }
 MEDIUM_REQUIREMENTS = {
     "active_employee_population", "department_grain", "explicit_denominator",

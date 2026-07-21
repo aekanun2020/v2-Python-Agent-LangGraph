@@ -24,6 +24,8 @@ from labs.lab6_todo.observation_router import (
 )
 
 SYSTEM = """คุณคือ data agent ที่ทำงานตามแผน, schema และหลักฐานจริงจาก MCP
+รักษาความหมายของ dimension และ metric จากคำถามเดิม ห้ามแทนคำที่คล้ายกันเอง
+หากข้อมูลมีเพียง proxy ให้ระบุ proxy และข้อจำกัด ห้ามอ้างเหตุและผลจาก association
 ก่อนเรียก MCP ต้องใช้ plan_write แล้ว plan_start ทีละขั้น
 ทุก plan step ต้องเป็นขั้นค้น/ตรวจข้อมูลด้วย MCP อย่าสร้างขั้น "สรุปคำตอบ" แยกต่างหาก
 ผล MCP จะถูก runtime ผูกเป็น evidence ของขั้นที่ in_progress โดยอัตโนมัติ
@@ -182,6 +184,7 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                             step_description=active[0].description, tool=name, result=result,
                             tool_arguments=args, semantic_checks=True,
                             prior_facts=accepted_facts or None,
+                            goal_description=question,
                         )
                         trace.append({"step_id": active[0].id, "tool": name,
                                       "tool_call_id": call_id, "observation": observation.as_dict()})

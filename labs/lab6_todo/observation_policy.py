@@ -72,9 +72,11 @@ def _has_substantive_payload(result: str) -> bool:
     return len(compact) >= 8 and not any(marker in compact for marker in empty_success)
 
 
-def _semantic_requirements(step_description: str) -> list[str]:
+def _semantic_requirements(step_description: str, goal_description: str | None = None) -> list[str]:
     """Infer hard semantic claims from the active step, not from a global prompt."""
     step = step_description.lower()
+    goal = (goal_description or "").lower()
+    context = goal + " " + step
     requirements = []
     if any(word in step for word in ("ปฏิบัติงาน", "active employee", "active workforce")):
         requirements.append("active_employee_population")
@@ -96,6 +98,14 @@ def _semantic_requirements(step_description: str) -> list[str]:
         "หลักฐานก่อนหน้า", "prior evidence", "cross-evidence", "cross evidence"
     )):
         requirements.append("cross_evidence_consistency")
+    if any(word in context for word in (
+        "ระยะเวลาการทำงาน", "อายุงาน", "employment length", "employment tenure"
+    )):
+        requirements.append("employment_length_dimension")
+    if any(word in context for word in ("วงเงิน", "loan amount", "funded amount")):
+        requirements.append("loan_amount_metric")
+    if any(word in context for word in ("อนุมัติวงเงิน", "approved amount", "approval amount")):
+        requirements.append("funded_amount_proxy")
     return requirements
 
 
@@ -158,6 +168,14 @@ def _check_query_semantics(requirements: list[str], tool_arguments: dict | None,
             )
             employee_aggregates = len(re.findall(r"group\s+by\s+(?:\w+\.)?employee_id", sql))
             ok = joined_satellites < 2 or ("with " in sql and employee_aggregates >= joined_satellites)
+        elif requirement == "employment_length_dimension":
+            ok = "emp_length_dim" in sql and bool(
+                re.search(r"\bgroup\s+by\b[^;]*(?:emp_length|employment)", sql)
+            )
+        elif requirement == "loan_amount_metric":
+            ok = any(token in sql for token in ("loan_amnt", "funded_amnt"))
+        elif requirement == "funded_amount_proxy":
+            ok = "funded_amnt" in sql
         (passed if ok else failed).append(requirement)
     if prior_facts and "cross_evidence_consistency" in requirements:
         current = extract_numeric_facts(result)
@@ -174,7 +192,8 @@ def _check_query_semantics(requirements: list[str], tool_arguments: dict | None,
 def observe_result(*, step_description: str, tool: str, result: str,
                    tool_arguments: dict | None = None,
                    semantic_checks: bool = False,
-                   prior_facts: dict[str, float] | None = None) -> ObservationState:
+                   prior_facts: dict[str, float] | None = None,
+                   goal_description: str | None = None) -> ObservationState:
     """Select and execute deterministic checks for this step/tool/result tuple."""
     result_type = _result_type(tool, result)
     step = step_description.lower()
@@ -186,7 +205,10 @@ def observe_result(*, step_description: str, tool: str, result: str,
         modules.extend(["result_shape", "population_and_grain"])
     if result_type == "truncated":
         modules.append("completeness")
-    requirements = _semantic_requirements(step_description) if semantic_checks else []
+    requirements = (
+        _semantic_requirements(step_description, goal_description)
+        if semantic_checks and result_type == "query_result" else []
+    )
     if requirements:
         modules.append("semantic_contract")
     if "cross_evidence_consistency" in requirements:
