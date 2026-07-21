@@ -19,7 +19,7 @@ from labs.core import config, llm
 from labs.core.registry import ToolRegistry
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
 from labs.lab6_todo.observation_policy import extract_numeric_facts, observe_result
-from labs.lab6_todo.semantic_reviewer import review_observation
+from labs.lab6_todo.semantic_reviewer import review_final_answer, review_observation
 from labs.lab6_todo.observation_router import (
     assess_observation_risk, routed_decision, validate_routing_mode,
 )
@@ -137,6 +137,7 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
         observation_routing_mode: str = "rules"):
     plan: PlannerState | None = None
     trace: list[dict] = []
+    accepted_evidence: list[dict] = []
     accepted_facts: dict[str, float] = {}
     routing_mode = validate_routing_mode(
         "enforce" if prompt_semantic_review else observation_routing_mode
@@ -148,12 +149,34 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
         response = llm.chat(messages=messages, tools=tools)
         message = response.choices[0].message
         if not message.tool_calls:
+            final_review_decision = None
             if plan is None:
                 feedback = "Answer gate rejected: ยังไม่มี plan_write"
             else:
                 try:
                     final_answer = require_final_answer(message.content)
                     validate_final_semantics(question, final_answer)
+                    if routing_mode in ("shadow", "enforce"):
+                        final_review = review_final_answer(
+                            goal=question,
+                            answer=final_answer,
+                            accepted_evidence=accepted_evidence,
+                        )
+                        final_decision = (
+                            final_review.decision if routing_mode == "enforce" else "accept"
+                        )
+                        final_review_decision = final_review.decision
+                        print(
+                            f"[FINAL SEMANTIC REVIEW] review={final_review.decision} "
+                            f"mode={routing_mode} final={final_decision} "
+                            f"reason={final_review.reason}"
+                        )
+                        if final_decision != "accept":
+                            raise ValueError(
+                                "final semantic reviewer rejected: "
+                                f"decision={final_review.decision}; {final_review.reason}; "
+                                f"next={final_review.suggested_next_action}"
+                            )
                     plan.approve_answer()
                     print(f"[ANSWER APPROVED] revision={plan.revision} tool_calls={len(trace)}")
                     print(final_answer)
@@ -162,7 +185,12 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                     feedback = str(exc)
             print(f"[ANSWER REJECTED] {feedback}")
             messages.append({"role": "assistant", "content": message.content or ""})
-            if plan is not None and all(step.status == "completed" for step in plan.steps):
+            if final_review_decision == "query_more":
+                instruction = (
+                    "หลักฐานยังไม่พอสำหรับข้อกล่าวอ้างใน final answer; เรียก plan_revise "
+                    "เพื่อเพิ่ม MCP-verifiable step แล้ว query เพิ่มตาม reviewer"
+                )
+            elif plan is not None and all(step.status == "completed" for step in plan.steps):
                 instruction = (
                     "ทุกขั้น completed แล้ว ห้ามเรียก tool เพิ่ม; เขียน final answer ที่ไม่ว่าง "
                     "โดยสรุปจาก accepted evidence ให้ผู้ใช้อ่านได้ทันที"
@@ -257,6 +285,13 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                                 continue
                     plan.observe(active[0].id, tool=name, tool_call_id=call_id, result=result,
                                  observation=observation.as_dict() if observation else None)
+                    accepted_evidence.append({
+                        "step_id": active[0].id,
+                        "step_description": active[0].description,
+                        "tool": name,
+                        "tool_arguments": args,
+                        "result": result,
+                    })
                     if dynamic_observation:
                         accepted_facts.update(extract_numeric_facts(result))
                     if not dynamic_observation:

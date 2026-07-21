@@ -1,8 +1,10 @@
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from labs.lab6_todo.observation_policy import ObservationState
 from labs.lab6_todo.semantic_reviewer import (
-    SemanticReview, _parse_json, hybrid_decision,
+    FINAL_SYSTEM, SemanticReview, _parse_json, hybrid_decision, review_final_answer,
 )
 
 
@@ -25,6 +27,34 @@ class SemanticReviewerTests(unittest.TestCase):
         hard = ObservationState("query_result", [], decision="accept")
         review = SemanticReview(decision="accept")
         self.assertEqual(hybrid_decision(hard, review), "accept")
+
+    def test_final_reviewer_requires_derived_aggregates_to_be_grounded(self):
+        self.assertIn("accepted MCP evidence", FINAL_SYSTEM)
+        self.assertIn("formula and weighting", FINAL_SYSTEM)
+
+    @patch("labs.lab6_todo.semantic_reviewer.llm.chat")
+    def test_final_reviewer_receives_answer_and_accepted_evidence(self, chat):
+        chat.return_value = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content=(
+                '{"derived_requirements":[],"checks":[],"supports_step":true,'
+                '"sufficient":true,"decision":"accept","confidence":1,'
+                '"reason":"grounded","suggested_next_action":""}'
+            )))],
+            usage=SimpleNamespace(prompt_tokens=10, completion_tokens=5),
+        )
+        review = review_final_answer(
+            goal="compare tenure",
+            answer="10+ years = 16514.62",
+            accepted_evidence=[{
+                "step_id": 1, "step_description": "aggregate", "tool": "execute_query_tool",
+                "tool_arguments": {"query": "SELECT ..."},
+                "result": '[{"emp_length":"10+ years","avg_funded":16514.62}]',
+            }],
+        )
+        self.assertEqual(review.decision, "accept")
+        payload = chat.call_args.kwargs["messages"][1]["content"]
+        self.assertIn("16514.62", payload)
+        self.assertIn("accepted_mcp_evidence", payload)
 
 
 if __name__ == "__main__":

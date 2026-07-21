@@ -26,6 +26,8 @@
 - `plan_complete` ถูกปฏิเสธทันทีถ้ายังไม่มี tool evidence
 - แก้แผนระหว่างทำงานผ่าน `plan_revise` และรักษาหลักฐานเดิม
 - final answer ถูก runtime gate ปฏิเสธจนกว่าทุกขั้นเสร็จและมีหลักฐาน
+- `shadow/enforce` ส่ง final answer พร้อม accepted MCP evidence ให้ independent reviewer;
+  `enforce` สั่ง rewrite หรือ `plan_revise` + query เพิ่มเมื่อมีตัวเลขใหม่ที่ไม่ grounded
 
 ### โหมดล่าสุดที่ควรใช้
 
@@ -38,6 +40,7 @@ cd v2-Python-Agent-LangGraph
 python labs/lab6_todo/agent_todo.py     # ของเดิม: TodoWrite
 python labs/lab6_todo/agent_planner.py  # ของใหม่: Rules mode
 python labs/lab6_todo/agent_planner.py --routing-mode shadow
+python labs/lab6_todo/agent_planner.py --routing-mode enforce
 ```
 
 สามคำสั่งนี้รัน `labs/lab6_todo/agent_planner.py` จริงและเรียก OpenRouter + MCP
@@ -60,6 +63,10 @@ python labs/lab6_todo/agent_planner.py --routing-mode shadow
 ที่ผ่าน hard checks แล้วจึงเรียก Qwen reviewer และบันทึกผลลง trace โดย reviewer
 ไม่มีสิทธิ์ block หลักฐาน ผล regression ล่าสุดคือ Rules 8/8, Shadow 8/8,
 behavior regression 0 และ reviewer calls ลดลง 62.5%
+
+Final synthesis ถูก review อีกครั้งในทั้ง `shadow` และ `enforce`: reviewer ตรวจทุก
+material claim/number กับ accepted evidence รวมถึงสูตรและ weighting ของ derived
+aggregate โดย `shadow` เป็น advisory ส่วน `enforce` มีสิทธิ์ปฏิเสธคำตอบสุดท้าย
 
 ```text
 MCP result → hard observation → risk router

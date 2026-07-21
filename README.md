@@ -100,6 +100,8 @@ orchestration framework:
 - analytical contract กำหนด aggregation grain และสูตรเดียวกันทุก Agent
 - validator ปฏิเสธ SQL ที่เสี่ยง fan-out และทำให้ Planner แก้แผน
 - final answer ผ่านได้เมื่อ runtime gate อนุมัติเท่านั้น
+- `shadow/enforce` ตรวจ final answer เทียบ accepted MCP evidence อีกครั้ง; `enforce`
+  block ตัวเลขหรือข้อกล่าวอ้างที่ไม่ได้ grounded และสั่ง rewrite/query เพิ่มได้
 
 ```text
 LLM proposes action
@@ -110,7 +112,7 @@ LLM proposes action
 → optional Qwen reviewer: shadow or enforce
 → Python binds accepted evidence
 → reject / replan / continue
-→ answer gate
+→ answer gate → final semantic reviewer (shadow or enforce)
 ```
 
 ### สถานะล่าสุด: Rules + Shadow Risk Router
@@ -133,8 +135,8 @@ Tool result
 | Mode | ใช้เมื่อ | ผลของ Qwen reviewer |
 | --- | --- | --- |
 | `rules` | ค่า default เพื่อ backward compatibility | ไม่เรียก reviewer |
-| `shadow` | **แนะนำสำหรับทดลอง/สะสมข้อมูลตอนนี้** | บันทึกผลและ disagreement แต่ block evidence ไม่ได้ |
-| `enforce` | งานทดลองเท่านั้น | block high-risk evidence ได้; ยังมี false reject |
+| `shadow` | **แนะนำสำหรับทดลอง/สะสมข้อมูลตอนนี้** | review observation + final answer แต่ไม่ block |
+| `enforce` | งานทดลองเท่านั้น | block high-risk evidence และ final synthesis ที่ไม่ grounded; ยังอาจ false reject |
 
 ```bash
 # พฤติกรรมเดิมและเร็วที่สุด
