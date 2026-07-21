@@ -1,0 +1,601 @@
+{
+  "experiment": "hard_rules_vs_prompt_reviewer_vs_hybrid",
+  "model": "qwen/qwen3.5-35b-a3b",
+  "mcp_endpoint": "https://bb36-184-22-21-43.ngrok-free.app/mcp",
+  "live_mcp_calls": 9,
+  "observations": 8,
+  "wall_elapsed_ms": 54780,
+  "metrics": {
+    "hard_rules": {
+      "exact_accuracy": 8,
+      "total": 8,
+      "false_accepts": 0,
+      "false_rejects": 0,
+      "decisions": [
+        "retry",
+        "accept",
+        "retry",
+        "accept",
+        "retry",
+        "accept",
+        "retry",
+        "accept"
+      ],
+      "reviewer_calls": 0,
+      "elapsed_ms": 0,
+      "admission_accuracy": 8
+    },
+    "prompt_reviewer": {
+      "exact_accuracy": 4,
+      "total": 8,
+      "false_accepts": 0,
+      "false_rejects": 1,
+      "decisions": [
+        "query_more",
+        "accept",
+        "retry",
+        "accept",
+        "reject",
+        "reject",
+        "query_more",
+        "accept"
+      ],
+      "reviewer_calls": 8,
+      "elapsed_ms": 52434,
+      "prompt_tokens": 3524,
+      "completion_tokens": 8983,
+      "admission_accuracy": 7
+    },
+    "hybrid": {
+      "exact_accuracy": 7,
+      "total": 8,
+      "false_accepts": 0,
+      "false_rejects": 1,
+      "decisions": [
+        "retry",
+        "accept",
+        "retry",
+        "accept",
+        "retry",
+        "reject",
+        "retry",
+        "accept"
+      ],
+      "reviewer_calls": 4,
+      "estimated_reviewer_elapsed_ms": 23212,
+      "admission_accuracy": 7
+    }
+  },
+  "items": [
+    {
+      "case": "denominator",
+      "variant": "wrong",
+      "expected": "retry",
+      "step": "คำนวณเปอร์เซ็นต์พนักงานที่มี skills",
+      "sql": "SELECT COUNT(DISTINCT employee_id) AS skilled_employees FROM skills",
+      "result_chars": 37,
+      "hard": {
+        "decision": "retry",
+        "elapsed_ms": 0,
+        "failed": [
+          "semantic:explicit_denominator"
+        ],
+        "correct": true
+      },
+      "prompt": {
+        "derived_requirements": [
+          {
+            "id": "req_001",
+            "description": "ต้องนับจำนวนพนักงานที่มี skills (numerator)",
+            "basis": "user_goal: คำนวณเปอร์เซ็นต์พนักงานที่มี skills"
+          },
+          {
+            "id": "req_002",
+            "description": "ต้องนับจำนวนพนักงานทั้งหมด (denominator)",
+            "basis": "user_goal: คำนวณเปอร์เซ็นต์ ต้องมีทั้งตัวเศษและตัวส่วน"
+          },
+          {
+            "id": "req_003",
+            "description": "ต้องคำนวณค่าเปอร์เซ็นต์จากตัวเศษและตัวส่วน",
+            "basis": "user_goal: คำนวณเปอร์เซ็นต์พนักงานที่มี skills"
+          }
+        ],
+        "checks": [
+          {
+            "requirement_id": "req_001",
+            "status": "pass",
+            "evidence": "query returns COUNT(DISTINCT employee_id) AS skilled_employees = 7"
+          },
+          {
+            "requirement_id": "req_002",
+            "status": "fail",
+            "evidence": "query does not retrieve total employee count from employees table"
+          },
+          {
+            "requirement_id": "req_003",
+            "status": "fail",
+            "evidence": "query returns raw count (7), not a percentage value"
+          }
+        ],
+        "supports_step": false,
+        "sufficient": false,
+        "decision": "query_more",
+        "confidence": 0.9,
+        "reason": "Query only returns numerator (7 skilled employees) but step requires percentage calculation. Missing denominator (total employees) and percentage computation. Cannot complete step with current result.",
+        "suggested_next_action": "Execute query to get total employee count, then calculate percentage = (skilled_employees / total_employees) * 100",
+        "elapsed_ms": 5963,
+        "prompt_tokens": 422,
+        "completion_tokens": 765,
+        "correct": false
+      },
+      "hybrid": {
+        "decision": "retry",
+        "correct": true,
+        "reviewer_required_in_routed_runtime": false
+      }
+    },
+    {
+      "case": "denominator",
+      "variant": "correct",
+      "expected": "accept",
+      "step": "คำนวณเปอร์เซ็นต์พนักงานที่มี skills",
+      "sql": "SELECT 100.0 * COUNT(DISTINCT s.employee_id) / NULLIF(COUNT(DISTINCT e.employee_id), 0) AS pct_skill_coverage FROM employees e LEFT JOIN skills s ON e.employee_id = s.employee_id",
+      "result_chars": 39,
+      "hard": {
+        "decision": "accept",
+        "elapsed_ms": 0,
+        "failed": [],
+        "correct": true
+      },
+      "prompt": {
+        "derived_requirements": [
+          {
+            "id": "req_001",
+            "description": "Denominator must represent total count of all employees in the dataset",
+            "basis": "User goal requires percentage of employees, so total employee count is needed as denominator"
+          },
+          {
+            "id": "req_002",
+            "description": "Numerator must represent count of employees who have at least one skill",
+            "basis": "User goal specifies employees with skills, so only employees with skills should be counted in numerator"
+          },
+          {
+            "id": "req_003",
+            "description": "Percentage calculation must use formula: (employees with skills / total employees) * 100",
+            "basis": "User goal is to calculate percentage, requiring proper percentage formula"
+          }
+        ],
+        "checks": [
+          {
+            "requirement_id": "req_001",
+            "status": "pass",
+            "evidence": "COUNT(DISTINCT e.employee_id) in query counts all employees from employees table"
+          },
+          {
+            "requirement_id": "req_002",
+            "status": "pass",
+            "evidence": "COUNT(DISTINCT s.employee_id) with LEFT JOIN counts only non-NULL employee_ids from skills table (employees with skills)"
+          },
+          {
+            "requirement_id": "req_003",
+            "status": "pass",
+            "evidence": "Query uses 100.0 * numerator / denominator formula for percentage calculation"
+          }
+        ],
+        "supports_step": true,
+        "sufficient": true,
+        "decision": "accept",
+        "confidence": 0.9,
+        "reason": "The SQL query correctly implements the semantic requirements for calculating percentage of employees with skills. The LEFT JOIN properly identifies employees with skills (non-NULL s.employee_id) while counting all employees in denominator. The result 28.0 represents 28% which is a valid percentage value.",
+        "suggested_next_action": "Bind the result as evidence for the completed step",
+        "elapsed_ms": 5055,
+        "prompt_tokens": 443,
+        "completion_tokens": 965,
+        "correct": true
+      },
+      "hybrid": {
+        "decision": "accept",
+        "correct": true,
+        "reviewer_required_in_routed_runtime": true
+      }
+    },
+    {
+      "case": "temporal_window",
+      "variant": "wrong",
+      "expected": "retry",
+      "step": "รวมชั่วโมงอบรมก่อน review ล่าสุด",
+      "sql": "SELECT SUM(hours) AS pre_review_hours FROM training_records",
+      "result_chars": 35,
+      "hard": {
+        "decision": "retry",
+        "elapsed_ms": 0,
+        "failed": [
+          "semantic:pre_review_time_window",
+          "semantic:latest_review_anchor"
+        ],
+        "correct": true
+      },
+      "prompt": {
+        "derived_requirements": [
+          {
+            "id": "req_1",
+            "description": "Calculate the sum of training hours.",
+            "basis": "User goal: 'รวมชั่วโมงอบรม' (Sum training hours)"
+          },
+          {
+            "id": "req_2",
+            "description": "Filter training records to include only those occurring before the most recent review date.",
+            "basis": "User goal: 'ก่อน review ล่าสุด' (Before last review)"
+          }
+        ],
+        "checks": [
+          {
+            "requirement_id": "req_1",
+            "status": "pass",
+            "evidence": "SQL contains 'SELECT SUM(hours)'"
+          },
+          {
+            "requirement_id": "req_2",
+            "status": "fail",
+            "evidence": "SQL lacks WHERE clause or JOIN to filter by review date"
+          }
+        ],
+        "supports_step": false,
+        "sufficient": false,
+        "decision": "retry",
+        "confidence": 0.95,
+        "reason": "The provided SQL query aggregates all training hours without filtering based on the review date. It fails to implement the semantic requirement of summing hours only prior to the last review, making the result (252) potentially inaccurate for the specific goal.",
+        "suggested_next_action": "Update the SQL query to include a filter condition comparing training dates against the maximum review date or join with a reviews table to exclude post-review records.",
+        "elapsed_ms": 12346,
+        "prompt_tokens": 417,
+        "completion_tokens": 2311,
+        "correct": true
+      },
+      "hybrid": {
+        "decision": "retry",
+        "correct": true,
+        "reviewer_required_in_routed_runtime": false
+      }
+    },
+    {
+      "case": "temporal_window",
+      "variant": "correct",
+      "expected": "accept",
+      "step": "รวมชั่วโมงอบรมก่อน review ล่าสุด",
+      "sql": "WITH latest_review AS (SELECT employee_id, review_date, ROW_NUMBER() OVER (PARTITION BY employee_id ORDER BY review_date DESC) rn FROM performance_reviews) SELECT SUM(t.hours) AS pre_review_hours FROM latest_review lr LEFT JOIN training_records t ON t.employee_id = lr.employee_id AND t.end_date <= lr.review_date WHERE lr.rn = 1",
+      "result_chars": 35,
+      "hard": {
+        "decision": "accept",
+        "elapsed_ms": 0,
+        "failed": [],
+        "correct": true
+      },
+      "prompt": {
+        "derived_requirements": [
+          {
+            "id": "req_001",
+            "description": "Identify the most recent review date for each employee",
+            "basis": "User goal requires 'review ล่าสุด' (last review)"
+          },
+          {
+            "id": "req_002",
+            "description": "Sum training hours where training ended on or before the review date",
+            "basis": "User goal requires 'ก่อน review' (before review)"
+          },
+          {
+            "id": "req_003",
+            "description": "Aggregate training hours across all employees for the total",
+            "basis": "User goal says 'รวมชั่วโมง' (sum hours) without specifying per-employee breakdown"
+          }
+        ],
+        "checks": [
+          {
+            "requirement_id": "req_001",
+            "status": "pass",
+            "evidence": "ROW_NUMBER() OVER (PARTITION BY employee_id ORDER BY review_date DESC) rn with WHERE lr.rn = 1 correctly identifies latest review per employee"
+          },
+          {
+            "requirement_id": "req_002",
+            "status": "pass",
+            "evidence": "JOIN condition t.end_date <= lr.review_date correctly filters training hours before review date"
+          },
+          {
+            "requirement_id": "req_003",
+            "status": "pass",
+            "evidence": "SUM(t.hours) aggregates all training hours without GROUP BY, returning total across all employees"
+          }
+        ],
+        "supports_step": true,
+        "sufficient": true,
+        "decision": "accept",
+        "confidence": 0.85,
+        "reason": "The query correctly implements the semantic requirements: identifies latest review per employee using ROW_NUMBER, filters training hours before review date using end_date <= review_date, and sums all hours. The result (204 hours) is non-empty and semantically valid for the step.",
+        "suggested_next_action": "No further action needed - step is complete with valid evidence",
+        "elapsed_ms": 5117,
+        "prompt_tokens": 480,
+        "completion_tokens": 930,
+        "correct": true
+      },
+      "hybrid": {
+        "decision": "accept",
+        "correct": true,
+        "reviewer_required_in_routed_runtime": true
+      }
+    },
+    {
+      "case": "join_cardinality",
+      "variant": "wrong",
+      "expected": "retry",
+      "step": "join skills และ projects โดยป้องกันยอดซ้ำ",
+      "sql": "SELECT COUNT(*) AS joined_rows FROM employees e JOIN skills s ON e.employee_id = s.employee_id JOIN projects p ON e.employee_id = p.employee_id",
+      "result_chars": 25,
+      "hard": {
+        "decision": "retry",
+        "elapsed_ms": 0,
+        "failed": [
+          "semantic:safe_join_cardinality"
+        ],
+        "correct": true
+      },
+      "prompt": {
+        "derived_requirements": [
+          {
+            "id": "req_001",
+            "description": "Query must join skills and projects tables",
+            "basis": "user_goal and active_step specify joining skills and projects"
+          },
+          {
+            "id": "req_002",
+            "description": "Query must prevent duplicate counts when joining multiple tables",
+            "basis": "active_step explicitly states 'ป้องกันยอดซ้ำ' (prevent duplicate counts)"
+          },
+          {
+            "id": "req_003",
+            "description": "Result should represent unique entities, not Cartesian product combinations",
+            "basis": "analytical_contract requires semantic sufficiency for the step"
+          }
+        ],
+        "checks": [
+          {
+            "requirement_id": "req_001",
+            "status": "pass",
+            "evidence": "Query joins employees, skills, and projects tables"
+          },
+          {
+            "requirement_id": "req_002",
+            "status": "fail",
+            "evidence": "Query uses COUNT(*) without DISTINCT or GROUP BY, will count Cartesian product of skill-project combinations per employee"
+          },
+          {
+            "requirement_id": "req_003",
+            "status": "fail",
+            "evidence": "Many-to-many join on employee_id creates duplicate employee rows when employee has multiple skills AND multiple projects"
+          }
+        ],
+        "supports_step": false,
+        "sufficient": false,
+        "decision": "reject",
+        "confidence": 0.9,
+        "reason": "The query does not prevent duplicate counts. When an employee has multiple skills and multiple projects, the JOIN creates a Cartesian product that multiplies rows (e.g., 2 skills × 3 projects = 6 rows for one employee). To prevent duplicates, the query should use DISTINCT, GROUP BY, or subqueries to count unique employees or unique skill-project combinations.",
+        "suggested_next_action": "Modify query to use COUNT(DISTINCT employee_id) or GROUP BY employee_id to prevent duplicate counting from many-to-many joins",
+        "elapsed_ms": 5233,
+        "prompt_tokens": 424,
+        "completion_tokens": 872,
+        "correct": false
+      },
+      "hybrid": {
+        "decision": "retry",
+        "correct": true,
+        "reviewer_required_in_routed_runtime": false
+      }
+    },
+    {
+      "case": "join_cardinality",
+      "variant": "correct",
+      "expected": "accept",
+      "step": "join skills และ projects โดยป้องกันยอดซ้ำ",
+      "sql": "WITH skill_emp AS (SELECT employee_id, COUNT(*) skill_count FROM skills GROUP BY employee_id), project_emp AS (SELECT employee_id, SUM(project_value) project_value FROM projects GROUP BY employee_id) SELECT COUNT(*) AS joined_rows FROM employees e LEFT JOIN skill_emp s ON e.employee_id = s.employee_id LEFT JOIN project_emp p ON e.employee_id = p.employee_id",
+      "result_chars": 25,
+      "hard": {
+        "decision": "accept",
+        "elapsed_ms": 0,
+        "failed": [],
+        "correct": true
+      },
+      "prompt": {
+        "derived_requirements": [
+          {
+            "id": "req_1",
+            "description": "Query must join skills and projects tables together",
+            "basis": "User goal explicitly states 'join skills และ projects'"
+          },
+          {
+            "id": "req_2",
+            "description": "Query must prevent duplicate counts when joining skills and projects",
+            "basis": "User goal explicitly states 'ป้องกันยอดซ้ำ'"
+          },
+          {
+            "id": "req_3",
+            "description": "Result must show actual joined data or prove join logic is correct",
+            "basis": "Analytical contract requires step to be supported by returned evidence"
+          },
+          {
+            "id": "req_4",
+            "description": "Join should be on employee_id as the common key between tables",
+            "basis": "Tool query uses employee_id as join key"
+          }
+        ],
+        "checks": [
+          {
+            "requirement_id": "req_1",
+            "status": "fail",
+            "evidence": "Query only joins skill_emp and project_emp (aggregations) to employees table, does not join skills and projects tables directly"
+          },
+          {
+            "requirement_id": "req_2",
+            "status": "fail",
+            "evidence": "No DISTINCT or deduplication logic shown; only aggregates skills and projects separately before joining to employees"
+          },
+          {
+            "requirement_id": "req_3",
+            "status": "fail",
+            "evidence": "Result only shows COUNT(*) = 25 joined_rows, does not show actual joined data to verify correctness"
+          },
+          {
+            "requirement_id": "req_4",
+            "status": "pass",
+            "evidence": "Query uses employee_id as join key between employees, skill_emp, and project_emp"
+          }
+        ],
+        "supports_step": false,
+        "sufficient": false,
+        "decision": "reject",
+        "confidence": 0.85,
+        "reason": "The query does not actually join skills and projects tables together. It only aggregates skills and projects separately, then joins those aggregations to employees. This does not demonstrate preventing duplicates when joining skills and projects. The result (25 rows) only shows employee count after joining, not the actual skills-projects join with deduplication logic.",
+        "suggested_next_action": "Rewrite query to directly join skills and projects tables with proper deduplication (e.g., using DISTINCT, or showing actual joined rows with employee_id, skill, and project columns)",
+        "elapsed_ms": 7025,
+        "prompt_tokens": 476,
+        "completion_tokens": 1207,
+        "correct": false
+      },
+      "hybrid": {
+        "decision": "reject",
+        "correct": false,
+        "reviewer_required_in_routed_runtime": true
+      }
+    },
+    {
+      "case": "cross_evidence",
+      "variant": "wrong",
+      "expected": "retry",
+      "step": "ยืนยัน active headcount กับหลักฐานก่อนหน้า",
+      "sql": "SELECT COUNT(*) + 1 AS active_headcount FROM employees WHERE status = N'ปฏิบัติงาน'",
+      "result_chars": 35,
+      "hard": {
+        "decision": "retry",
+        "elapsed_ms": 0,
+        "failed": [
+          "semantic:cross_evidence_consistency"
+        ],
+        "correct": true
+      },
+      "prompt": {
+        "derived_requirements": [
+          {
+            "id": "req_001",
+            "description": "The active headcount query must count employees with active status without arbitrary additions",
+            "basis": "user_goal and analytical_contract - verification requires accurate headcount semantics"
+          },
+          {
+            "id": "req_002",
+            "description": "The result must be consistent with prior evidence (active_headcount = 25.0)",
+            "basis": "selected_prior_facts - verification step requires comparison with prior facts"
+          },
+          {
+            "id": "req_003",
+            "description": "Any deviation from prior evidence must be explainable and justified",
+            "basis": "analytical_contract - completed step must be supported by SQL semantics and returned evidence"
+          }
+        ],
+        "checks": [
+          {
+            "requirement_id": "req_001",
+            "status": "fail",
+            "evidence": "Query contains '+1' which is an arbitrary addition not justified by the goal"
+          },
+          {
+            "requirement_id": "req_002",
+            "status": "fail",
+            "evidence": "Current result (26) does not match prior evidence (25.0) - discrepancy of 1"
+          },
+          {
+            "requirement_id": "req_003",
+            "status": "unknown",
+            "evidence": "No explanation provided for the +1 addition or the discrepancy"
+          }
+        ],
+        "supports_step": false,
+        "sufficient": false,
+        "decision": "query_more",
+        "confidence": 0.75,
+        "reason": "The query adds an arbitrary +1 to the count without justification, creating a discrepancy with prior evidence (25 vs 26). This requires clarification before the verification step can be considered complete.",
+        "suggested_next_action": "Request clarification on the +1 addition in the query and verify if the discrepancy with prior headcount (25) is intentional or an error",
+        "elapsed_ms": 5680,
+        "prompt_tokens": 423,
+        "completion_tokens": 1088,
+        "correct": false
+      },
+      "hybrid": {
+        "decision": "retry",
+        "correct": true,
+        "reviewer_required_in_routed_runtime": false
+      }
+    },
+    {
+      "case": "cross_evidence",
+      "variant": "correct",
+      "expected": "accept",
+      "step": "ยืนยัน active headcount กับหลักฐานก่อนหน้า",
+      "sql": "SELECT COUNT(*) AS active_headcount FROM employees WHERE status = N'ปฏิบัติงาน'",
+      "result_chars": 35,
+      "hard": {
+        "decision": "accept",
+        "elapsed_ms": 0,
+        "failed": [],
+        "correct": true
+      },
+      "prompt": {
+        "derived_requirements": [
+          {
+            "id": "req_001",
+            "description": "Query must count employees with active/working status",
+            "basis": "User goal requires verifying active headcount"
+          },
+          {
+            "id": "req_002",
+            "description": "Result must be comparable with prior evidence (25.0)",
+            "basis": "Selected prior facts show active_headcount = 25.0"
+          },
+          {
+            "id": "req_003",
+            "description": "Query result must be non-empty and semantically valid",
+            "basis": "Analytical contract requires supported evidence"
+          }
+        ],
+        "checks": [
+          {
+            "requirement_id": "req_001",
+            "status": "pass",
+            "evidence": "Query filters WHERE status = N'ปฏิบัติงาน' (working status)"
+          },
+          {
+            "requirement_id": "req_002",
+            "status": "pass",
+            "evidence": "Result 25 matches prior fact 25.0"
+          },
+          {
+            "requirement_id": "req_003",
+            "status": "pass",
+            "evidence": "Raw tool result contains 1 row with active_headcount = 25"
+          }
+        ],
+        "supports_step": true,
+        "sufficient": true,
+        "decision": "accept",
+        "confidence": 0.95,
+        "reason": "The SQL query correctly counts active employees (status = 'ปฏิบัติงาน'), returns a valid count of 25, and matches the prior evidence of 25.0. All semantic requirements for verifying active headcount are satisfied.",
+        "suggested_next_action": "No further action needed - step is complete and verified",
+        "elapsed_ms": 6015,
+        "prompt_tokens": 439,
+        "completion_tokens": 845,
+        "correct": true
+      },
+      "hybrid": {
+        "decision": "accept",
+        "correct": true,
+        "reviewer_required_in_routed_runtime": true
+      }
+    }
+  ],
+  "scope_limit": "One run on four declared HR semantic risks; prompt results are model/sample dependent."
+}

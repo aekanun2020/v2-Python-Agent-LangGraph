@@ -46,6 +46,7 @@ make compare-lab6-hr
 make compare-observation-policy-hr
 make compare-semantic-observation-hr
 make compare-semantic-matrix-hr
+make compare-prompt-observation-hr
 ```
 
 ความแตกต่างสำคัญ: LLM ยังใช้ reasoning เพื่อสร้าง/แก้แผน แต่ไม่มีสิทธิ์เปลี่ยน
@@ -105,6 +106,21 @@ cross-evidence contradiction ผล captured run ผ่าน 4/4 ด้วย 9
 wrong queries ทุกตัว execute สำเร็จและ structural checks รับ แต่ semantic policy
 ตัดสิน `retry` ทั้งหมด ก่อนรับ corrected queries เป็น `accept` ดูภาพที่
 `../../artifacts/lab6_hr_semantic_matrix.png`
+
+### Optional Qwen Semantic Reviewer + Hybrid gate
+
+เปิด prompt reviewer ใน agent จริงด้วย:
+
+```bash
+PROMPT_SEMANTIC_REVIEW=1 make run-pure-planner
+```
+
+reviewer ใช้ system prompt แยก context เพื่อ derive semantic requirements แล้วคืน JSON
+ส่วน Hybrid ให้ hard failure veto เสมอและเรียก reviewer เฉพาะ hard checks ที่ผ่าน
+ผล comparison Qwen: rules 8/8, prompt 7/8 admission accuracy และ Hybrid 7/8;
+prompt มี false reject corrected join หนึ่งครั้ง ใช้ 52.434 วินาทีและ 12,507 tokens
+หาก route แบบ Hybrid จะลด reviewer calls จาก 8 เหลือ 4 ดูภาพที่
+`../../artifacts/lab6_hr_prompt_reviewer_comparison.png`
 
 ---
 
