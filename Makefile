@@ -1,7 +1,7 @@
 PYTHON ?= python
 HR_CHALLENGE ?= skills_project_risk
 
-.PHONY: test proof proof-pure-planner run-pure-planner compare-lab6-hr compare-lab6-hr-adversarial compare-observation-policy-hr run-planner compare-lab8 compare-lab8-hr validate-hr-challenges compile
+.PHONY: test proof proof-pure-planner run-pure-planner compare-lab6-hr compare-lab6-hr-adversarial compare-observation-policy-hr compare-semantic-observation-hr run-planner compare-lab8 compare-lab8-hr validate-hr-challenges compile
 
 test:
 	$(PYTHON) -m unittest -v tests.test_lab6_planner_runtime tests.test_observation_policy tests.test_hr_analytical_contract tests.test_lab8_planner tests.test_lab8_comparison tests.test_hr_challenges
@@ -23,6 +23,9 @@ compare-lab6-hr-adversarial:
 
 compare-observation-policy-hr:
 	$(PYTHON) -m scripts.compare_observation_policy_hr
+
+compare-semantic-observation-hr:
+	$(PYTHON) -m scripts.compare_semantic_observation_hr
 
 run-planner:
 	$(PYTHON) labs/lab8_langgraph/agent_langgraph.py

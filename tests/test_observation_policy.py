@@ -41,6 +41,34 @@ class DynamicObservationPolicyTests(unittest.TestCase):
         self.assertEqual(obs.decision, "query_more")
         self.assertIn("completeness", obs.policy_modules)
 
+    def test_successful_query_with_wrong_population_and_grain_is_retried(self):
+        obs = observe_result(
+            step_description="นับพนักงานที่ปฏิบัติงานแยกแผนก",
+            tool="execute_query_tool",
+            tool_arguments={"query": "SELECT COUNT(*) AS headcount FROM employees"},
+            result='[{"headcount":100}]',
+            semantic_checks=True,
+        )
+        self.assertEqual(obs.result_type, "query_result")
+        self.assertEqual(obs.decision, "retry")
+        self.assertIn("semantic:active_employee_population", obs.failed)
+        self.assertIn("semantic:department_grain", obs.failed)
+
+    def test_correct_population_and_grain_are_accepted(self):
+        obs = observe_result(
+            step_description="นับพนักงานที่ปฏิบัติงานแยกแผนก",
+            tool="execute_query_tool",
+            tool_arguments={"query": (
+                "SELECT department_id, COUNT(*) AS headcount FROM employees "
+                "WHERE status = N'ปฏิบัติงาน' GROUP BY department_id"
+            )},
+            result='[{"department_id":1,"headcount":10}]',
+            semantic_checks=True,
+        )
+        self.assertEqual(obs.decision, "accept")
+        self.assertIn("semantic:active_employee_population", obs.passed)
+        self.assertIn("semantic:department_grain", obs.passed)
+
 
 if __name__ == "__main__":
     unittest.main()

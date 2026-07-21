@@ -129,7 +129,8 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                     observation = None
                     if dynamic_observation:
                         observation = observe_result(
-                            step_description=active[0].description, tool=name, result=result
+                            step_description=active[0].description, tool=name, result=result,
+                            tool_arguments=args, semantic_checks=True
                         )
                         trace.append({"step_id": active[0].id, "tool": name,
                                       "tool_call_id": call_id, "observation": observation.as_dict()})

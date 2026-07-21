@@ -1,0 +1,94 @@
+{
+  "experiment": "successful_but_semantically_wrong_hr_result",
+  "step": "นับพนักงานที่ปฏิบัติงานแยกแผนก",
+  "model": "not used — semantic observation layer isolated",
+  "mcp_endpoint": "https://bb36-184-22-21-43.ngrok-free.app/mcp",
+  "elapsed_ms": 302,
+  "live_mcp_calls": [
+    {
+      "query": "SELECT COUNT(*) AS headcount FROM employees",
+      "execution_succeeded": true,
+      "result_chars": 21
+    },
+    {
+      "query": "SELECT department, COUNT(*) AS headcount FROM employees WHERE status = N'ปฏิบัติงาน' GROUP BY department",
+      "execution_succeeded": true,
+      "result_chars": 260
+    }
+  ],
+  "structural_observation_only": {
+    "decision": "accept",
+    "approved": true,
+    "wrong_evidence_accepted": 1,
+    "observation": {
+      "result_type": "query_result",
+      "policy_modules": [
+        "execution_integrity",
+        "payload_presence",
+        "step_tool_alignment",
+        "result_shape",
+        "population_and_grain"
+      ],
+      "passed": [
+        "execution_integrity",
+        "payload_presence",
+        "step_tool_alignment"
+      ],
+      "failed": [],
+      "warnings": [],
+      "semantic_requirements": [],
+      "supports_step": true,
+      "sufficient": true,
+      "decision": "accept",
+      "reason": "hard checks passed for this step, tool, and result type"
+    }
+  },
+  "semantic_observation": {
+    "wrong_query_decision": "retry",
+    "wrong_query_failed_checks": [
+      "semantic:active_employee_population",
+      "semantic:department_grain"
+    ],
+    "wrong_evidence_accepted": 0,
+    "correct_query_decision": "accept",
+    "correct_query_passed_checks": [
+      "execution_integrity",
+      "payload_presence",
+      "step_tool_alignment",
+      "semantic:active_employee_population",
+      "semantic:department_grain"
+    ],
+    "correct_query_observation": {
+      "result_type": "query_result",
+      "policy_modules": [
+        "execution_integrity",
+        "payload_presence",
+        "step_tool_alignment",
+        "result_shape",
+        "population_and_grain",
+        "semantic_contract"
+      ],
+      "passed": [
+        "execution_integrity",
+        "payload_presence",
+        "step_tool_alignment",
+        "semantic:active_employee_population",
+        "semantic:department_grain"
+      ],
+      "failed": [],
+      "warnings": [],
+      "semantic_requirements": [
+        "active_employee_population",
+        "department_grain"
+      ],
+      "supports_step": true,
+      "sufficient": true,
+      "decision": "accept",
+      "reason": "hard checks passed for this step, tool, and result type"
+    },
+    "approved": true,
+    "evidence_count": 1
+  },
+  "supported": true,
+  "scope_limit": "Proves two explicit step semantics only: active population and department grain."
+}
