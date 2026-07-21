@@ -167,6 +167,25 @@ class DynamicObservationPolicyTests(unittest.TestCase):
         self.assertEqual(obs.decision, "retry")
         self.assertIn("semantic:loan_status_not_approval", obs.failed)
 
+    def test_post_origination_status_filter_is_rejected_without_approval_alias(self):
+        obs = observe_result(
+            goal_description="ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน",
+            step_description="คำนวณวงเงินตามอายุงาน",
+            tool="execute_query_tool",
+            tool_arguments={"query": (
+                "SELECT d.emp_length, AVG(f.funded_amnt) avg_funded "
+                "FROM loans_fact f JOIN emp_length_dim d "
+                "ON f.emp_length_id=d.emp_length_id JOIN loan_status_dim s "
+                "ON f.loan_status_id=s.loan_status_id "
+                "WHERE s.loan_status IN ('Current','Fully Paid') "
+                "GROUP BY d.emp_length"
+            )},
+            result='[{"emp_length":"10+ years","avg_funded":16402.75}]',
+            semantic_checks=True,
+        )
+        self.assertEqual(obs.decision, "retry")
+        self.assertIn("semantic:loan_status_not_approval", obs.failed)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -36,7 +36,8 @@ loan_status เช่น Current/Fully Paid/Charged Off คือผลหลั
 ตอบสุดท้ายได้เมื่อทุกขั้น completed เท่านั้น ใช้ T-SQL TOP ไม่ใช้ LIMIT"""
 
 NON_EVIDENCE_STEP_WORDS = (
-    "สรุป", "นำเสนอ", "รายงาน", "ข้อเสนอแนะ", "วิเคราะห์ผล", "ตีความ", "ข้อจำกัด",
+    "สรุปคำตอบ", "สรุปผลการวิเคราะห์", "เขียนสรุป", "จัดทำสรุป",
+    "นำเสนอ", "รายงาน", "ข้อเสนอแนะ", "วิเคราะห์ผล", "ตีความ", "ข้อจำกัด",
     "summary", "summarize", "synthesis", "synthesize", "final", "answer", "report",
     "insight", "recommend", "interpret", "evaluate", "assess", "limitation",
 )
@@ -80,6 +81,13 @@ def validate_final_semantics(question: str, answer: str,
     ))
     failures: list[str] = []
     if approval_amount_goal:
+        if "loan_status" in text and any(token in text for token in (
+            "อนุมัติ", "approved", "approval"
+        )):
+            failures.append(
+                "ห้ามใช้ loan_status เช่น Current/Fully Paid นิยามประชากรที่อนุมัติ; "
+                "เป็นสถานะหลังปล่อยกู้"
+            )
         if re.search(r"วงเงิน(?:กู้)?ที่อนุมัติ\s*\(\s*loan_amnt\s*\)", text):
             failures.append(
                 "ห้ามเรียก loan_amnt ว่าวงเงินที่อนุมัติ; ใช้ funded_amnt เป็น proxy ของยอด funding"

@@ -179,12 +179,9 @@ def _check_query_semantics(requirements: list[str], tool_arguments: dict | None,
             ok = "funded_amnt" in sql
         elif requirement == "loan_status_not_approval":
             # Loan status describes performance after origination.  It cannot be
-            # relabelled as an approval decision (for example Current/Fully Paid).
-            uses_status = "loan_status" in sql
-            labels_approval = any(token in sql for token in (
-                "approval", "approved", "approve_rate", "approval_rate", "อนุมัติ"
-            ))
-            ok = not (uses_status and labels_approval)
+            # used to select an "approved" population (for example Current/Fully
+            # Paid), even when the SQL avoids an approval-looking alias.
+            ok = "loan_status" not in sql
         (passed if ok else failed).append(requirement)
     if prior_facts and "cross_evidence_consistency" in requirements:
         current = extract_numeric_facts(result)

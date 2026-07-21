@@ -3,10 +3,22 @@ import unittest
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
 from labs.lab6_todo.agent_planner import (
     normalize_plan_descriptions, require_final_answer, validate_final_semantics,
+    validate_plan_descriptions,
 )
 
 
 class PurePythonPlannerTests(unittest.TestCase):
+    def test_summary_statistics_is_an_mcp_verifiable_step(self):
+        validate_plan_descriptions([
+            "คำนวณสถิติสรุปวงเงินกู้โดยเฉลี่ยตามระยะเวลาการทำงาน"
+        ])
+
+    def test_final_gate_rejects_status_filtered_approved_population(self):
+        with self.assertRaisesRegex(ValueError, "สถานะหลังปล่อยกู้"):
+            validate_final_semantics(
+                "ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน",
+                "วงเงินกู้ที่มีการอนุมัติ (loan_status = Current หรือ Fully Paid)",
+            )
     def test_final_semantic_gate_rejects_status_as_approval_and_currency(self):
         with self.assertRaisesRegex(ValueError, "loan_status"):
             validate_final_semantics(
