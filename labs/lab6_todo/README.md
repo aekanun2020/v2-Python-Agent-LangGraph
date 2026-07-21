@@ -27,6 +27,32 @@
 - แก้แผนระหว่างทำงานผ่าน `plan_revise` และรักษาหลักฐานเดิม
 - final answer ถูก runtime gate ปฏิเสธจนกว่าทุกขั้นเสร็จและมีหลักฐาน
 
+### โหมดล่าสุดที่ควรใช้
+
+Runtime มี Risk Router สามโหมด โดยค่า default ยังคงเป็น `rules` เพื่อไม่เปลี่ยน
+behavior เดิม ส่วนโหมดที่แนะนำสำหรับเรียนรู้และเก็บผล reviewer คือ `shadow`:
+
+```bash
+OBSERVATION_ROUTING_MODE=shadow make run-pure-planner
+```
+
+ใน Shadow mode hard rules ยังเป็นผู้ตัดสิน evidence เหมือนเดิม เฉพาะผล high risk
+ที่ผ่าน hard checks แล้วจึงเรียก Qwen reviewer และบันทึกผลลง trace โดย reviewer
+ไม่มีสิทธิ์ block หลักฐาน ผล regression ล่าสุดคือ Rules 8/8, Shadow 8/8,
+behavior regression 0 และ reviewer calls ลดลง 62.5%
+
+```text
+MCP result → hard observation → risk router
+                            ├─ low/medium → hard decision
+                            └─ high → Qwen review (shadow only)
+                                      ↓
+                              hard decision remains final
+```
+
+ยังไม่แนะนำ `OBSERVATION_ROUTING_MODE=enforce` เป็น default เพราะ captured Qwen run
+มี false reject corrected join หนึ่งครั้ง ดูภาพสรุปล่าสุดที่
+`../../artifacts/lab6_hr_shadow_router_comparison.png`
+
 ```text
 while (plain Python):
   LLM proposes action

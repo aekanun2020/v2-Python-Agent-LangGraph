@@ -19,10 +19,55 @@ LLM proposes action
 → Python validates state + analytical contract
 → MCP executes
 → dynamic observation: accept / retry / query_more / reject
+→ risk router: low / medium / high
+→ optional Qwen reviewer: shadow or enforce
 → Python binds accepted evidence
 → reject / replan / continue
 → answer gate
 ```
+
+### สถานะล่าสุด: Rules + Shadow Risk Router
+
+เวอร์ชันล่าสุด **ไม่ใช่ LangGraph** และไม่ให้ Qwen reviewer ตัดสินทุกผลลัพธ์
+Runtime ใช้ hard rules เป็น authority แล้ว route เฉพาะ observation ความเสี่ยงสูงไปให้
+Qwen ตรวจ semantics เพิ่ม:
+
+```text
+Tool result
+→ Structural checks
+→ Hard semantic rules
+→ Risk Router
+   ├─ low/medium: ใช้ hard decision
+   └─ high: เรียก independent Qwen reviewer
+→ rules/shadow/enforce กำหนดอำนาจของ reviewer
+→ Evidence Gate → PlannerState → Answer Gate
+```
+
+| Mode | ใช้เมื่อ | ผลของ Qwen reviewer |
+| --- | --- | --- |
+| `rules` | ค่า default เพื่อ backward compatibility | ไม่เรียก reviewer |
+| `shadow` | **แนะนำสำหรับทดลอง/สะสมข้อมูลตอนนี้** | บันทึกผลและ disagreement แต่ block evidence ไม่ได้ |
+| `enforce` | งานทดลองเท่านั้น | block high-risk evidence ได้; ยังมี false reject |
+
+```bash
+# พฤติกรรมเดิมและเร็วที่สุด
+OBSERVATION_ROUTING_MODE=rules make run-pure-planner
+
+# โหมดล่าสุดที่แนะนำให้ผู้เรียนทดลอง
+OBSERVATION_ROUTING_MODE=shadow make run-pure-planner
+
+# ยังไม่แนะนำเป็น default
+OBSERVATION_ROUTING_MODE=enforce make run-pure-planner
+```
+
+หลักฐานล่าสุดจาก observations ชุดเดียวกัน: Rules 8/8, Shadow 8/8,
+Shadow behavior regression = 0, high-risk recall 6/6 และลด reviewer calls 62.5%
+ส่วน Enforce ได้ 7/8 เพราะ Qwen false reject corrected join หนึ่งครั้ง
+
+![สถานะล่าสุด: Rules vs Shadow Router vs Enforce](artifacts/lab6_hr_shadow_router_comparison.png)
+
+> `shadow` ยังมี latency/token cost เมื่อพบ high risk แต่ไม่ทำให้ evidence decision
+> เปลี่ยนจาก rules ส่วน `enforce` ยังต้องสะสมผลหลายโจทย์และหลาย runs ก่อนใช้งานจริง
 
 ### Quick start สำหรับผู้เรียน
 
@@ -57,18 +102,23 @@ python -m unittest -v tests.test_lab6_planner_runtime tests.test_hr_analytical_c
 make proof-pure-planner
 ```
 
-หรือใช้คำสั่งย่อ:
+คำสั่งหลัก:
 
 ```bash
-make test        # unit tests
-make proof-pure-planner # Pure Python evidence gate + MCP จริง
-make run-pure-planner   # Pure Python Planner + OpenRouter + MCP
-make compare-lab6-hr # TodoWrite เดิม vs Pure Python Planner บนโจทย์ HR เดียวกัน
-make compare-observation-policy-hr # controlled proof ด้วย MCP จริง ไม่ต้องใช้ LLM key
-make compare-semantic-observation-hr # successful-but-wrong semantic proof
-make compare-semantic-matrix-hr # denominator/time/join/contradiction matrix
-make compare-prompt-observation-hr # hard rules vs Qwen reviewer vs hybrid
-make compare-shadow-router-hr # replay rules/shadow/enforce โดยไม่เรียก API ซ้ำ
+make test                     # regression suite
+make run-pure-planner         # Agent จริง; default routing mode = rules
+make compare-shadow-router-hr # replay หลักฐานล่าสุด ไม่เรียก API ซ้ำ
+```
+
+คำสั่งทดลองย้อนหลัง:
+
+```bash
+make proof-pure-planner             # Evidence Gate + MCP จริง
+make compare-lab6-hr                # TodoWrite vs Pure Python Planner
+make compare-observation-policy-hr  # error-level observation proof
+make compare-semantic-observation-hr
+make compare-semantic-matrix-hr
+make compare-prompt-observation-hr  # ใช้ Qwen reviewer 8 calls
 ```
 
 > คำสั่ง end-to-end อ่าน endpoint/key จาก `.env` ผ่าน `python-dotenv`
