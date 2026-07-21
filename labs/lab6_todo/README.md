@@ -47,6 +47,7 @@ make compare-observation-policy-hr
 make compare-semantic-observation-hr
 make compare-semantic-matrix-hr
 make compare-prompt-observation-hr
+make compare-shadow-router-hr
 ```
 
 ความแตกต่างสำคัญ: LLM ยังใช้ reasoning เพื่อสร้าง/แก้แผน แต่ไม่มีสิทธิ์เปลี่ยน
@@ -112,7 +113,9 @@ wrong queries ทุกตัว execute สำเร็จและ structural 
 เปิด prompt reviewer ใน agent จริงด้วย:
 
 ```bash
-PROMPT_SEMANTIC_REVIEW=1 make run-pure-planner
+OBSERVATION_ROUTING_MODE=rules make run-pure-planner   # default
+OBSERVATION_ROUTING_MODE=shadow make run-pure-planner # reviewer advisory
+OBSERVATION_ROUTING_MODE=enforce make run-pure-planner
 ```
 
 reviewer ใช้ system prompt แยก context เพื่อ derive semantic requirements แล้วคืน JSON
@@ -121,6 +124,14 @@ reviewer ใช้ system prompt แยก context เพื่อ derive semant
 prompt มี false reject corrected join หนึ่งครั้ง ใช้ 52.434 วินาทีและ 12,507 tokens
 หาก route แบบ Hybrid จะลด reviewer calls จาก 8 เหลือ 4 ดูภาพที่
 `../../artifacts/lab6_hr_prompt_reviewer_comparison.png`
+
+Shadow Router จัด observation เป็น low/medium/high และเรียก Qwen เฉพาะ high risk ที่
+hard checks ผ่าน ใน `shadow` reviewer decision ถูกบันทึกใน trace แต่เปลี่ยน evidence
+ไม่ได้ ผล replay: high-risk recall 6/6, reviewer calls ลด 62.5%, disagreement 1 และ
+behavior regression = 0 ดูภาพ `../../artifacts/lab6_hr_shadow_router_comparison.png`
+
+`PROMPT_SEMANTIC_REVIEW=1` ยังรองรับย้อนหลังและเทียบเท่า `enforce` แต่ผู้เรียนควรใช้
+`OBSERVATION_ROUTING_MODE` เพราะแสดงอำนาจของ reviewer ชัดกว่า
 
 ---
 

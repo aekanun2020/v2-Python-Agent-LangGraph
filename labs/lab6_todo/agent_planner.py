@@ -17,7 +17,10 @@ from labs.core import config, llm
 from labs.core.registry import ToolRegistry
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
 from labs.lab6_todo.observation_policy import extract_numeric_facts, observe_result
-from labs.lab6_todo.semantic_reviewer import hybrid_decision, review_observation
+from labs.lab6_todo.semantic_reviewer import review_observation
+from labs.lab6_todo.observation_router import (
+    assess_observation_risk, routed_decision, validate_routing_mode,
+)
 
 SYSTEM = """คุณคือ HR data agent ที่ทำงานตามแผนและหลักฐานจริง
 ก่อนเรียก MCP ต้องใช้ plan_write แล้ว plan_start ทีละขั้น
@@ -68,10 +71,14 @@ def planner_tools() -> list[dict]:
 
 
 def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validator=None,
-        dynamic_observation: bool = False, prompt_semantic_review: bool = False):
+        dynamic_observation: bool = False, prompt_semantic_review: bool = False,
+        observation_routing_mode: str = "rules"):
     plan: PlannerState | None = None
     trace: list[dict] = []
     accepted_facts: dict[str, float] = {}
+    routing_mode = validate_routing_mode(
+        "enforce" if prompt_semantic_review else observation_routing_mode
+    )
     tools = planner_tools() + registry.openai_tools
     messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": question}]
 
@@ -137,6 +144,11 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                         )
                         trace.append({"step_id": active[0].id, "tool": name,
                                       "tool_call_id": call_id, "observation": observation.as_dict()})
+                        risk = assess_observation_risk(
+                            hard=observation, step_description=active[0].description,
+                            tool=name, tool_arguments=args,
+                        )
+                        trace[-1]["risk"] = risk.as_dict()
                         print(f"[OBSERVATION] step={active[0].id} type={observation.result_type} "
                               f"decision={observation.decision} reason={observation.reason}")
                         if observation.decision != "accept":
@@ -145,18 +157,22 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                             ) + "\nผลนี้ยังไม่ถูกบันทึกเป็น evidence; retry/query_more/replan ตาม decision"
                             messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
                             continue
-                        if prompt_semantic_review:
+                        if routing_mode in ("shadow", "enforce") and risk.reviewer_required:
                             semantic_review = review_observation(
                                 goal=plan.goal, active_step=active[0].description,
                                 analytical_contract=question, tool=name, tool_arguments=args,
                                 result=result, prior_facts=accepted_facts or None,
                             )
-                            routed_decision = hybrid_decision(observation, semantic_review)
+                            final_observation_decision = routed_decision(
+                                routing_mode, observation, semantic_review
+                            )
                             trace[-1]["semantic_review"] = semantic_review.as_dict()
-                            trace[-1]["hybrid_decision"] = routed_decision
+                            trace[-1]["routed_decision"] = final_observation_decision
+                            trace[-1]["routing_mode"] = routing_mode
                             print(f"[SEMANTIC REVIEW] step={active[0].id} "
-                                  f"decision={semantic_review.decision} hybrid={routed_decision}")
-                            if routed_decision != "accept":
+                                  f"risk={risk.level} review={semantic_review.decision} "
+                                  f"mode={routing_mode} final={final_observation_decision}")
+                            if final_observation_decision != "accept":
                                 result += "\n\n[PROMPT SEMANTIC REVIEW]\n" + json.dumps(
                                     semantic_review.as_dict(), ensure_ascii=False
                                 ) + "\nผลนี้ยังไม่ถูกบันทึกเป็น evidence"
@@ -188,8 +204,10 @@ def main():
         prompt_review = os.environ.get("PROMPT_SEMANTIC_REVIEW", "0").lower() in (
             "1", "true", "yes"
         )
+        routing_mode = os.environ.get("OBSERVATION_ROUTING_MODE", "rules")
         run(question, registry, dynamic_observation=True,
-            prompt_semantic_review=prompt_review)
+            prompt_semantic_review=prompt_review,
+            observation_routing_mode=routing_mode)
     finally:
         registry.close()
 

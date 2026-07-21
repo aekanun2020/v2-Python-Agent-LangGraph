@@ -1,0 +1,203 @@
+{
+  "experiment": "shadow_risk_router_replay",
+  "source_artifact": "artifacts/lab6_hr_prompt_reviewer_comparison.json",
+  "model": "qwen/qwen3.5-35b-a3b",
+  "source_live_mcp_calls": 9,
+  "source_reviewer_calls": 8,
+  "rows": [
+    {
+      "case": "denominator",
+      "variant": "wrong",
+      "expected": "retry",
+      "hard_decision": "retry",
+      "risk": {
+        "level": "medium",
+        "signals": [
+          "contract:explicit_denominator",
+          "sql:aggregate"
+        ],
+        "reviewer_required": false,
+        "reason": "hard policy already rejected the result; reviewer cannot override it"
+      },
+      "review_called": false,
+      "review_decision": null,
+      "shadow_decision": "retry",
+      "enforce_decision": "retry",
+      "shadow_regression": false,
+      "review_disagreement": false
+    },
+    {
+      "case": "denominator",
+      "variant": "correct",
+      "expected": "accept",
+      "hard_decision": "accept",
+      "risk": {
+        "level": "medium",
+        "signals": [
+          "contract:explicit_denominator",
+          "sql:aggregate"
+        ],
+        "reviewer_required": false,
+        "reason": "medium risk is handled by deterministic policy without reviewer cost"
+      },
+      "review_called": false,
+      "review_decision": null,
+      "shadow_decision": "accept",
+      "enforce_decision": "accept",
+      "shadow_regression": false,
+      "review_disagreement": false
+    },
+    {
+      "case": "temporal_window",
+      "variant": "wrong",
+      "expected": "retry",
+      "hard_decision": "retry",
+      "risk": {
+        "level": "high",
+        "signals": [
+          "contract:latest_review_anchor",
+          "contract:pre_review_time_window"
+        ],
+        "reviewer_required": false,
+        "reason": "hard policy already rejected the result; reviewer cannot override it"
+      },
+      "review_called": false,
+      "review_decision": null,
+      "shadow_decision": "retry",
+      "enforce_decision": "retry",
+      "shadow_regression": false,
+      "review_disagreement": false
+    },
+    {
+      "case": "temporal_window",
+      "variant": "correct",
+      "expected": "accept",
+      "hard_decision": "accept",
+      "risk": {
+        "level": "high",
+        "signals": [
+          "contract:latest_review_anchor",
+          "contract:pre_review_time_window",
+          "sql:window_function"
+        ],
+        "reviewer_required": true,
+        "reason": "high semantic risk passed hard checks; independent review is useful"
+      },
+      "review_called": true,
+      "review_decision": "accept",
+      "shadow_decision": "accept",
+      "enforce_decision": "accept",
+      "shadow_regression": false,
+      "review_disagreement": false
+    },
+    {
+      "case": "join_cardinality",
+      "variant": "wrong",
+      "expected": "retry",
+      "hard_decision": "retry",
+      "risk": {
+        "level": "high",
+        "signals": [
+          "contract:safe_join_cardinality",
+          "sql:multi_satellite_join"
+        ],
+        "reviewer_required": false,
+        "reason": "hard policy already rejected the result; reviewer cannot override it"
+      },
+      "review_called": false,
+      "review_decision": null,
+      "shadow_decision": "retry",
+      "enforce_decision": "retry",
+      "shadow_regression": false,
+      "review_disagreement": false
+    },
+    {
+      "case": "join_cardinality",
+      "variant": "correct",
+      "expected": "accept",
+      "hard_decision": "accept",
+      "risk": {
+        "level": "high",
+        "signals": [
+          "contract:safe_join_cardinality"
+        ],
+        "reviewer_required": true,
+        "reason": "high semantic risk passed hard checks; independent review is useful"
+      },
+      "review_called": true,
+      "review_decision": "reject",
+      "shadow_decision": "accept",
+      "enforce_decision": "reject",
+      "shadow_regression": false,
+      "review_disagreement": true
+    },
+    {
+      "case": "cross_evidence",
+      "variant": "wrong",
+      "expected": "retry",
+      "hard_decision": "retry",
+      "risk": {
+        "level": "high",
+        "signals": [
+          "contract:cross_evidence_consistency"
+        ],
+        "reviewer_required": false,
+        "reason": "hard policy already rejected the result; reviewer cannot override it"
+      },
+      "review_called": false,
+      "review_decision": null,
+      "shadow_decision": "retry",
+      "enforce_decision": "retry",
+      "shadow_regression": false,
+      "review_disagreement": false
+    },
+    {
+      "case": "cross_evidence",
+      "variant": "correct",
+      "expected": "accept",
+      "hard_decision": "accept",
+      "risk": {
+        "level": "high",
+        "signals": [
+          "contract:cross_evidence_consistency"
+        ],
+        "reviewer_required": true,
+        "reason": "high semantic risk passed hard checks; independent review is useful"
+      },
+      "review_called": true,
+      "review_decision": "accept",
+      "shadow_decision": "accept",
+      "enforce_decision": "accept",
+      "shadow_regression": false,
+      "review_disagreement": false
+    }
+  ],
+  "metrics": {
+    "rules": {
+      "admission_accuracy": 8,
+      "false_accepts": 0,
+      "false_rejects": 0
+    },
+    "shadow": {
+      "admission_accuracy": 8,
+      "false_accepts": 0,
+      "false_rejects": 0
+    },
+    "enforce": {
+      "admission_accuracy": 7,
+      "false_accepts": 0,
+      "false_rejects": 1
+    },
+    "router": {
+      "high_risk_recall": 6,
+      "high_risk_total": 6,
+      "reviewer_calls": 3,
+      "call_reduction_pct": 62.5,
+      "shadow_behavior_regressions": 0,
+      "reviewer_disagreements": 1,
+      "replayed_reviewer_elapsed_ms": 18157
+    }
+  },
+  "supported": true,
+  "scope_limit": "Deterministic replay of one captured Qwen run; shadow mode does not prove future reviewer stability."
+}
