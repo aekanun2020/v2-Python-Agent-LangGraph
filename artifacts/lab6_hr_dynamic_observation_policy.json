@@ -1,0 +1,124 @@
+{
+  "experiment": "dynamic_observation_policy_isolated_controlled_fault",
+  "hypothesis": "A step/tool/result-dependent policy rejects non-empty unusable results before evidence binding.",
+  "model": "not used — policy-layer isolation (avoids planner sampling variance)",
+  "mcp_endpoint": "https://bb36-184-22-21-43.ngrok-free.app/mcp",
+  "tool_action": {
+    "name": "execute_query_tool",
+    "arguments": {
+      "query": "SELECT TOP 5 * FROM employees"
+    }
+  },
+  "live_mcp_calls": [
+    {
+      "tool": "execute_query_tool",
+      "arguments": {
+        "query": "SELECT TOP 5 * FROM employees"
+      },
+      "returned_chars_before_fault": 719,
+      "fault_injected": true
+    },
+    {
+      "tool": "execute_query_tool",
+      "arguments": {
+        "query": "SELECT TOP 5 * FROM employees"
+      },
+      "returned_chars": 719,
+      "fault_injected": false
+    }
+  ],
+  "elapsed_ms": 495,
+  "injected_fault": "[MCP ERROR] injected after a real MCP call: 502 Bad Gateway",
+  "planner_only": {
+    "approved": true,
+    "step_status": "completed",
+    "evidence_count": 1,
+    "evidence": [
+      {
+        "tool": "execute_query_tool",
+        "tool_call_id": "2b8b5bb8-7f60-4c9e-97f5-3a1cea613d18",
+        "result_excerpt": "[MCP ERROR] injected after a real MCP call: 502 Bad Gateway",
+        "observation": null
+      }
+    ],
+    "invalid_evidence_accepted": 1,
+    "fault_decision": "legacy implicit accept"
+  },
+  "dynamic_observation": {
+    "approved": true,
+    "step_status": "completed",
+    "evidence_count": 1,
+    "evidence": [
+      {
+        "tool": "execute_query_tool",
+        "tool_call_id": "e2a7a51f-91fe-42d8-9770-33f14d54770a",
+        "result_excerpt": " employee_id first_name last_name birth_date  hire_date        department     current_position employee_type     status\n           1      สมชาย      ใจดี 1985-03-15 2020-01-15 เทคโ",
+        "observation": {
+          "result_type": "query_result",
+          "policy_modules": [
+            "execution_integrity",
+            "payload_presence",
+            "step_tool_alignment",
+            "result_shape",
+            "population_and_grain"
+          ],
+          "passed": [
+            "execution_integrity",
+            "payload_presence",
+            "step_tool_alignment"
+          ],
+          "failed": [],
+          "warnings": [],
+          "supports_step": true,
+          "sufficient": true,
+          "decision": "accept",
+          "reason": "hard checks passed for this step, tool, and result type"
+        }
+      }
+    ],
+    "invalid_evidence_accepted": 0,
+    "fault_observation": {
+      "result_type": "error",
+      "policy_modules": [
+        "execution_integrity",
+        "payload_presence",
+        "step_tool_alignment",
+        "result_shape",
+        "population_and_grain"
+      ],
+      "passed": [],
+      "failed": [
+        "execution_integrity",
+        "supports_current_step"
+      ],
+      "warnings": [],
+      "supports_step": false,
+      "sufficient": false,
+      "decision": "retry",
+      "reason": "tool payload reports an execution/transport error"
+    },
+    "retry_observation": {
+      "result_type": "query_result",
+      "policy_modules": [
+        "execution_integrity",
+        "payload_presence",
+        "step_tool_alignment",
+        "result_shape",
+        "population_and_grain"
+      ],
+      "passed": [
+        "execution_integrity",
+        "payload_presence",
+        "step_tool_alignment"
+      ],
+      "failed": [],
+      "warnings": [],
+      "supports_step": true,
+      "sufficient": true,
+      "decision": "accept",
+      "reason": "hard checks passed for this step, tool, and result type"
+    }
+  },
+  "supported": true,
+  "scope_limit": "Proves evidence-admission and retry behavior, not final HR answer quality or universal agent intelligence."
+}

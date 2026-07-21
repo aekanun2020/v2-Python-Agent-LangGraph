@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from labs.core import config, llm
 from labs.core.registry import ToolRegistry
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
+from labs.lab6_todo.observation_policy import observe_result
 
 SYSTEM = """คุณคือ HR data agent ที่ทำงานตามแผนและหลักฐานจริง
 ก่อนเรียก MCP ต้องใช้ plan_write แล้ว plan_start ทีละขั้น
@@ -65,7 +66,8 @@ def planner_tools() -> list[dict]:
     ]
 
 
-def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validator=None):
+def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validator=None,
+        dynamic_observation: bool = False):
     plan: PlannerState | None = None
     trace: list[dict] = []
     tools = planner_tools() + registry.openai_tools
@@ -124,8 +126,25 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                         raise ValueError(f"ANALYTICAL CONTRACT: {rejection}; revise the query")
                     result = registry.dispatch(name, args)
                     call_id = call.id or str(uuid.uuid4())
-                    plan.observe(active[0].id, tool=name, tool_call_id=call_id, result=result)
-                    trace.append({"step_id": active[0].id, "tool": name, "tool_call_id": call_id})
+                    observation = None
+                    if dynamic_observation:
+                        observation = observe_result(
+                            step_description=active[0].description, tool=name, result=result
+                        )
+                        trace.append({"step_id": active[0].id, "tool": name,
+                                      "tool_call_id": call_id, "observation": observation.as_dict()})
+                        print(f"[OBSERVATION] step={active[0].id} type={observation.result_type} "
+                              f"decision={observation.decision} reason={observation.reason}")
+                        if observation.decision != "accept":
+                            result += "\n\n[OBSERVATION POLICY]\n" + json.dumps(
+                                observation.as_dict(), ensure_ascii=False
+                            ) + "\nผลนี้ยังไม่ถูกบันทึกเป็น evidence; retry/query_more/replan ตาม decision"
+                            messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
+                            continue
+                    plan.observe(active[0].id, tool=name, tool_call_id=call_id, result=result,
+                                 observation=observation.as_dict() if observation else None)
+                    if not dynamic_observation:
+                        trace.append({"step_id": active[0].id, "tool": name, "tool_call_id": call_id})
                     print(f"[EVIDENCE] step={active[0].id} tool={name} id={call_id}")
             except (KeyError, TypeError, ValueError) as exc:
                 result = f"[RUNTIME REJECTED] {exc}"

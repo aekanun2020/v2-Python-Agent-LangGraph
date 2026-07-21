@@ -21,7 +21,8 @@
 เจ้าของ state transition แทนการเชื่อคำประกาศของ LLM:
 
 - มี `PlannerState`, revision และสถานะของแต่ละขั้น
-- MCP result ถูกผูกกับ step ที่ `in_progress` เป็น evidence อัตโนมัติ
+- Dynamic Observation Policy ตรวจ active step + tool + result type ก่อนรับหลักฐาน
+- MCP result ถูกผูกกับ step ที่ `in_progress` เมื่อ observation ตัดสิน `accept`
 - `plan_complete` ถูกปฏิเสธทันทีถ้ายังไม่มี tool evidence
 - แก้แผนระหว่างทำงานผ่าน `plan_revise` และรักษาหลักฐานเดิม
 - final answer ถูก runtime gate ปฏิเสธจนกว่าทุกขั้นเสร็จและมีหลักฐาน
@@ -31,7 +32,8 @@ while (plain Python):
   LLM proposes action
   → Python validates transition
   → MCP executes
-  → Python binds evidence to active step
+  → Dynamic observation: accept / retry / query_more / reject
+  → Python binds accepted evidence to active step
   → incomplete/unsupported answer is rejected
 ```
 
@@ -41,6 +43,7 @@ while (plain Python):
 make proof-pure-planner
 make run-pure-planner
 make compare-lab6-hr
+make compare-observation-policy-hr
 ```
 
 ความแตกต่างสำคัญ: LLM ยังใช้ reasoning เพื่อสร้าง/แก้แผน แต่ไม่มีสิทธิ์เปลี่ยน
@@ -68,6 +71,25 @@ Pure Python Planner ใช้ 11 calls / 97.163 วินาที, completed 9/
 
 ผล Qwen adversarial: Pure Planner ถูกปฏิเสธ query ก่อนส่ง MCP, ฟื้นตัวจน revision 6,
 completed 2/2 และ APPROVED โดยใช้ 16 MCP calls / 752.206 วินาที
+
+### Controlled proof: Dynamic Observation Policy
+
+Planner รุ่นแรกห้าม evidence ว่าง แต่ยังรับข้อความ error ที่ไม่ว่างได้
+`observation_policy.py` จึงเพิ่ม hard policy ที่เปลี่ยนตาม step, tool capability และ
+result type ก่อนเรียก `PlannerState.observe()`
+
+```bash
+make compare-observation-policy-hr
+```
+
+คำสั่งนี้ไม่ใช้ LLM key เพื่อ isolate จังหวะ Observation โดยเรียก SQL read-only กับ
+HR MCP จริง 2 ครั้ง: รอบแรกจำลอง 502 หลัง MCP ตอบ แล้ว retry action เดิม ผลที่บันทึกได้คือ
+PlannerState เดิมรับ invalid evidence 1 ครั้ง ส่วน Dynamic Policy รับ 0, ตัดสิน `retry`
+แล้วรับ successful result เป็น evidence ดู captured screen ที่
+`../../artifacts/lab6_hr_dynamic_observation_policy.png` และ trace เต็มในไฟล์ JSON ข้างกัน
+
+ขอบเขตของหลักฐาน: พิสูจน์ evidence admission และ recovery path ไม่ได้พิสูจน์คุณภาพ
+คำตอบ HR หรือความฉลาดโดยรวมของ agent
 
 ---
 

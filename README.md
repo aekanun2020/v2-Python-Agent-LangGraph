@@ -7,7 +7,8 @@
 orchestration framework:
 
 - Python เป็นเจ้าของ `PlannerState` และตรวจ state transition
-- MCP result ถูกผูกกับ active step เป็น evidence
+- Dynamic Observation Policy เลือก hard checks จาก active step + tool + result type
+- MCP result ถูกผูกกับ active step เป็น evidence เฉพาะเมื่อ observation ตัดสิน `accept`
 - step ที่ไม่มีหลักฐานเปลี่ยนเป็น `completed` ไม่ได้
 - analytical contract กำหนด aggregation grain และสูตรเดียวกันทุก Agent
 - validator ปฏิเสธ SQL ที่เสี่ยง fan-out และทำให้ Planner แก้แผน
@@ -17,7 +18,8 @@ orchestration framework:
 LLM proposes action
 → Python validates state + analytical contract
 → MCP executes
-→ Python binds evidence
+→ dynamic observation: accept / retry / query_more / reject
+→ Python binds accepted evidence
 → reject / replan / continue
 → answer gate
 ```
@@ -62,6 +64,7 @@ make test        # unit tests
 make proof-pure-planner # Pure Python evidence gate + MCP จริง
 make run-pure-planner   # Pure Python Planner + OpenRouter + MCP
 make compare-lab6-hr # TodoWrite เดิม vs Pure Python Planner บนโจทย์ HR เดียวกัน
+make compare-observation-policy-hr # controlled proof ด้วย MCP จริง ไม่ต้องใช้ LLM key
 ```
 
 > คำสั่ง end-to-end อ่าน endpoint/key จาก `.env` ผ่าน `python-dotenv`
@@ -177,6 +180,53 @@ query ใหม่ได้จริง แยกผลไว้ที่ `artif
 recovery path ของ Planner ไม่ใช่ head-to-head correctness test ที่สมบูรณ์ จึงควรตีความว่า
 วิธีใหม่เหมาะกับงานที่ความผิดพลาดหรือการจบไม่ครบมีต้นทุนสูง แต่ overhead ปัจจุบัน
 ยังมากเกินไปสำหรับเปิดใช้กับทุกคำถาม
+
+### Dynamic Observation Policy: พิสูจน์จังหวะ Observation โดยตรง
+
+Evidence gate รุ่นแรกยังมีช่องโหว่: `observe()` ยอมรับ tool result ทุกข้อความที่ไม่ว่าง
+ดังนั้นข้อความ error เช่น `502 Bad Gateway` ก็สามารถถูกผูกเป็น evidence, complete step
+และผ่าน answer gate ได้ การเพิ่ม planner หรือ prompt อย่างเดียวไม่แก้ปัญหานี้
+
+`observation_policy.py` เลือก policy modules แบบ dynamic จาก 3 inputs:
+
+```text
+active PlanStep + tool capability + tool result type
+→ execution_integrity / payload_presence / step_tool_alignment
+→ schema_coverage หรือ result_shape/population_and_grain ตามบริบท
+→ accept / retry / query_more / reject
+```
+
+รัน controlled experiment ซึ่งใช้ PlannerState และ SQL action เดียวกันทั้งสองฝั่ง:
+
+```bash
+make compare-observation-policy-hr
+```
+
+![PlannerState vs Dynamic Observation Policy](artifacts/lab6_hr_dynamic_observation_policy.png)
+
+| Metric | PlannerState only | + Dynamic Observation Policy |
+| --- | ---: | ---: |
+| Live HR MCP calls ใน protocol | 2 | ใช้ protocol เดียวกัน |
+| Invalid `502` evidence accepted | 1 | 0 |
+| Fault decision | implicit accept | `retry` |
+| Successful retry decision | ไม่มี observation | `accept` |
+| Answer gate | ผ่านด้วย invalid evidence | ผ่านด้วย successful evidence เท่านั้น |
+
+การทดลองนี้ตั้งใจ **ไม่เรียก LLM** เพื่อ isolate ตัวแปร Observation โดยไม่ให้ sampling
+ของ planner ปนผล: เรียก `execute_query_tool` กับ MCP จริงก่อน, แทนผลรอบแรกด้วย
+non-empty 502 แบบ deterministic, แล้วให้ทั้งสอง runtime ประเมิน payload เดียวกัน
+Dynamic Policy ปฏิเสธ fault ก่อน evidence admission และ retry SQL เดิมกับ MCP จริงสำเร็จ
+
+สิ่งที่ผลนี้พิสูจน์คือ evidence-admission และ recovery mechanism เท่านั้น ยังไม่พิสูจน์
+numerical correctness, คุณภาพคำตอบ HR หรือความฉลาดโดยรวม ส่วน end-to-end Qwen A/B
+ที่ลองระหว่างพัฒนาไม่ถูกใช้เป็นหลักฐาน เพราะแผนที่ model สุ่มได้ต่างกันและ baseline
+ชนเพดาน 60 turns ทำให้ไม่สามารถระบุสาเหตุของผลต่างว่าเกิดจาก Observation เพียงตัวเดียว
+
+ไฟล์หลักฐาน:
+
+- `artifacts/lab6_hr_dynamic_observation_policy.json` — MCP calls, policy modules, checks และ state
+- `artifacts/lab6_hr_dynamic_observation_policy.html` — รายงานที่เปิดซ้ำได้
+- `artifacts/lab6_hr_dynamic_observation_policy.png` — captured screen ของรายงาน
 
 ### LangGraph (optional comparison)
 

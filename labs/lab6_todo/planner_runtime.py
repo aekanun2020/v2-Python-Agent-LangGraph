@@ -17,6 +17,7 @@ class Evidence:
     tool: str
     tool_call_id: str
     result: str
+    observation: dict | None = None
 
 
 @dataclass
@@ -51,13 +52,14 @@ class PlannerState:
                 raise ValueError(f"step {step.id} is already in progress")
         target.status = "in_progress"
 
-    def observe(self, step_id: int, *, tool: str, tool_call_id: str, result: str) -> None:
+    def observe(self, step_id: int, *, tool: str, tool_call_id: str, result: str,
+                observation: dict | None = None) -> None:
         target = self.step(step_id)
         if target.status != "in_progress":
             raise ValueError("tool evidence must belong to the in-progress step")
         if not result.strip():
             raise ValueError("empty tool results are not evidence")
-        target.evidence.append(Evidence(tool, tool_call_id, result))
+        target.evidence.append(Evidence(tool, tool_call_id, result, observation))
 
     def complete(self, step_id: int) -> None:
         target = self.step(step_id)
