@@ -29,11 +29,29 @@
 
 ### โหมดล่าสุดที่ควรใช้
 
+ถ้าต้องการ **รัน Agent จริง** จาก root repository:
+
+```bash
+conda activate agentic-ai
+make run-agent         # Rules mode; เริ่มจากคำสั่งนี้
+make run-agent-shadow  # Agent เดิม + Qwen reviewer แบบไม่ block
+make run-agent-enforce # งานทดลอง; ยังไม่แนะนำ
+```
+
+สามคำสั่งนี้รัน `labs/lab6_todo/agent_planner.py` จริงและเรียก OpenRouter + MCP
+ส่วนคำสั่ง `compare-*` มีไว้สร้าง/replay benchmark artifacts ไม่ใช่ Agent interactive
+runner หากต้องการถามคำถามเอง:
+
+```bash
+OBSERVATION_ROUTING_MODE=shadow python labs/lab6_todo/agent_planner.py \
+  "คำถาม HR ของคุณ"
+```
+
 Runtime มี Risk Router สามโหมด โดยค่า default ยังคงเป็น `rules` เพื่อไม่เปลี่ยน
 behavior เดิม ส่วนโหมดที่แนะนำสำหรับเรียนรู้และเก็บผล reviewer คือ `shadow`:
 
 ```bash
-OBSERVATION_ROUTING_MODE=shadow make run-pure-planner
+make run-agent-shadow
 ```
 
 ใน Shadow mode hard rules ยังเป็นผู้ตัดสิน evidence เหมือนเดิม เฉพาะผล high risk
@@ -67,7 +85,7 @@ while (plain Python):
 
 ```bash
 make proof-pure-planner
-make run-pure-planner
+make run-agent
 make compare-lab6-hr
 make compare-observation-policy-hr
 make compare-semantic-observation-hr
@@ -139,9 +157,9 @@ wrong queries ทุกตัว execute สำเร็จและ structural 
 เปิด prompt reviewer ใน agent จริงด้วย:
 
 ```bash
-OBSERVATION_ROUTING_MODE=rules make run-pure-planner   # default
-OBSERVATION_ROUTING_MODE=shadow make run-pure-planner # reviewer advisory
-OBSERVATION_ROUTING_MODE=enforce make run-pure-planner
+make run-agent         # rules; default
+make run-agent-shadow  # reviewer advisory
+make run-agent-enforce
 ```
 
 reviewer ใช้ system prompt แยก context เพื่อ derive semantic requirements แล้วคืน JSON
