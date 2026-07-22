@@ -26,8 +26,7 @@ class RiskAssessment:
 
 HIGH_REQUIREMENTS = {
     "pre_review_time_window", "latest_review_anchor", "safe_join_cardinality",
-    "cross_evidence_consistency", "employment_length_dimension",
-    "loan_amount_metric", "funded_amount_proxy", "loan_status_not_approval",
+    "cross_evidence_consistency",
 }
 MEDIUM_REQUIREMENTS = {
     "active_employee_population", "department_grain", "explicit_denominator",
@@ -41,6 +40,9 @@ def assess_observation_risk(*, hard: ObservationState, step_description: str,
     signals: list[str] = []
 
     high = sorted(requirements & HIGH_REQUIREMENTS)
+    contract_requirements = sorted(requirements - HIGH_REQUIREMENTS - MEDIUM_REQUIREMENTS)
+    if contract_requirements:
+        high.extend(contract_requirements)
     medium = sorted(requirements & MEDIUM_REQUIREMENTS)
     signals.extend(f"contract:{item}" for item in high + medium)
     if re.search(r"\b(row_number|rank|dense_rank)\s*\(", sql):

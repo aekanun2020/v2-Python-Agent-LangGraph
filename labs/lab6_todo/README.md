@@ -21,17 +21,37 @@
 เจ้าของ state transition แทนการเชื่อคำประกาศของ LLM:
 
 - มี `PlannerState`, revision และสถานะของแต่ละขั้น
-- Dynamic Observation Policy ตรวจ active step + tool + result type ก่อนรับหลักฐาน
-- Dynamic goal contract แปลงโจทย์เป็นข้อกำหนด field/population ก่อน `plan_write`
-  และ semantic retry ส่ง `[ACTIONABLE FIX]` ที่ระบุ JOIN/GROUP BY/metric ตรงๆ
+- Dynamic Observation Policy compile typed `ObservationState` จาก active step + action
+  capability + tool result + prior evidence + declarative contract
+- Domain example อยู่ใน `contracts/*.json`; contract ใหม่ไม่ต้อง hard-code table/field เพิ่มใน
+  Python core และ semantic retry ใช้ hint จาก contract
+  (policy HR รุ่นเดิมยังคงไว้เพื่อ backward compatibility)
 - MCP result ถูกผูกกับ step ที่ `in_progress` เมื่อ observation ตัดสิน `accept`
 - เมื่อ Observation รับ tool evidence แล้ว Python runtime จะ complete step อัตโนมัติ;
   `plan_complete` ที่เรียกซ้ำเป็น idempotent และขั้นที่ไม่มี evidence ยัง complete ไม่ได้
 - `plan_revise` แก้ future work ได้ แต่เปิดหรือลบ completed evidence เดิมไม่ได้
+- `plan_write` ใช้ได้ครั้งเดียว ป้องกัน plan/evidence provenance ถูก reset กลางงาน
+- failure เดิมซ้ำครบ threshold ถูก circuit breaker บังคับ replan หรือ stop แบบ fail-fast
 - แก้แผนระหว่างทำงานผ่าน `plan_revise` และรักษาหลักฐานเดิม
 - final answer ถูก runtime gate ปฏิเสธจนกว่าทุกขั้นเสร็จและมีหลักฐาน
 - `shadow/enforce` ส่ง final answer พร้อม accepted MCP evidence ให้ independent reviewer;
   `enforce` สั่ง rewrite หรือ `plan_revise` + query เพิ่มเมื่อมีตัวเลขใหม่ที่ไม่ grounded
+
+Typed state หลัก:
+
+```text
+ObservationState
+├─ execution_ok / supports_step / evidence_sufficient
+├─ proven_claims / contradicted_claims / unsupported_claims
+├─ decision: accept / retry / query_more / replan / stop
+└─ suggested_action
+
+EvidenceRecord
+└─ evidence_id / plan_id / plan_revision / step_id / action / result / proven_claim_ids
+```
+
+`contracts/lending_funding_example.json` มีไว้สาธิต extension point เท่านั้น งานนี้ยัง
+ไม่สร้าง Domain Skill, ontology หรือ production semantic assurance
 
 ### โหมดล่าสุดที่ควรใช้
 

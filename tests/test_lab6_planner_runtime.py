@@ -1,5 +1,6 @@
 import unittest
 
+from labs.lab6_todo.observation_types import Claim
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
 from labs.lab6_todo.agent_planner import (
     build_goal_contract, normalize_plan_descriptions, require_final_answer,
@@ -15,24 +16,27 @@ class PurePythonPlannerTests(unittest.TestCase):
         self.assertIn("do not JOIN or filter loan_status", contract)
 
     def test_semantic_failure_has_executable_recovery_hint(self):
-        hint = semantic_recovery_hint([
-            "semantic:employment_length_dimension", "semantic:funded_amount_proxy"
+        hint = semantic_recovery_hint([], [
+            Claim("dimension", "grouped_dimension", "dimension", "unsupported",
+                  "JOIN dimension table and GROUP BY its label."),
+            Claim("metric", "metric", "metric", "unsupported",
+                  "SELECT or aggregate the configured metric."),
         ])
-        self.assertIn("GROUP BY d.emp_length", hint)
-        self.assertIn("f.funded_amnt", hint)
+        self.assertIn("GROUP BY", hint)
+        self.assertIn("configured metric", hint)
     def test_summary_statistics_is_an_mcp_verifiable_step(self):
         validate_plan_descriptions([
             "คำนวณสถิติสรุปวงเงินกู้โดยเฉลี่ยตามระยะเวลาการทำงาน"
         ])
 
     def test_final_gate_rejects_status_filtered_approved_population(self):
-        with self.assertRaisesRegex(ValueError, "สถานะหลังปล่อยกู้"):
+        with self.assertRaisesRegex(ValueError, "loan_status"):
             validate_final_semantics(
                 "ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน",
                 "วงเงินกู้ที่มีการอนุมัติ (loan_status = Current หรือ Fully Paid)",
             )
     def test_final_semantic_gate_rejects_status_as_approval_and_currency(self):
-        with self.assertRaisesRegex(ValueError, "loan_status"):
+        with self.assertRaisesRegex(ValueError, "Approval rate"):
             validate_final_semantics(
                 "ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน",
                 "อัตราการอนุมัติสูงสุด 88% และวงเงินเฉลี่ย 16,403 บาท",

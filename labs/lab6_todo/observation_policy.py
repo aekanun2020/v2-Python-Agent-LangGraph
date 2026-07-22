@@ -12,7 +12,13 @@ import re
 from dataclasses import asdict, dataclass, field
 from typing import Literal
 
-ObservationDecision = Literal["accept", "retry", "query_more", "reject"]
+from labs.lab6_todo.capabilities import infer_action_capabilities, required_step_capability
+from labs.lab6_todo.contract_runtime import (
+    ResolvedContract, evaluate_action_claims, resolve_contract,
+)
+from labs.lab6_todo.observation_types import ActionHint, Claim
+
+ObservationDecision = Literal["accept", "retry", "query_more", "replan", "stop", "reject"]
 
 
 @dataclass
@@ -23,10 +29,17 @@ class ObservationState:
     failed: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     semantic_requirements: list[str] = field(default_factory=list)
+    execution_ok: bool = False
     supports_step: bool = False
+    evidence_sufficient: bool = False
+    # Backward-compatible alias kept for existing lesson code and traces.
     sufficient: bool = False
     decision: ObservationDecision = "reject"
     reason: str = ""
+    proven_claims: list[Claim] = field(default_factory=list)
+    contradicted_claims: list[Claim] = field(default_factory=list)
+    unsupported_claims: list[Claim] = field(default_factory=list)
+    suggested_action: ActionHint | None = None
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -98,15 +111,6 @@ def _semantic_requirements(step_description: str, goal_description: str | None =
         "หลักฐานก่อนหน้า", "prior evidence", "cross-evidence", "cross evidence"
     )):
         requirements.append("cross_evidence_consistency")
-    if any(word in context for word in (
-        "ระยะเวลาการทำงาน", "อายุงาน", "employment length", "employment tenure"
-    )):
-        requirements.append("employment_length_dimension")
-    if any(word in context for word in ("วงเงิน", "loan amount", "funded amount")):
-        requirements.append("loan_amount_metric")
-    if any(word in context for word in ("อนุมัติวงเงิน", "approved amount", "approval amount")):
-        requirements.append("funded_amount_proxy")
-        requirements.append("loan_status_not_approval")
     return requirements
 
 
@@ -169,19 +173,6 @@ def _check_query_semantics(requirements: list[str], tool_arguments: dict | None,
             )
             employee_aggregates = len(re.findall(r"group\s+by\s+(?:\w+\.)?employee_id", sql))
             ok = joined_satellites < 2 or ("with " in sql and employee_aggregates >= joined_satellites)
-        elif requirement == "employment_length_dimension":
-            ok = "emp_length_dim" in sql and bool(
-                re.search(r"\bgroup\s+by\b[^;]*(?:emp_length|employment)", sql)
-            )
-        elif requirement == "loan_amount_metric":
-            ok = any(token in sql for token in ("loan_amnt", "funded_amnt"))
-        elif requirement == "funded_amount_proxy":
-            ok = "funded_amnt" in sql
-        elif requirement == "loan_status_not_approval":
-            # Loan status describes performance after origination.  It cannot be
-            # used to select an "approved" population (for example Current/Fully
-            # Paid), even when the SQL avoids an approval-looking alias.
-            ok = "loan_status" not in sql
         (passed if ok else failed).append(requirement)
     if prior_facts and "cross_evidence_consistency" in requirements:
         current = extract_numeric_facts(result)
@@ -199,8 +190,11 @@ def observe_result(*, step_description: str, tool: str, result: str,
                    tool_arguments: dict | None = None,
                    semantic_checks: bool = False,
                    prior_facts: dict[str, float] | None = None,
-                   goal_description: str | None = None) -> ObservationState:
+                   goal_description: str | None = None,
+                   contract: ResolvedContract | None = None) -> ObservationState:
     """Select and execute deterministic checks for this step/tool/result tuple."""
+    if contract is None and goal_description:
+        contract = resolve_contract(goal_description)
     result_type = _result_type(tool, result)
     step = step_description.lower()
     tool_lower = tool.lower()
@@ -215,6 +209,14 @@ def observe_result(*, step_description: str, tool: str, result: str,
         _semantic_requirements(step_description, goal_description)
         if semantic_checks and result_type == "query_result" else []
     )
+    step_capability = required_step_capability(step_description)
+    contract_claims = (
+        evaluate_action_claims(
+            contract, sql=str((tool_arguments or {}).get("query", ""))
+        ) if (semantic_checks and result_type == "query_result"
+              and step_capability != "schema_presence") else []
+    )
+    requirements.extend(claim.id for claim in contract_claims)
     if requirements:
         modules.append("semantic_contract")
     if "cross_evidence_consistency" in requirements:
@@ -228,6 +230,7 @@ def observe_result(*, step_description: str, tool: str, result: str,
         state.reason = "tool payload reports an execution/transport error"
         return state
     state.passed.append("execution_integrity")
+    state.execution_ok = True
 
     if not _has_substantive_payload(result):
         state.failed.extend(["payload_presence", "supports_current_step"])
@@ -236,13 +239,9 @@ def observe_result(*, step_description: str, tool: str, result: str,
         return state
     state.passed.append("payload_presence")
 
-    expects_schema = any(word in step for word in SCHEMA_WORDS)
-    schema_tool = any(word in tool_lower for word in (
-        "schema", "table", "column", "describe", "database_context"
-    ))
-    expects_query = any(word in step for word in QUERY_WORDS)
-    query_tool = any(word in tool_lower for word in ("query", "sql", "execute"))
-    if (expects_schema and not schema_tool) or (expects_query and not query_tool):
+    required_capability = step_capability
+    capabilities = infer_action_capabilities(tool, tool_arguments)
+    if required_capability and required_capability not in capabilities:
         state.failed.append("step_tool_alignment")
         state.decision = "reject"
         state.reason = "tool type does not support the active plan step"
@@ -256,8 +255,23 @@ def observe_result(*, step_description: str, tool: str, result: str,
         return state
 
     semantic_passed, semantic_failed = _check_query_semantics(
-        requirements, tool_arguments, result, prior_facts
+        [item for item in requirements if item not in {claim.id for claim in contract_claims}],
+        tool_arguments, result, prior_facts
     )
+    state.proven_claims.extend(claim for claim in contract_claims if claim.status == "proven")
+    state.unsupported_claims.extend(
+        claim for claim in contract_claims if claim.status == "unsupported"
+    )
+    if "cross_evidence_consistency" in semantic_failed:
+        state.contradicted_claims.append(Claim(
+            id="cross_evidence_consistency",
+            type="consistency",
+            description="current result conflicts with previously accepted evidence",
+            status="contradicted",
+            basis="numeric facts sharing the same field name do not match",
+        ))
+    semantic_passed.extend(claim.id for claim in state.proven_claims)
+    semantic_failed.extend(claim.id for claim in state.unsupported_claims)
     state.passed.extend(f"semantic:{item}" for item in semantic_passed)
     if semantic_failed:
         state.failed.extend(f"semantic:{item}" for item in semantic_failed)
@@ -265,9 +279,12 @@ def observe_result(*, step_description: str, tool: str, result: str,
         state.reason = "successful payload violates active-step semantics: " + ", ".join(
             semantic_failed
         )
+        hint = " | ".join(claim.basis for claim in state.unsupported_claims if claim.basis)
+        state.suggested_action = ActionHint("retry", hint or state.reason)
         return state
 
     state.supports_step = True
+    state.evidence_sufficient = True
     state.sufficient = True
     state.decision = "accept"
     state.reason = "hard checks passed for this step, tool, and result type"

@@ -1,0 +1,71 @@
+{
+  "id": "lending_funding_example",
+  "match": {
+    "all_groups": [
+      ["ระยะเวลาการทำงาน", "อายุงาน", "employment length", "employment tenure"],
+      ["อนุมัติวงเงิน", "approved amount", "approval amount"]
+    ]
+  },
+  "prompt_rules": [
+    "Dimension contract: JOIN emp_length_dim and GROUP BY emp_length_dim.emp_length.",
+    "Metric contract: SELECT/aggregate loans_fact.funded_amnt as a funding proxy; loan_amnt alone is insufficient.",
+    "Population contract: do not JOIN or filter loan_status/loan_status_dim; Current/Fully Paid are post-origination outcomes, not approval decisions.",
+    "Answer contract: state that no Approved/Rejected field exists and do not claim approval rate or causal effect."
+  ],
+  "observation_claims": [
+    {
+      "id": "employment_length_dimension",
+      "type": "grouped_dimension",
+      "description": "The action groups the employment-length dimension.",
+      "checks": {
+        "contains_all": ["emp_length_dim"],
+        "regex_all": ["\\bgroup\\s+by\\b[^;]*(?:emp_length|employment)"]
+      },
+      "hint": "JOIN emp_length_dim and GROUP BY emp_length."
+    },
+    {
+      "id": "funded_amount_proxy",
+      "type": "metric",
+      "description": "The action measures the configured funding proxy.",
+      "checks": {"contains_all": ["funded_amnt"]},
+      "hint": "SELECT or aggregate funded_amnt."
+    },
+    {
+      "id": "post_origination_population",
+      "type": "population",
+      "description": "Post-origination status is not used as an approval population.",
+      "checks": {"excludes_all": ["loan_status"]},
+      "hint": "Remove loan_status joins and filters."
+    }
+  ],
+  "final_rules": [
+    {
+      "pattern": "loan_status[^.\\n]{0,100}(?:อนุมัติ|approved|approval)|(?:อนุมัติ|approved|approval)[^.\\n]{0,100}loan_status",
+      "message": "Do not interpret loan_status post-origination outcomes as an approval decision."
+    },
+    {
+      "pattern": "วงเงิน(?:กู้)?ที่อนุมัติ\\s*\\(\\s*loan_amnt\\s*\\)",
+      "message": "Do not relabel loan_amnt as approved amount."
+    },
+    {
+      "pattern": "อัตราการอนุมัติ|approval rate",
+      "message": "Approval rate is unsupported without an approval-decision field."
+    },
+    {
+      "pattern": "บาท|\\bthb\\b|\\busd\\b|\\$",
+      "message": "Do not state a currency without currency metadata."
+    },
+    {
+      "pattern": "(?:ส่วนใหญ่[^.\\n]{0,80}(?:เต็มจำนวน|อนุมัติเต็ม)|most[^.\\n]{0,80}(?:fully funded|full amount))",
+      "requires_query": {
+        "contains_all": ["loan_amnt", "funded_amnt", "case"],
+        "contains_any_groups": [["count(", "sum(", "avg("]]
+      },
+      "message": "A majority claim requires a row-level proportion with numerator and denominator."
+    },
+    {
+      "pattern": "(?:ไม่มีข้อมูล|ไม่มี\\s*(?:field|ฟิลด์))[^.\\n]{0,120}(?:annual_inc|\\bdti\\b|home_ownership)",
+      "message": "MCP schema contains the stated control field; do not claim it is absent."
+    }
+  ]
+}

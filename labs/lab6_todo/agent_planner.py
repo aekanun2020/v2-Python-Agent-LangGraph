@@ -20,6 +20,11 @@ from labs.core.registry import ToolRegistry
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
 from labs.lab6_todo.observation_policy import extract_numeric_facts, observe_result
 from labs.lab6_todo.semantic_reviewer import review_final_answer, review_observation
+from labs.lab6_todo.circuit_breaker import FailureCircuitBreaker
+from labs.lab6_todo.contract_runtime import (
+    ResolvedContract, resolve_contract, validate_final_contract,
+)
+from labs.lab6_todo.observation_types import ActionHint
 from labs.lab6_todo.observation_router import (
     assess_observation_risk, routed_decision, validate_routing_mode,
 )
@@ -27,7 +32,6 @@ from labs.lab6_todo.observation_router import (
 SYSTEM = """คุณคือ data agent ที่ทำงานตามแผน, schema และหลักฐานจริงจาก MCP
 รักษาความหมายของ dimension และ metric จากคำถามเดิม ห้ามแทนคำที่คล้ายกันเอง
 หากข้อมูลมีเพียง proxy ให้ระบุ proxy และข้อจำกัด ห้ามอ้างเหตุและผลจาก association
-loan_status เช่น Current/Fully Paid/Charged Off คือผลหลังปล่อยกู้ ไม่ใช่ผลการอนุมัติ
 ห้ามระบุสกุลเงินถ้า schema หรือ evidence ไม่ได้บอกหน่วย และห้ามกล่าวว่า field ไม่มีโดยไม่ตรวจ schema
 ก่อนเรียก MCP ต้องใช้ plan_write แล้ว plan_start ทีละขั้น
 ทุก plan step ต้องเป็นขั้นค้น/ตรวจข้อมูลด้วย MCP อย่าสร้างขั้น "สรุปคำตอบ" แยกต่างหาก
@@ -73,61 +77,16 @@ def require_final_answer(content) -> str:
 
 
 def validate_final_semantics(question: str, answer: str,
-                             accepted_evidence: list[dict] | None = None) -> None:
-    """Reject known claim-level category errors that SQL validation cannot see."""
-    goal = question.lower()
-    text = answer.lower()
-    approval_amount_goal = any(token in goal for token in (
-        "อนุมัติวงเงิน", "approved amount", "approval amount"
-    ))
-    failures: list[str] = []
-    if approval_amount_goal:
-        if "loan_status" in text and any(token in text for token in (
-            "อนุมัติ", "approved", "approval"
-        )):
-            failures.append(
-                "ห้ามใช้ loan_status เช่น Current/Fully Paid นิยามประชากรที่อนุมัติ; "
-                "เป็นสถานะหลังปล่อยกู้"
-            )
-        if re.search(r"วงเงิน(?:กู้)?ที่อนุมัติ\s*\(\s*loan_amnt\s*\)", text):
-            failures.append(
-                "ห้ามเรียก loan_amnt ว่าวงเงินที่อนุมัติ; ใช้ funded_amnt เป็น proxy ของยอด funding"
-            )
-        if any(token in text for token in ("อัตราการอนุมัติ", "approval rate")):
-            failures.append(
-                "ห้ามตีความ loan_status (เช่น Current/Fully Paid) เป็นการอนุมัติ"
-            )
-        if any(token in text for token in ("บาท", " thb", " usd", "$")):
-            failures.append("ห้ามระบุสกุลเงินเมื่อ evidence ไม่มี currency metadata")
-        missing_claim = re.search(
-            r"(?:ไม่มีข้อมูล|ไม่มี\s*(?:field|ฟิลด์))[^.\n]{0,120}"
-            r"(?:annual_inc|\bdti\b|home_ownership)",
-            text,
-        )
-        if missing_claim:
-            failures.append(
-                "ห้ามอ้างว่า annual_inc/dti/home_ownership ไม่มี เพราะ MCP schema มี field เหล่านี้"
-            )
-        majority_full_funding = bool(re.search(
-            r"(?:ส่วนใหญ่[^.\n]{0,80}(?:เต็มจำนวน|อนุมัติเต็ม)|"
-            r"most[^.\n]{0,80}(?:fully funded|full amount))",
-            text,
-        ))
-        if majority_full_funding:
-            queries = " ".join(
-                str(item.get("tool_arguments", {}).get("query", "")).lower()
-                for item in (accepted_evidence or [])
-            )
-            has_row_level_ratio = (
-                "loan_amnt" in queries and "funded_amnt" in queries
-                and "case" in queries
-                and any(token in queries for token in ("count(", "sum(", "avg("))
-            )
-            if not has_row_level_ratio:
-                failures.append(
-                    "ค่าเฉลี่ยที่ใกล้กันพิสูจน์ไม่ได้ว่าส่วนใหญ่ได้ funding เต็มจำนวน; "
-                    "ต้องมี row-level proportion จาก SQL evidence"
-                )
+                             accepted_evidence: list[dict] | None = None,
+                             contract: ResolvedContract | None = None) -> None:
+    """Apply final-answer rules supplied by the resolved extension contract."""
+    if contract is None:
+        contract = resolve_contract(question)
+    queries = " ".join(
+        str(item.get("action", item.get("tool_arguments", {})).get("query", "")).lower()
+        for item in (accepted_evidence or [])
+    )
+    failures = validate_final_contract(contract, answer, queries)
     if failures:
         raise ValueError("final semantic gate rejected: " + "; ".join(failures))
 
@@ -142,51 +101,15 @@ def validate_plan_descriptions(descriptions: list[str]) -> None:
 
 
 def build_goal_contract(question: str) -> str:
-    """Turn known goal semantics into actionable, pre-plan runtime constraints."""
-    goal = question.lower()
-    rules: list[str] = []
-    if any(token in goal for token in (
-        "ระยะเวลาการทำงาน", "อายุงาน", "employment length", "employment tenure"
-    )):
-        rules.append(
-            "Dimension contract: JOIN emp_length_dim and GROUP BY emp_length_dim.emp_length."
-        )
-    if any(token in goal for token in (
-        "อนุมัติวงเงิน", "approved amount", "approval amount"
-    )):
-        rules.extend([
-            "Metric contract: SELECT/aggregate loans_fact.funded_amnt as a funding proxy; "
-            "loan_amnt alone is insufficient.",
-            "Population contract: do not JOIN or filter loan_status/loan_status_dim; "
-            "Current/Fully Paid are post-origination outcomes, not approval decisions.",
-            "Answer contract: state that no Approved/Rejected field exists and do not "
-            "claim approval rate or causal effect.",
-        ])
-    if not rules:
-        return ""
-    return "[DYNAMIC GOAL CONTRACT — runtime authority]\n" + "\n".join(
-        f"- {rule}" for rule in rules
+    contract = resolve_contract(question)
+    return contract.system_context if contract else ""
+
+
+def semantic_recovery_hint(failed: list[str], unsupported_claims=None) -> str:
+    del failed
+    return " | ".join(
+        claim.basis for claim in (unsupported_claims or []) if claim.basis
     )
-
-
-def semantic_recovery_hint(failed: list[str]) -> str:
-    hints = {
-        "semantic:employment_length_dimension": (
-            "JOIN emp_length_dim d ON loans_fact.emp_length_id=d.emp_length_id "
-            "และ GROUP BY d.emp_length"
-        ),
-        "semantic:loan_amount_metric": (
-            "SELECT/aggregate f.loan_amnt หรือ f.funded_amnt ตาม metric contract"
-        ),
-        "semantic:funded_amount_proxy": (
-            "ต้อง SELECT/aggregate f.funded_amnt; loan_amnt อย่างเดียวไม่ผ่าน"
-        ),
-        "semantic:loan_status_not_approval": (
-            "ลบ JOIN/WHERE ที่อ้าง loan_status หรือ loan_status_dim ออกจาก query"
-        ),
-    }
-    selected = [hints[item] for item in failed if item in hints]
-    return " | ".join(selected)
 
 
 def planner_tools() -> list[dict]:
@@ -219,14 +142,15 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
         observation_routing_mode: str = "rules"):
     plan: PlannerState | None = None
     trace: list[dict] = []
-    accepted_evidence: list[dict] = []
     accepted_facts: dict[str, float] = {}
+    breaker = FailureCircuitBreaker()
     routing_mode = validate_routing_mode(
         "enforce" if prompt_semantic_review else observation_routing_mode
     )
     tools = planner_tools() + registry.openai_tools
     messages = [{"role": "system", "content": SYSTEM}]
-    goal_contract = build_goal_contract(question)
+    contract = resolve_contract(question)
+    goal_contract = contract.system_context if contract else ""
     if goal_contract:
         messages.append({"role": "system", "content": goal_contract})
     messages.append({"role": "user", "content": question})
@@ -244,12 +168,15 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                     # Do not spend a reviewer call—or ask it for more evidence—until
                     # the deterministic planner proves every step is complete.
                     plan.approve_answer()
-                    validate_final_semantics(question, final_answer, accepted_evidence)
+                    evidence_payload = [item.as_dict() for item in plan.accepted_evidence]
+                    validate_final_semantics(
+                        question, final_answer, evidence_payload, contract
+                    )
                     if routing_mode in ("shadow", "enforce"):
                         final_review = review_final_answer(
                             goal=question,
                             answer=final_answer,
-                            accepted_evidence=accepted_evidence,
+                            accepted_evidence=evidence_payload,
                         )
                         final_decision = (
                             final_review.decision if routing_mode == "enforce" else "accept"
@@ -297,6 +224,8 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
             try:
                 args = json.loads(call.function.arguments or "{}")
                 if name == "plan_write":
+                    if plan is not None:
+                        raise ValueError("plan_write is allowed once; use plan_revise")
                     descriptions = normalize_plan_descriptions(args["steps"])
                     validate_plan_descriptions(descriptions)
                     plan = PlannerState(
@@ -335,6 +264,7 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                             tool_arguments=args, semantic_checks=True,
                             prior_facts=accepted_facts or None,
                             goal_description=question,
+                            contract=contract,
                         )
                         trace.append({"step_id": active[0].id, "tool": name,
                                       "tool_call_id": call_id, "observation": observation.as_dict()})
@@ -346,12 +276,37 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                         print(f"[OBSERVATION] step={active[0].id} type={observation.result_type} "
                               f"decision={observation.decision} reason={observation.reason}")
                         if observation.decision != "accept":
-                            recovery = semantic_recovery_hint(observation.failed)
+                            recovery = semantic_recovery_hint(
+                                observation.failed, observation.unsupported_claims
+                            )
+                            failure_count, escalation = breaker.record(
+                                step_id=active[0].id, tool=name,
+                                decision=observation.decision, failed=observation.failed,
+                            )
                             result += "\n\n[OBSERVATION POLICY]\n" + json.dumps(
                                 observation.as_dict(), ensure_ascii=False
                             ) + "\nผลนี้ยังไม่ถูกบันทึกเป็น evidence; retry/query_more/replan ตาม decision"
                             if recovery:
                                 result += "\n[ACTIONABLE FIX] " + recovery
+                            if escalation == "replan":
+                                observation.decision = "replan"
+                                observation.suggested_action = ActionHint(
+                                    "replan", "Repeated failure requires a different action capability"
+                                )
+                                trace[-1]["observation"] = observation.as_dict()
+                                result += (
+                                    f"\n[CIRCUIT BREAKER] repeated failure={failure_count}; "
+                                    "ต้อง plan_revise และเปลี่ยน action capability"
+                                )
+                            elif escalation == "stop":
+                                observation.decision = "stop"
+                                observation.suggested_action = ActionHint(
+                                    "stop", "Repeated identical failure reached the fail-fast limit"
+                                )
+                                trace[-1]["observation"] = observation.as_dict()
+                                raise RuntimeError(
+                                    f"circuit breaker stopped repeated failure after {failure_count} attempts"
+                                )
                             messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
                             continue
                         if routing_mode in ("shadow", "enforce") and risk.reviewer_required:
@@ -377,16 +332,14 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                                                  "content": result})
                                 continue
                     plan.observe(active[0].id, tool=name, tool_call_id=call_id, result=result,
-                                 observation=observation.as_dict() if observation else None)
+                                 observation=observation.as_dict() if observation else None,
+                                 action=args,
+                                 proven_claim_ids=[
+                                     claim.id for claim in observation.proven_claims
+                                 ] if observation else [])
                     if dynamic_observation:
                         plan.complete(active[0].id)
-                    accepted_evidence.append({
-                        "step_id": active[0].id,
-                        "step_description": active[0].description,
-                        "tool": name,
-                        "tool_arguments": args,
-                        "result": result,
-                    })
+                    breaker.clear_step(active[0].id)
                     result += (
                         "\n\n[RUNTIME STATE]\n" + plan.render()
                         + "\nหลักฐานถูกรับและ step completed อัตโนมัติ; "

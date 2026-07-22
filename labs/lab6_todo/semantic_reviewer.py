@@ -48,9 +48,8 @@ the exact value is present in accepted evidence or its formula and weighting are
 and numerically correct. If a new MCP query is required, use query_more. If the evidence
 is sufficient but wording/arithmetic must be corrected, use retry.
 Never infer a row-level majority or proportion from similar column averages. Such a
-claim requires direct row-level numerator/denominator evidence. Do not relabel
-loan_amnt as approved amount; funded_amnt may only be described as a funding proxy
-unless the evidence explicitly defines an approval decision.
+claim requires direct row-level numerator/denominator evidence. Treat proxy semantics
+as contract data; do not invent a domain interpretation that evidence does not define.
 
 Decision meanings:
 - accept: every material claim and number is entailed by accepted evidence
@@ -153,7 +152,7 @@ def review_final_answer(*, goal: str, answer: str, accepted_evidence: list[dict]
             "step_id": item.get("step_id"),
             "step_description": item.get("step_description"),
             "tool": item.get("tool"),
-            "tool_arguments": item.get("tool_arguments") or {},
+            "tool_arguments": item.get("action", item.get("tool_arguments")) or {},
             "result": result,
         }
         encoded = json.dumps(entry, ensure_ascii=False)

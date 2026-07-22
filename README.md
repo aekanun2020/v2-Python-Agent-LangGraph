@@ -95,8 +95,9 @@ orchestration framework:
 
 - Python เป็นเจ้าของ `PlannerState` และตรวจ state transition
 - Dynamic Observation Policy เลือก hard checks จาก active step + tool + result type
-- Runtime สร้าง dynamic goal contract ก่อนวางแผนและส่งชื่อ dimension, metric,
-  population constraint ที่ต้องใช้ให้ model; failed checks คืน actionable SQL fix
+- Runtime โหลด declarative contract จาก `labs/lab6_todo/contracts/*.json`; contract ใหม่จึงไม่ต้อง
+  ฝังชื่อ table/field เพิ่มใน core และ failed claims คืน hint จาก contract
+  (ส่วน policy HR รุ่นเดิมยังคงไว้เพื่อ backward compatibility)
 - MCP result ถูกผูกกับ active step เป็น evidence เฉพาะเมื่อ observation ตัดสิน `accept`
 - step ที่ไม่มีหลักฐานเปลี่ยนเป็น `completed` ไม่ได้
 - accepted observation ทำให้ Python auto-complete active step; model ไม่ต้องจัดการ
@@ -118,6 +119,39 @@ LLM proposes action
 → reject / replan / continue
 → answer gate → final semantic reviewer (shadow or enforce)
 ```
+
+### Generic TAO Observation runtime
+
+Observation หลัง tool call ไม่ได้เป็นเพียง raw text แต่ compile เป็น state ที่บอกว่า
+action สำเร็จหรือไม่, รองรับ step หรือไม่, evidence พอหรือยัง, claim ใด proven /
+contradicted / unsupported และควร accept / retry / query_more / replan / stop:
+
+```text
+Tool result
+→ infer action capabilities (รวม SQL ที่อ่าน INFORMATION_SCHEMA)
+→ load resolved declarative contract
+→ compile typed claims
+→ ObservationState
+→ bind EvidenceRecord(plan_id, revision, step_id, action, claims)
+→ Planner transition
+```
+
+กลไกทั่วไปอยู่ใน `observation_types.py`, `contract_runtime.py`, `capabilities.py`
+และ `circuit_breaker.py` ส่วน `contracts/lending_funding_example.json` เป็นเพียง
+extension example สำหรับ dataset ที่ใช้ทดลอง ลบหรือเพิ่ม contract ได้โดยไม่แก้ core
+runtime งานนี้ไม่ได้พยายามแทน Domain Skill หรือ ontology เฉพาะทาง
+
+Runtime invariant ล่าสุด:
+
+- `plan_write` ใช้ได้ครั้งเดียว; หลังจากนั้นใช้ `plan_revise`
+- accepted evidence มี provenance และอยู่ใน `PlannerState` แหล่งเดียว
+- completed evidence เปิดหรือลบด้วย replan ไม่ได้
+- failure signature เดิมครั้งที่ 3 บังคับ replan และครั้งที่ 5 fail-fast
+- tool compatibility ดู capability ของ action ไม่ดูชื่อ tool เพียงอย่างเดียว
+
+Stability baseline ก่อน refactor จากคำถามเดิม 10 runs: completion 8/10, strict
+semantic correctness 5/10, max-step failure 2/10 และ median MCP attempts 9.5
+ตัวเลขนี้เป็น baseline สำหรับเทียบหลัง refactor ไม่ใช่คำกล่าวว่า Agent พร้อม production
 
 ### สถานะล่าสุด: Rules + Shadow Risk Router
 

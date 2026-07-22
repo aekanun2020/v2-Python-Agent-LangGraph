@@ -8,16 +8,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Literal
+import uuid
+
+from labs.lab6_todo.observation_types import EvidenceRecord
 
 StepStatus = Literal["pending", "in_progress", "completed", "blocked"]
-
-
-@dataclass
-class Evidence:
-    tool: str
-    tool_call_id: str
-    result: str
-    observation: dict | None = None
 
 
 @dataclass
@@ -25,7 +20,7 @@ class PlanStep:
     id: int
     description: str
     status: StepStatus = "pending"
-    evidence: list[Evidence] = field(default_factory=list)
+    evidence: list[EvidenceRecord] = field(default_factory=list)
 
 
 @dataclass
@@ -36,6 +31,7 @@ class PlannerState:
     revision: int = 1
     last_reason: str = "initial plan"
     answer_approved: bool = False
+    plan_id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     def step(self, step_id: int) -> PlanStep:
         match = next((step for step in self.steps if step.id == step_id), None)
@@ -55,13 +51,23 @@ class PlannerState:
         target.status = "in_progress"
 
     def observe(self, step_id: int, *, tool: str, tool_call_id: str, result: str,
-                observation: dict | None = None) -> None:
+                observation: dict | None = None, action: dict | None = None,
+                proven_claim_ids: list[str] | None = None) -> None:
         target = self.step(step_id)
         if target.status != "in_progress":
             raise ValueError("tool evidence must belong to the in-progress step")
         if not result.strip():
             raise ValueError("empty tool results are not evidence")
-        target.evidence.append(Evidence(tool, tool_call_id, result, observation))
+        target.evidence.append(EvidenceRecord(
+            evidence_id=str(uuid.uuid4()), plan_id=self.plan_id,
+            plan_revision=self.revision, step_id=step_id, tool=tool,
+            tool_call_id=tool_call_id, action=action or {}, result=result,
+            proven_claim_ids=proven_claim_ids or [], observation=observation,
+        ))
+
+    @property
+    def accepted_evidence(self) -> list[EvidenceRecord]:
+        return [evidence for step in self.steps for evidence in step.evidence]
 
     def complete(self, step_id: int) -> None:
         target = self.step(step_id)

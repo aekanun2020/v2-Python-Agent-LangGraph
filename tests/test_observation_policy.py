@@ -125,8 +125,8 @@ class DynamicObservationPolicyTests(unittest.TestCase):
         )
         self.assertEqual(obs.decision, "retry")
         self.assertIn("semantic:employment_length_dimension", obs.failed)
-        self.assertIn("semantic:loan_amount_metric", obs.failed)
         self.assertIn("semantic:funded_amount_proxy", obs.failed)
+        self.assertIn("semantic:post_origination_population", obs.passed)
 
     def test_original_goal_accepts_employment_length_and_funded_amount(self):
         obs = observe_result(
@@ -144,9 +144,8 @@ class DynamicObservationPolicyTests(unittest.TestCase):
         )
         self.assertEqual(obs.decision, "accept")
         self.assertIn("semantic:employment_length_dimension", obs.passed)
-        self.assertIn("semantic:loan_amount_metric", obs.passed)
         self.assertIn("semantic:funded_amount_proxy", obs.passed)
-        self.assertIn("semantic:loan_status_not_approval", obs.passed)
+        self.assertIn("semantic:post_origination_population", obs.passed)
 
     def test_loan_status_cannot_be_relabelled_as_approval(self):
         obs = observe_result(
@@ -165,7 +164,7 @@ class DynamicObservationPolicyTests(unittest.TestCase):
             semantic_checks=True,
         )
         self.assertEqual(obs.decision, "retry")
-        self.assertIn("semantic:loan_status_not_approval", obs.failed)
+        self.assertIn("semantic:post_origination_population", obs.failed)
 
     def test_post_origination_status_filter_is_rejected_without_approval_alias(self):
         obs = observe_result(
@@ -184,7 +183,7 @@ class DynamicObservationPolicyTests(unittest.TestCase):
             semantic_checks=True,
         )
         self.assertEqual(obs.decision, "retry")
-        self.assertIn("semantic:loan_status_not_approval", obs.failed)
+        self.assertIn("semantic:post_origination_population", obs.failed)
 
 
 if __name__ == "__main__":
