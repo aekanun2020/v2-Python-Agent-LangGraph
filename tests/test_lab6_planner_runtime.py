@@ -3,8 +3,8 @@ import unittest
 from labs.lab6_todo.observation_types import Claim
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
 from labs.lab6_todo.agent_planner import (
-    build_goal_contract, normalize_plan_descriptions, require_final_answer,
-    semantic_recovery_hint, validate_final_semantics, validate_plan_descriptions,
+    build_goal_contract, normalize_typed_plan_steps, require_final_answer,
+    semantic_recovery_hint, validate_final_semantics,
 )
 
 
@@ -24,10 +24,16 @@ class PurePythonPlannerTests(unittest.TestCase):
         ])
         self.assertIn("GROUP BY", hint)
         self.assertIn("configured metric", hint)
-    def test_summary_statistics_is_an_mcp_verifiable_step(self):
-        validate_plan_descriptions([
-            "คำนวณสถิติสรุปวงเงินกู้โดยเฉลี่ยตามระยะเวลาการทำงาน"
-        ])
+    def test_typed_plan_does_not_infer_capability_from_description(self):
+        step = normalize_typed_plan_steps([{
+            "description": "ข้อความนี้จะเขียนว่าอะไรก็ได้",
+            "required_capability": "aggregation",
+            "evidence_requirements": [{
+                "claim_id": "aggregate_ready",
+                "predicate": "aggregation_executed",
+            }],
+        }])[0]
+        self.assertEqual(step.required_capability, "aggregation")
 
     def test_final_gate_rejects_status_filtered_approved_population(self):
         with self.assertRaisesRegex(ValueError, "loan_status"):
@@ -141,17 +147,34 @@ class PurePythonPlannerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unknown step id 99"):
             self.plan.start(99)
 
-    def test_plan_write_normalizes_qwen_object_steps(self):
-        normalized = normalize_plan_descriptions([
-            {"description": "ตรวจ schema"},
-            {"text": "query ข้อมูล"},
-            "ตรวจจำนวนแถว",
-        ])
-        self.assertEqual(normalized, ["ตรวจ schema", "query ข้อมูล", "ตรวจจำนวนแถว"])
+    def test_plan_write_normalizes_typed_qwen_steps(self):
+        normalized = normalize_typed_plan_steps([{
+            "description": "ตรวจ schema",
+            "required_capability": "schema_inspection",
+            "evidence_requirements": [{
+                "claim_id": "schema_seen", "predicate": "schema_inspected",
+            }],
+        }])
+        self.assertEqual(normalized[0].description, "ตรวจ schema")
+        self.assertEqual(normalized[0].required_capability, "schema_inspection")
 
     def test_plan_write_rejects_malformed_step_without_crashing(self):
         with self.assertRaisesRegex(ValueError, r"steps\[1\]"):
-            normalize_plan_descriptions([{"status": "pending"}])
+            normalize_typed_plan_steps([{"status": "pending"}])
+
+    def test_plan_write_rejects_free_text_steps(self):
+        with self.assertRaisesRegex(ValueError, "typed object"):
+            normalize_typed_plan_steps(["ตรวจ schema"])
+
+    def test_generic_payload_cannot_fake_declared_aggregation(self):
+        with self.assertRaisesRegex(ValueError, "aggregation_executed"):
+            normalize_typed_plan_steps([{
+                "description": "aggregate data",
+                "required_capability": "aggregation",
+                "evidence_requirements": [{
+                    "claim_id": "anything", "predicate": "inspectable_payload",
+                }],
+            }])
 
     def test_answer_gate_rejects_none_or_blank_content(self):
         for content in (None, "", "   "):

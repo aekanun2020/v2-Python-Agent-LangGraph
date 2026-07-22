@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 import uuid
 
-from labs.lab6_todo.observation_types import EvidenceRecord
+from labs.lab6_todo.observation_types import EvidenceRecord, EvidenceRequirement
 
 StepStatus = Literal["pending", "in_progress", "completed", "blocked"]
 
@@ -21,6 +21,8 @@ class PlanStep:
     description: str
     status: StepStatus = "pending"
     evidence: list[EvidenceRecord] = field(default_factory=list)
+    required_capability: str | None = None
+    evidence_requirements: list[EvidenceRequirement] = field(default_factory=list)
 
 
 @dataclass
@@ -92,13 +94,19 @@ class PlannerState:
             if previous and previous.status == "completed" and previous.evidence:
                 # A model may revise future work, but cannot reopen accepted work.
                 step.status = "completed"
+                step.description = previous.description
+                step.required_capability = previous.required_capability
+                step.evidence_requirements = list(previous.evidence_requirements)
             if step.status == "completed" and not step.evidence:
                 step.status = "pending"
         for previous in old.values():
             if (previous.id not in proposed_ids and previous.status == "completed"
                     and previous.evidence):
                 steps.append(PlanStep(
-                    previous.id, previous.description, "completed", list(previous.evidence)
+                    id=previous.id, description=previous.description,
+                    status="completed", evidence=list(previous.evidence),
+                    required_capability=previous.required_capability,
+                    evidence_requirements=list(previous.evidence_requirements),
                 ))
         active_seen = False
         for step in sorted(steps, key=lambda item: item.id):
@@ -126,6 +134,8 @@ class PlannerState:
         for step in self.steps:
             lines.append(
                 f"[{step.status}] {step.id}. {step.description} "
-                f"(evidence={len(step.evidence)})"
+                f"(capability={step.required_capability or 'unspecified'}, "
+                f"requirements={len(step.evidence_requirements)}, "
+                f"evidence={len(step.evidence)})"
             )
         return "\n".join(lines)

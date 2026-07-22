@@ -21,7 +21,9 @@
 เจ้าของ state transition แทนการเชื่อคำประกาศของ LLM:
 
 - มี `PlannerState`, revision และสถานะของแต่ละขั้น
-- Dynamic Observation Policy compile typed `ObservationState` จาก active step + action
+- LLM ต้องประกาศ `required_capability` และ `evidence_requirements` แบบ typed ใน
+  `plan_write/plan_revise`; description มีไว้ให้มนุษย์อ่าน ไม่ถูก Python ใช้เดา intent
+- Dynamic Observation Policy compile typed `ObservationState` จาก typed step + action
   capability + tool result + prior evidence + declarative contract
 - Domain example อยู่ใน `contracts/*.json`; contract ใหม่ไม่ต้อง hard-code table/field เพิ่มใน
   Python core และ semantic retry ใช้ hint จาก contract
@@ -48,7 +50,16 @@ ObservationState
 
 EvidenceRecord
 └─ evidence_id / plan_id / plan_revision / step_id / action / result / proven_claim_ids
+
+PlanStep
+├─ description (human-readable only)
+├─ required_capability
+└─ evidence_requirements: claim_id / predicate / target
 ```
+
+Capability และ evidence predicate เป็น vocabulary กลาง เช่น `schema_inspection`,
+`aggregation`, `schema_inspected`, `aggregation_executed` ไม่ใช่ชื่อ table/field ของ
+โจทย์ LLM เลือกความหมายแบบ dynamic ส่วน Python ตรวจว่า action ทำสิ่งที่ประกาศจริง
 
 `contracts/lending_funding_example.json` มีไว้สาธิต extension point เท่านั้น งานนี้ยัง
 ไม่สร้าง Domain Skill, ontology หรือ production semantic assurance

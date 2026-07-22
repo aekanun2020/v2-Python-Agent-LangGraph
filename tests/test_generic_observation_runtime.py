@@ -5,6 +5,7 @@ from labs.lab6_todo.circuit_breaker import FailureCircuitBreaker
 from labs.lab6_todo.contract_runtime import evaluate_action_claims, resolve_contract
 from labs.lab6_todo.observation_policy import observe_result
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
+from labs.lab6_todo.observation_types import EvidenceRequirement
 
 
 class GenericObservationRuntimeTests(unittest.TestCase):
@@ -13,7 +14,7 @@ class GenericObservationRuntimeTests(unittest.TestCase):
             "execute_query_tool",
             {"query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS"},
         )
-        self.assertIn("schema_presence", capabilities)
+        self.assertIn("schema_inspection", capabilities)
         obs = observe_result(
             step_description="ตรวจ schema ของตาราง",
             tool="execute_query_tool",
@@ -21,11 +22,63 @@ class GenericObservationRuntimeTests(unittest.TestCase):
             result='[{"COLUMN_NAME":"employee_id"}]',
             goal_description="ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน",
             semantic_checks=True,
+            required_capability="schema_inspection",
+            evidence_requirements=[EvidenceRequirement(
+                "schema_seen", "schema_inspected", "database columns"
+            )],
         )
         self.assertEqual(obs.decision, "accept")
         self.assertTrue(obs.execution_ok)
         self.assertTrue(obs.supports_step)
         self.assertTrue(obs.evidence_sufficient)
+        self.assertEqual(obs.proven_claims[0].id, "schema_seen")
+
+    def test_description_keywords_cannot_override_typed_capability(self):
+        obs = observe_result(
+            step_description="ตรวจ schema และ column แต่ typed intent คือ aggregation",
+            required_capability="aggregation",
+            evidence_requirements=[EvidenceRequirement(
+                "aggregate_ready", "aggregation_executed"
+            )],
+            tool="preview_table",
+            result='[{"column":"employee_id"}]',
+        )
+        self.assertEqual(obs.decision, "reject")
+        self.assertIn("step_tool_alignment", obs.failed)
+
+    def test_schema_existence_action_is_not_forced_through_analytical_contract(self):
+        obs = observe_result(
+            step_description="ตรวจว่ามี decision field หรือไม่",
+            required_capability="existence_check",
+            evidence_requirements=[EvidenceRequirement(
+                "decision_field_checked", "existence_checked"
+            )],
+            tool="execute_query_tool",
+            tool_arguments={"query": (
+                "SELECT COUNT(*) AS field_count FROM INFORMATION_SCHEMA.COLUMNS "
+                "WHERE COLUMN_NAME = 'approval_decision'"
+            )},
+            result='[{"field_count":0}]',
+            goal_description="ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน",
+            semantic_checks=True,
+        )
+        self.assertEqual(obs.decision, "accept")
+        self.assertEqual(obs.proven_claims[0].id, "decision_field_checked")
+
+    def test_typed_plan_is_not_reclassified_by_legacy_description_keywords(self):
+        obs = observe_result(
+            step_description="นับพนักงานที่ปฏิบัติงานแยกแผนก",
+            required_capability="query_execution",
+            evidence_requirements=[EvidenceRequirement(
+                "rows_observed", "rows_returned"
+            )],
+            tool="execute_query_tool",
+            tool_arguments={"query": "SELECT COUNT(*) AS headcount FROM employees"},
+            result='[{"headcount":100}]',
+            semantic_checks=True,
+        )
+        self.assertEqual(obs.decision, "accept")
+        self.assertNotIn("active_employee_population", obs.semantic_requirements)
 
     def test_cross_evidence_conflict_becomes_typed_contradicted_claim(self):
         obs = observe_result(

@@ -9,6 +9,18 @@ ClaimStatus = Literal["proven", "contradicted", "unsupported"]
 
 
 @dataclass(frozen=True)
+class EvidenceRequirement:
+    """A typed, model-declared condition that accepted evidence must satisfy."""
+
+    claim_id: str
+    predicate: str
+    target: str = ""
+
+    def as_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class Claim:
     id: str
     type: str

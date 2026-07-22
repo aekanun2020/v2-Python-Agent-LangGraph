@@ -32,6 +32,7 @@ class DynamicObservationPolicyTests(unittest.TestCase):
 
     def test_schema_preview_cannot_complete_query_step(self):
         obs = observe_result(step_description="query aggregate metric",
+                             required_capability="query_execution",
                              tool="preview_table", result='{"rows":[{"id":1}]}')
         self.assertEqual(obs.decision, "reject")
 

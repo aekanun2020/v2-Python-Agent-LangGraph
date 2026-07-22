@@ -12,11 +12,13 @@ import re
 from dataclasses import asdict, dataclass, field
 from typing import Literal
 
-from labs.lab6_todo.capabilities import infer_action_capabilities, required_step_capability
+from labs.lab6_todo.capabilities import (
+    evaluate_evidence_requirements, infer_action_capabilities,
+)
 from labs.lab6_todo.contract_runtime import (
     ResolvedContract, evaluate_action_claims, resolve_contract,
 )
-from labs.lab6_todo.observation_types import ActionHint, Claim
+from labs.lab6_todo.observation_types import ActionHint, Claim, EvidenceRequirement
 
 ObservationDecision = Literal["accept", "retry", "query_more", "replan", "stop", "reject"]
 
@@ -50,10 +52,6 @@ ERROR_MARKERS = (
     "bad gateway", "service unavailable", "timed out", "timeout",
 )
 TRUNCATION_MARKERS = ("truncated", "ถูกตัด", "more rows", "has_more", "next_cursor")
-SCHEMA_WORDS = ("schema", "table", "column", "field", "โครงสร้าง", "คอลัมน์")
-QUERY_WORDS = ("query", "sql", "aggregate", "metric", "จำนวน", "อัตรา", "ค่าเฉลี่ย")
-
-
 def _result_type(tool: str, result: str) -> str:
     lowered_tool = tool.lower()
     lowered = result.lower()
@@ -191,7 +189,10 @@ def observe_result(*, step_description: str, tool: str, result: str,
                    semantic_checks: bool = False,
                    prior_facts: dict[str, float] | None = None,
                    goal_description: str | None = None,
-                   contract: ResolvedContract | None = None) -> ObservationState:
+                   contract: ResolvedContract | None = None,
+                   required_capability: str | None = None,
+                   evidence_requirements: list[EvidenceRequirement] | None = None,
+                   ) -> ObservationState:
     """Select and execute deterministic checks for this step/tool/result tuple."""
     if contract is None and goal_description:
         contract = resolve_contract(goal_description)
@@ -199,22 +200,29 @@ def observe_result(*, step_description: str, tool: str, result: str,
     step = step_description.lower()
     tool_lower = tool.lower()
     modules = ["execution_integrity", "payload_presence", "step_tool_alignment"]
-    if result_type == "schema" or any(word in step for word in SCHEMA_WORDS):
+    if result_type == "schema" or required_capability == "schema_inspection":
         modules.append("schema_coverage")
-    if result_type == "query_result" or any(word in step for word in QUERY_WORDS):
+    if result_type == "query_result" or required_capability in {
+        "query_execution", "aggregation", "comparison", "existence_check",
+    }:
         modules.extend(["result_shape", "population_and_grain"])
     if result_type == "truncated":
         modules.append("completeness")
     requirements = (
         _semantic_requirements(step_description, goal_description)
-        if semantic_checks and result_type == "query_result" else []
+        # Legacy lesson policies remain available for old untyped callers only.
+        # Typed plans declare their intent explicitly and are never reclassified
+        # from natural-language description keywords.
+        if (semantic_checks and result_type == "query_result"
+            and not evidence_requirements) else []
     )
-    step_capability = required_step_capability(step_description)
+    step_capability = required_capability
+    capabilities = infer_action_capabilities(tool, tool_arguments)
     contract_claims = (
         evaluate_action_claims(
             contract, sql=str((tool_arguments or {}).get("query", ""))
         ) if (semantic_checks and result_type == "query_result"
-              and step_capability != "schema_presence") else []
+              and "schema_inspection" not in capabilities) else []
     )
     requirements.extend(claim.id for claim in contract_claims)
     if requirements:
@@ -240,13 +248,32 @@ def observe_result(*, step_description: str, tool: str, result: str,
     state.passed.append("payload_presence")
 
     required_capability = step_capability
-    capabilities = infer_action_capabilities(tool, tool_arguments)
     if required_capability and required_capability not in capabilities:
         state.failed.append("step_tool_alignment")
         state.decision = "reject"
         state.reason = "tool type does not support the active plan step"
         return state
     state.passed.append("step_tool_alignment")
+
+    typed_claims = evaluate_evidence_requirements(
+        evidence_requirements or [], capabilities, result
+    )
+    state.proven_claims.extend(
+        claim for claim in typed_claims if claim.status == "proven"
+    )
+    state.unsupported_claims.extend(
+        claim for claim in typed_claims if claim.status == "unsupported"
+    )
+    if state.unsupported_claims:
+        state.failed.extend(
+            f"evidence:{claim.id}" for claim in state.unsupported_claims
+        )
+        state.decision = "query_more"
+        state.reason = "action does not satisfy typed evidence requirements"
+        state.suggested_action = ActionHint(
+            "query_more", " | ".join(claim.basis for claim in state.unsupported_claims)
+        )
+        return state
 
     if result_type == "truncated":
         state.warnings.append("result_completeness_unknown")
