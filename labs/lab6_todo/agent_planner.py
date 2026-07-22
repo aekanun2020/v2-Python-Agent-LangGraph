@@ -23,6 +23,7 @@ from labs.lab6_todo.semantic_reviewer import review_final_answer, review_observa
 from labs.lab6_todo.circuit_breaker import FailureCircuitBreaker
 from labs.lab6_todo.contract_runtime import (
     ResolvedContract, resolve_contract, validate_final_contract,
+    validate_reviewer_action,
 )
 from labs.lab6_todo.claim_adjudication import validate_final_claims
 from labs.lab6_todo.observation_types import ActionHint
@@ -225,10 +226,25 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                             goal=question,
                             answer=final_answer,
                             accepted_evidence=evidence_payload,
+                            contract_context=goal_contract,
                         )
-                        final_decision = (
-                            final_review.decision if routing_mode == "enforce" else "accept"
+                        reviewer_contract_failures = validate_reviewer_action(
+                            contract,
+                            decision=final_review.decision,
+                            reason=final_review.reason,
+                            suggested_next_action=final_review.suggested_next_action,
                         )
+                        if reviewer_contract_failures:
+                            print(
+                                "[FINAL REVIEW OVERRIDDEN] reviewer action conflicts with "
+                                "runtime contract: " + "; ".join(reviewer_contract_failures)
+                            )
+                            final_decision = "accept"
+                        else:
+                            final_decision = (
+                                final_review.decision
+                                if routing_mode == "enforce" else "accept"
+                            )
                         final_review_decision = final_review.decision
                         print(
                             f"[FINAL SEMANTIC REVIEW] review={final_review.decision} "

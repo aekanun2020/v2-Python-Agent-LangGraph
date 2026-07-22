@@ -155,6 +155,8 @@ Runtime invariant ล่าสุด:
 - Filtered catalog SELECT รองรับ `existence_check` แม้ LLM ไม่ได้เขียน COUNT/EXISTS
 - Final claim adjudicator ปฏิเสธ monotonic/trend claim จนกว่าจะมี numeric trend
   evidence โดยตรง ไม่ฝากการตัดสินให้ final reviewer เพียงอย่างเดียว
+- Final Reviewer ได้รับ resolved contract เป็น authoritative context และ Python
+  override คำสั่ง `retry/query_more` ที่เสนอ action ขัด contract เพื่อป้องกัน reviewer loop
 - accepted evidence มี provenance และอยู่ใน `PlannerState` แหล่งเดียว
 - completed evidence เปิดหรือลบด้วย replan ไม่ได้
 - failure signature เดิมครั้งที่ 3 บังคับ replan และครั้งที่ 5 fail-fast

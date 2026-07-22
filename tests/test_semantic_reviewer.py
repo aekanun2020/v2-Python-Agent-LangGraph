@@ -46,6 +46,7 @@ class SemanticReviewerTests(unittest.TestCase):
         review = review_final_answer(
             goal="compare tenure",
             answer="10+ years = 16514.62",
+            contract_context="Do not interpret status as approval.",
             accepted_evidence=[{
                 "step_id": 1, "step_description": "aggregate", "tool": "execute_query_tool",
                 "tool_arguments": {"query": "SELECT ..."},
@@ -56,6 +57,8 @@ class SemanticReviewerTests(unittest.TestCase):
         payload = chat.call_args.kwargs["messages"][1]["content"]
         self.assertIn("16514.62", payload)
         self.assertIn("accepted_mcp_evidence", payload)
+        self.assertIn("authoritative_runtime_contract", payload)
+        self.assertIn("Do not interpret status as approval", payload)
 
     @patch("labs.lab6_todo.semantic_reviewer.llm.chat")
     def test_observation_reviewer_receives_typed_step_intent(self, chat):

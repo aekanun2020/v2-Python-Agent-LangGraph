@@ -42,6 +42,8 @@
 - final answer ถูก runtime gate ปฏิเสธจนกว่าทุกขั้นเสร็จและมีหลักฐาน
 - `shadow/enforce` ส่ง final answer พร้อม accepted MCP evidence ให้ independent reviewer;
   `enforce` สั่ง rewrite หรือ `plan_revise` + query เพิ่มเมื่อมีตัวเลขใหม่ที่ไม่ grounded
+- resolved declarative contract ถูกส่งให้ Final Reviewer เป็น authority; ถ้า reviewer
+  ยังเสนอ action ที่ contract ห้าม Python จะ override แทนการเปิด query/replan loop
 
 Typed state หลัก:
 

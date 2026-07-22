@@ -2,7 +2,9 @@ import unittest
 
 from labs.lab6_todo.capabilities import action_capability_error, infer_action_capabilities
 from labs.lab6_todo.circuit_breaker import FailureCircuitBreaker
-from labs.lab6_todo.contract_runtime import evaluate_action_claims, resolve_contract
+from labs.lab6_todo.contract_runtime import (
+    evaluate_action_claims, resolve_contract, validate_reviewer_action,
+)
 from labs.lab6_todo.observation_policy import observe_result
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
 from labs.lab6_todo.observation_types import EvidenceRequirement
@@ -125,6 +127,26 @@ class GenericObservationRuntimeTests(unittest.TestCase):
                  "GROUP BY d.emp_length"),
         )
         self.assertTrue(all(claim.status == "proven" for claim in claims))
+
+    def test_reviewer_cannot_recommend_action_forbidden_by_runtime_contract(self):
+        contract = resolve_contract("ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน")
+        failures = validate_reviewer_action(
+            contract, decision="query_more",
+            reason="loan_status_id might contain approval information",
+            suggested_next_action=(
+                "Join loan_status_dim and calculate approval rate by emp_length"
+            ),
+        )
+        self.assertTrue(failures)
+        self.assertIn("approval", " ".join(failures).lower())
+
+    def test_reviewer_may_recommend_action_inside_runtime_contract(self):
+        contract = resolve_contract("ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน")
+        failures = validate_reviewer_action(
+            contract, decision="query_more", reason="need funding evidence",
+            suggested_next_action="Aggregate funded_amnt by emp_length",
+        )
+        self.assertEqual(failures, [])
 
     def test_circuit_breaker_replans_then_stops_repeated_signature(self):
         breaker = FailureCircuitBreaker(replan_after=3, stop_after=5)

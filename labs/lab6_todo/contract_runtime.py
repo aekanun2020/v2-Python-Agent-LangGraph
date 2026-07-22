@@ -92,3 +92,16 @@ def validate_final_contract(contract: ResolvedContract | None, answer: str,
                     continue
             failures.append(str(rule.get("message", "final claim violates contract")))
     return failures
+
+
+def validate_reviewer_action(
+    contract: ResolvedContract | None, *, decision: str, reason: str,
+    suggested_next_action: str,
+) -> list[str]:
+    """Reject a non-accept reviewer instruction that violates runtime authority."""
+    if decision == "accept" or contract is None:
+        return []
+    instruction = suggested_next_action.strip() or reason.strip()
+    if not instruction:
+        return []
+    return validate_final_contract(contract, instruction)
