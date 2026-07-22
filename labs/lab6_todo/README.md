@@ -34,6 +34,10 @@
 - `plan_revise` แก้ future work ได้ แต่เปิดหรือลบ completed evidence เดิมไม่ได้
 - `plan_write` ใช้ได้ครั้งเดียว ป้องกัน plan/evidence provenance ถูก reset กลางงาน
 - failure เดิมซ้ำครบ threshold ถูก circuit breaker บังคับ replan หรือ stop แบบ fail-fast
+- action ต้องใช้ capability ที่เฉพาะที่สุด เช่น GROUP BY/AVG ต้องประกาศ `aggregation`
+  ไม่ใช่ `query_execution`; runtime reject ได้ก่อนส่ง MCP
+- final trend/monotonic claim ต้องมี numeric evidence field โดยตรง เช่น
+  `monotonic_increase_violations=0` หรือ `trend_slope`; grouped rows อย่างเดียวไม่พอ
 - แก้แผนระหว่างทำงานผ่าน `plan_revise` และรักษาหลักฐานเดิม
 - final answer ถูก runtime gate ปฏิเสธจนกว่าทุกขั้นเสร็จและมีหลักฐาน
 - `shadow/enforce` ส่ง final answer พร้อม accepted MCP evidence ให้ independent reviewer;
@@ -60,6 +64,8 @@ PlanStep
 Capability และ evidence predicate เป็น vocabulary กลาง เช่น `schema_inspection`,
 `aggregation`, `schema_inspected`, `aggregation_executed` ไม่ใช่ชื่อ table/field ของ
 โจทย์ LLM เลือกความหมายแบบ dynamic ส่วน Python ตรวจว่า action ทำสิ่งที่ประกาศจริง
+เมื่อ Observation เรียก Qwen reviewer จะส่ง typed capability และ evidence requirements
+ไปด้วย เพื่อให้ reviewer ตรวจ semantic alignment จาก declaration เดียวกับ runtime
 
 `contracts/lending_funding_example.json` มีไว้สาธิต extension point เท่านั้น งานนี้ยัง
 ไม่สร้าง Domain Skill, ontology หรือ production semantic assurance

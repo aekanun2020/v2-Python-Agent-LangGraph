@@ -1,6 +1,6 @@
 import unittest
 
-from labs.lab6_todo.capabilities import infer_action_capabilities
+from labs.lab6_todo.capabilities import action_capability_error, infer_action_capabilities
 from labs.lab6_todo.circuit_breaker import FailureCircuitBreaker
 from labs.lab6_todo.contract_runtime import evaluate_action_claims, resolve_contract
 from labs.lab6_todo.observation_policy import observe_result
@@ -73,12 +73,35 @@ class GenericObservationRuntimeTests(unittest.TestCase):
                 "rows_observed", "rows_returned"
             )],
             tool="execute_query_tool",
-            tool_arguments={"query": "SELECT COUNT(*) AS headcount FROM employees"},
-            result='[{"headcount":100}]',
+            tool_arguments={"query": "SELECT TOP 1 employee_id FROM employees"},
+            result='[{"employee_id":100}]',
             semantic_checks=True,
         )
         self.assertEqual(obs.decision, "accept")
         self.assertNotIn("active_employee_population", obs.semantic_requirements)
+
+    def test_filtered_catalog_query_supports_existence_without_count(self):
+        args = {"query": (
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS "
+            "WHERE COLUMN_NAME = 'decision_field'"
+        )}
+        self.assertIsNone(action_capability_error(
+            "existence_check", "execute_query_tool", args
+        ))
+
+    def test_aggregation_cannot_hide_behind_broad_query_execution(self):
+        error = action_capability_error(
+            "query_execution", "execute_query_tool",
+            {"query": "SELECT department, AVG(score) FROM reviews GROUP BY department"},
+        )
+        self.assertIn("too broad", error)
+
+    def test_aggregation_declared_specifically_is_accepted(self):
+        error = action_capability_error(
+            "aggregation", "execute_query_tool",
+            {"query": "SELECT department, AVG(score) FROM reviews GROUP BY department"},
+        )
+        self.assertIsNone(error)
 
     def test_cross_evidence_conflict_becomes_typed_contradicted_claim(self):
         obs = observe_result(

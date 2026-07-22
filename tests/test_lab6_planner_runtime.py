@@ -51,8 +51,43 @@ class PurePythonPlannerTests(unittest.TestCase):
     def test_final_semantic_gate_accepts_funded_amount_proxy_without_currency(self):
         validate_final_semantics(
             "ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน",
-            "ค่าเฉลี่ย funded_amnt สูงขึ้นตามบางกลุ่มอายุงาน แต่เป็น association เท่านั้น",
+            "รายงานค่าเฉลี่ย funded_amnt แยกตามกลุ่มอายุงาน เป็น association เท่านั้น",
         )
+
+    def test_final_gate_rejects_monotonic_claim_without_explicit_numeric_proof(self):
+        grouped_rows = [{"result": '[{"tenure":1,"avg_value":10},{"tenure":2,"avg_value":9}]'}]
+        with self.assertRaisesRegex(ValueError, "monotonic_increase_violations"):
+            validate_final_semantics(
+                "เปรียบเทียบค่าเฉลี่ยตามอายุงาน",
+                "ค่าเฉลี่ยเพิ่มขึ้นตามระยะเวลาการทำงาน",
+                grouped_rows,
+            )
+
+    def test_final_gate_rejects_soft_trend_claim_without_trend_statistic(self):
+        grouped_rows = [{"result": '[{"tenure":1,"avg_value":10},{"tenure":2,"avg_value":11}]'}]
+        with self.assertRaisesRegex(ValueError, "trend_slope"):
+            validate_final_semantics(
+                "เปรียบเทียบค่าเฉลี่ยตามอายุงาน",
+                "โดยทั่วไป อายุงานที่ยาวนานกว่ามีแนวโน้มค่าเฉลี่ยสูงขึ้น",
+                grouped_rows,
+            )
+
+    def test_final_gate_accepts_monotonic_claim_with_zero_violation_evidence(self):
+        evidence = [{"result": '[{"monotonic_increase_violations":0}]'}]
+        validate_final_semantics(
+            "เปรียบเทียบค่าเฉลี่ยตามอายุงาน",
+            "ค่าเฉลี่ยเพิ่มขึ้นตามระยะเวลาการทำงาน",
+            evidence,
+        )
+
+    def test_final_gate_marks_monotonic_claim_contradicted_by_violation_count(self):
+        evidence = [{"result": '[{"monotonic_increase_violations":2}]'}]
+        with self.assertRaisesRegex(ValueError, "contradicted"):
+            validate_final_semantics(
+                "เปรียบเทียบค่าเฉลี่ยตามอายุงาน",
+                "ค่าเฉลี่ยเพิ่มขึ้นตามระยะเวลาการทำงาน",
+                evidence,
+            )
 
     def test_final_semantic_gate_rejects_false_missing_control_claim(self):
         with self.assertRaisesRegex(ValueError, "MCP schema"):

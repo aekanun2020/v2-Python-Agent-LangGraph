@@ -150,6 +150,11 @@ Runtime invariant ล่าสุด:
 - `plan_write` ใช้ได้ครั้งเดียว; หลังจากนั้นใช้ `plan_revise`
 - `plan_write/plan_revise` รับเฉพาะ typed step object; free-text step ถูกปฏิเสธ
 - LLM เป็นผู้ตีความ intent ส่วน Python ตรวจ capability/predicate catalog และบังคับผล
+- Runtime วิเคราะห์ SQL shape โดยตัด comments/string literals ก่อน และบังคับ
+  most-specific capability; aggregation ซ่อนใต้ `query_execution` ไม่ได้
+- Filtered catalog SELECT รองรับ `existence_check` แม้ LLM ไม่ได้เขียน COUNT/EXISTS
+- Final claim adjudicator ปฏิเสธ monotonic/trend claim จนกว่าจะมี numeric trend
+  evidence โดยตรง ไม่ฝากการตัดสินให้ final reviewer เพียงอย่างเดียว
 - accepted evidence มี provenance และอยู่ใน `PlannerState` แหล่งเดียว
 - completed evidence เปิดหรือลบด้วย replan ไม่ได้
 - failure signature เดิมครั้งที่ 3 บังคับ replan และครั้งที่ 5 fail-fast

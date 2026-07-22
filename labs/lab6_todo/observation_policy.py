@@ -13,7 +13,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Literal
 
 from labs.lab6_todo.capabilities import (
-    evaluate_evidence_requirements, infer_action_capabilities,
+    action_capability_error, evaluate_evidence_requirements, infer_action_capabilities,
 )
 from labs.lab6_todo.contract_runtime import (
     ResolvedContract, evaluate_action_claims, resolve_contract,
@@ -248,10 +248,13 @@ def observe_result(*, step_description: str, tool: str, result: str,
     state.passed.append("payload_presence")
 
     required_capability = step_capability
-    if required_capability and required_capability not in capabilities:
+    capability_error = action_capability_error(
+        required_capability, tool, tool_arguments
+    )
+    if capability_error:
         state.failed.append("step_tool_alignment")
         state.decision = "reject"
-        state.reason = "tool type does not support the active plan step"
+        state.reason = capability_error
         return state
     state.passed.append("step_tool_alignment")
 

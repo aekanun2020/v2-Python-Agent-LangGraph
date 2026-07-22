@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 
 from labs.lab6_todo.observation_types import Claim, EvidenceRequirement
 
@@ -34,23 +35,80 @@ CAPABILITY_EVIDENCE_PREDICATES = {
 }
 
 
+@dataclass(frozen=True)
+class SQLStructure:
+    has_select: bool = False
+    has_where: bool = False
+    has_group_by: bool = False
+    has_aggregate: bool = False
+    has_order_by: bool = False
+    has_having: bool = False
+    has_case: bool = False
+    reads_catalog: bool = False
+
+
+def analyze_sql_structure(sql: str) -> SQLStructure:
+    """Small SQL lexer for capability shape; it never interprets domain names."""
+    without_comments = re.sub(r"--[^\n]*|/\*.*?\*/", " ", sql, flags=re.DOTALL)
+    without_literals = re.sub(r"N?'(?:''|[^'])*'", " STRING ", without_comments)
+    normalized = re.sub(r"\s+", " ", without_literals).strip().lower()
+    return SQLStructure(
+        has_select=bool(re.search(r"\bselect\b", normalized)),
+        has_where=bool(re.search(r"\bwhere\b", normalized)),
+        has_group_by=bool(re.search(r"\bgroup\s+by\b", normalized)),
+        has_aggregate=bool(re.search(r"\b(?:avg|sum|count|min|max)\s*\(", normalized)),
+        has_order_by=bool(re.search(r"\border\s+by\b", normalized)),
+        has_having=bool(re.search(r"\bhaving\b", normalized)),
+        has_case=bool(re.search(r"\bcase\b", normalized)),
+        reads_catalog=any(
+            token in normalized for token in ("information_schema", "sys.columns", "sys.tables")
+        ),
+    )
+
+
 def infer_action_capabilities(tool: str, arguments: dict | None = None) -> set[str]:
     name = tool.lower()
-    sql = re.sub(r"\s+", " ", str((arguments or {}).get("query", ""))).lower()
+    sql = str((arguments or {}).get("query", ""))
+    structure = analyze_sql_structure(sql)
     capabilities: set[str] = set()
     if any(token in name for token in ("schema", "table", "column", "describe", "database_context")):
         capabilities.update(("schema_inspection", "sample_rows"))
     if any(token in name for token in ("query", "sql", "execute")):
         capabilities.add("query_execution")
-        if any(token in sql for token in ("information_schema", "sys.columns", "sys.tables")):
+        if structure.reads_catalog:
             capabilities.add("schema_inspection")
-        if re.search(r"\bgroup\s+by\b|\b(?:avg|sum|count|min|max)\s*\(", sql):
+        if structure.has_group_by or structure.has_aggregate:
             capabilities.add("aggregation")
-        if re.search(r"(?:=|<>|!=|<=|>=|<|>)|\b(?:case|order\s+by)\b", sql):
+        if structure.has_case or structure.has_order_by or structure.has_having:
             capabilities.add("comparison")
-        if re.search(r"\bexists\b|\bcount\s*\(", sql):
+        # A filtered SELECT establishes whether matching records exist even when
+        # the model chooses rows rather than COUNT/EXISTS as its SQL form.
+        if structure.has_select and structure.has_where:
             capabilities.add("existence_check")
     return capabilities
+
+
+def action_capability_error(
+    required_capability: str | None, tool: str, arguments: dict | None = None,
+) -> str | None:
+    """Validate action shape and prevent a broad declaration hiding a specific action."""
+    if not required_capability:
+        return None
+    capabilities = infer_action_capabilities(tool, arguments)
+    if required_capability not in capabilities:
+        return (
+            f"action capabilities={sorted(capabilities)} do not satisfy "
+            f"required_capability={required_capability!r}"
+        )
+    specialized = capabilities & {
+        "schema_inspection", "aggregation", "comparison", "existence_check",
+    }
+    if required_capability == "query_execution" and specialized:
+        return (
+            "declared query_execution is too broad for this action; choose the most-specific "
+            f"capability from {sorted(specialized)}"
+        )
+    return None
 
 
 def validate_declared_capability(capability: str) -> None:
