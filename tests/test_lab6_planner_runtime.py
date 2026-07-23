@@ -32,6 +32,7 @@ class PurePythonPlannerTests(unittest.TestCase):
                 "claim_id": "aggregate_ready",
                 "predicate": "aggregation_executed",
             }],
+            "required_resources": [{"kind": "table", "name": "facts"}],
         }])[0]
         self.assertEqual(step.required_capability, "aggregation")
 
@@ -189,6 +190,7 @@ class PurePythonPlannerTests(unittest.TestCase):
             "evidence_requirements": [{
                 "claim_id": "schema_seen", "predicate": "schema_inspected",
             }],
+            "required_resources": [{"kind": "table", "name": "employees"}],
         }])
         self.assertEqual(normalized[0].description, "ตรวจ schema")
         self.assertEqual(normalized[0].required_capability, "schema_inspection")
@@ -209,6 +211,7 @@ class PurePythonPlannerTests(unittest.TestCase):
                 "evidence_requirements": [{
                     "claim_id": "anything", "predicate": "inspectable_payload",
                 }],
+                "required_resources": [{"kind": "table", "name": "facts"}],
             }])
 
     def test_answer_gate_rejects_none_or_blank_content(self):

@@ -10,7 +10,9 @@ from dataclasses import dataclass, field
 from typing import Literal
 import uuid
 
-from labs.lab6_todo.observation_types import EvidenceRecord, EvidenceRequirement
+from labs.lab6_todo.observation_types import (
+    EvidenceRecord, EvidenceRequirement, ResourceRequirement,
+)
 
 StepStatus = Literal["pending", "in_progress", "completed", "blocked"]
 
@@ -23,6 +25,7 @@ class PlanStep:
     evidence: list[EvidenceRecord] = field(default_factory=list)
     required_capability: str | None = None
     evidence_requirements: list[EvidenceRequirement] = field(default_factory=list)
+    required_resources: list[ResourceRequirement] = field(default_factory=list)
 
 
 @dataclass
@@ -41,16 +44,58 @@ class PlannerState:
             raise ValueError(f"unknown step id {step_id}; use a step id from current PlannerState")
         return match
 
-    def start(self, step_id: int) -> None:
+    def start(self, step_id: int) -> bool:
         target = self.step(step_id)
         if target.status == "completed" and target.evidence:
-            return
+            return False
         if target.status not in ("pending", "in_progress"):
             raise ValueError(f"step {step_id} cannot start from {target.status}")
         for step in self.steps:
             if step.status == "in_progress" and step.id != step_id:
                 raise ValueError(f"step {step.id} is already in progress")
+        reusable = self._reusable_evidence(target)
+        if reusable is not None:
+            target.evidence.append(EvidenceRecord(
+                evidence_id=str(uuid.uuid4()), plan_id=self.plan_id,
+                plan_revision=self.revision, step_id=target.id, tool=reusable.tool,
+                tool_call_id=reusable.tool_call_id, action=dict(reusable.action),
+                result=reusable.result, proven_claim_ids=list(reusable.proven_claim_ids),
+                claim_requirements=list(reusable.claim_requirements),
+                bound_resources=list(reusable.bound_resources),
+                required_capability=reusable.required_capability,
+                reused_from_evidence_id=reusable.evidence_id,
+                observation=reusable.observation,
+            ))
+            target.status = "completed"
+            return True
         target.status = "in_progress"
+        return False
+
+    def _reusable_evidence(self, target: PlanStep) -> EvidenceRecord | None:
+        """Reuse only exact claims backed by compatible capability and resources."""
+        claim_signatures = {
+            (item.claim_id, item.predicate, item.target)
+            for item in target.evidence_requirements
+        }
+        resources = {f"{item.kind}:{item.name.lower()}" for item in target.required_resources}
+        if not claim_signatures or not resources:
+            return None
+        for evidence in self.accepted_evidence:
+            bound = {
+                f"{item.get('kind')}:{str(item.get('name', '')).lower()}"
+                for item in evidence.bound_resources
+            }
+            proven_signatures = {
+                (str(item.get("claim_id", "")), str(item.get("predicate", "")),
+                 str(item.get("target", "")))
+                for item in evidence.claim_requirements
+                if item.get("claim_id") in evidence.proven_claim_ids
+            }
+            if (claim_signatures <= proven_signatures
+                    and resources <= bound
+                    and target.required_capability == evidence.required_capability):
+                return evidence
+        return None
 
     def observe(self, step_id: int, *, tool: str, tool_call_id: str, result: str,
                 observation: dict | None = None, action: dict | None = None,
@@ -65,6 +110,9 @@ class PlannerState:
             plan_revision=self.revision, step_id=step_id, tool=tool,
             tool_call_id=tool_call_id, action=action or {}, result=result,
             proven_claim_ids=proven_claim_ids or [], observation=observation,
+            claim_requirements=[item.as_dict() for item in target.evidence_requirements],
+            bound_resources=[item.as_dict() for item in target.required_resources],
+            required_capability=target.required_capability,
         ))
 
     @property
@@ -97,6 +145,7 @@ class PlannerState:
                 step.description = previous.description
                 step.required_capability = previous.required_capability
                 step.evidence_requirements = list(previous.evidence_requirements)
+                step.required_resources = list(previous.required_resources)
             if step.status == "completed" and not step.evidence:
                 step.status = "pending"
         for previous in old.values():
@@ -107,6 +156,7 @@ class PlannerState:
                     status="completed", evidence=list(previous.evidence),
                     required_capability=previous.required_capability,
                     evidence_requirements=list(previous.evidence_requirements),
+                    required_resources=list(previous.required_resources),
                 ))
         active_seen = False
         for step in sorted(steps, key=lambda item: item.id):
@@ -136,6 +186,7 @@ class PlannerState:
                 f"[{step.status}] {step.id}. {step.description} "
                 f"(capability={step.required_capability or 'unspecified'}, "
                 f"requirements={len(step.evidence_requirements)}, "
+                f"resources={len(step.required_resources)}, "
                 f"evidence={len(step.evidence)})"
             )
         return "\n".join(lines)

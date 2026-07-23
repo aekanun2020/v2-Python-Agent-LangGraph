@@ -51,6 +51,10 @@ python labs/lab6_todo/agent_planner.py --routing-mode shadow
 Shadow จะเรียก Qwen reviewer เฉพาะผล high risk แต่ reviewer เปลี่ยน Evidence decision
 ไม่ได้ จึงเหมาะสำหรับทดลองตอนนี้ ส่วนคำสั่งนี้ยังไม่แนะนำให้ใช้เป็น default:
 
+Planner รุ่นล่าสุดให้ LLM ประกาศ table/field ของแต่ละ step แบบ typed จากนั้น Observation
+ตรวจว่า tool result ผูกกับ resource นั้นจริง และ reuse accepted evidence ได้เมื่อ claim,
+capability และ resource ตรงกัน จึงลด query ซ้ำโดยไม่ hard-code ชื่อ resource ใน Python core
+
 ```bash
 python labs/lab6_todo/agent_planner.py --routing-mode enforce
 ```

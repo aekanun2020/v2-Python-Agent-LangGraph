@@ -9,6 +9,17 @@ ClaimStatus = Literal["proven", "contradicted", "unsupported"]
 
 
 @dataclass(frozen=True)
+class ResourceRequirement:
+    """A model-declared database resource, independent of domain vocabulary."""
+
+    kind: Literal["table", "field"]
+    name: str
+
+    def as_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class EvidenceRequirement:
     """A typed, model-declared condition that accepted evidence must satisfy."""
 
@@ -43,6 +54,10 @@ class EvidenceRecord:
     action: dict
     result: str
     proven_claim_ids: list[str] = field(default_factory=list)
+    claim_requirements: list[dict] = field(default_factory=list)
+    bound_resources: list[dict] = field(default_factory=list)
+    required_capability: str | None = None
+    reused_from_evidence_id: str | None = None
     observation: dict | None = None
 
     def as_dict(self) -> dict:

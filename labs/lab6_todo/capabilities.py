@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from labs.lab6_todo.observation_types import Claim, EvidenceRequirement
+from labs.lab6_todo.observation_types import Claim, EvidenceRequirement, ResourceRequirement
 
 CAPABILITY_CATALOG = (
     "schema_inspection",
@@ -64,6 +64,50 @@ def analyze_sql_structure(sql: str) -> SQLStructure:
             token in normalized for token in ("information_schema", "sys.columns", "sys.tables")
         ),
     )
+
+
+def _identifier_tokens(value: str) -> set[str]:
+    clean = re.sub(r"[\[\]`\"]", "", value).lower()
+    return set(re.findall(r"[\w$]+(?:\.[\w$]+)*", clean, flags=re.UNICODE))
+
+
+def action_resource_error(
+    tool: str, arguments: dict | None, result: str | None,
+    requirements: list[ResourceRequirement],
+) -> str | None:
+    """Bind declared resources to action structure (or schema payload for broad inspectors)."""
+    if not requirements:
+        return None
+    args = arguments or {}
+    name = tool.lower()
+    query = str(args.get("query", ""))
+    table_arg = str(args.get("table_name", args.get("table", "")))
+    action_text = f"{query} {table_arg}".lower()
+    payload_text = (result or "").lower()
+    action_tokens = _identifier_tokens(action_text)
+    payload_tokens = _identifier_tokens(payload_text)
+    broad_schema_inspector = "database_context" in name or "schema" in name
+    missing: list[str] = []
+    for requirement in requirements:
+        resource = requirement.name.lower().replace("[", "").replace("]", "")
+        terminal = resource.split(".")[-1]
+        # SQL aliases may replace table qualifiers, so a field binds by its terminal
+        # identifier while its table is independently declared as a table resource.
+        found_in_action = resource in action_tokens or (
+            requirement.kind == "field"
+            and any(token.split(".")[-1] == terminal for token in action_tokens)
+        )
+        found = found_in_action or (
+            broad_schema_inspector and (
+                resource in payload_tokens
+                or any(token.split(".")[-1] == terminal for token in payload_tokens)
+            )
+        )
+        if not found:
+            missing.append(f"{requirement.kind}:{requirement.name}")
+    if missing:
+        return "action/result does not bind declared resources: " + ", ".join(missing)
+    return None
 
 
 def infer_action_capabilities(tool: str, arguments: dict | None = None) -> set[str]:

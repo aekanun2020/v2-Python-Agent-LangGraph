@@ -27,9 +27,10 @@ from labs.lab6_todo.contract_runtime import (
 )
 from labs.lab6_todo.claim_adjudication import validate_final_claims
 from labs.lab6_todo.observation_types import ActionHint
-from labs.lab6_todo.observation_types import EvidenceRequirement
+from labs.lab6_todo.observation_types import EvidenceRequirement, ResourceRequirement
 from labs.lab6_todo.capabilities import (
     CAPABILITY_CATALOG, EVIDENCE_PREDICATE_CATALOG, action_capability_error,
+    action_resource_error,
     validate_capability_requirements, validate_declared_capability,
     validate_evidence_predicate,
 )
@@ -43,6 +44,8 @@ SYSTEM = """คุณคือ data agent ที่ทำงานตามแ�
 ห้ามระบุสกุลเงินถ้า schema หรือ evidence ไม่ได้บอกหน่วย และห้ามกล่าวว่า field ไม่มีโดยไม่ตรวจ schema
 ก่อนเรียก MCP ต้องใช้ plan_write แล้ว plan_start ทีละขั้น
 ทุก plan step ต้องประกาศ required_capability และ evidence_requirements แบบ typed
+ทุก step ต้องประกาศ required_resources เป็น table/field ที่ action ต้องใช้จริง
+ถ้าหลาย step ต้องพิสูจน์ claim เดียวกัน ให้ใช้ claim_id เดิมเพื่อให้ runtime reuse evidence ได้
 เลือก required_capability จาก: schema_inspection, sample_rows, query_execution, aggregation, comparison, existence_check
 เลือก evidence predicate จาก: inspectable_payload, schema_inspected, rows_returned, aggregation_executed, comparison_executed, existence_checked
 ต้องเลือก capability ที่เฉพาะที่สุด: SQL ที่มี GROUP BY/AVG/SUM/COUNT ใช้ aggregation ไม่ใช้ query_execution
@@ -67,6 +70,7 @@ def normalize_typed_plan_steps(raw_steps, *, revised: bool = False) -> list[Plan
         description = item.get("description")
         capability = item.get("required_capability")
         raw_requirements = item.get("evidence_requirements")
+        raw_resources = item.get("required_resources")
         if not isinstance(description, str) or not description.strip():
             raise ValueError(f"steps[{index}].description must be non-empty")
         if not isinstance(capability, str):
@@ -92,6 +96,20 @@ def normalize_typed_plan_steps(raw_steps, *, revised: bool = False) -> list[Plan
                 target=str(raw.get("target", "")).strip(),
             ))
         validate_capability_requirements(capability, requirements)
+        if not isinstance(raw_resources, list) or not raw_resources:
+            raise ValueError(f"steps[{index}].required_resources must be non-empty")
+        resources: list[ResourceRequirement] = []
+        for resource_index, raw in enumerate(raw_resources, start=1):
+            if not isinstance(raw, dict):
+                raise ValueError(
+                    f"steps[{index}].required_resources[{resource_index}] must be an object"
+                )
+            kind, name = raw.get("kind"), raw.get("name")
+            if kind not in ("table", "field"):
+                raise ValueError("resource kind must be table or field")
+            if not isinstance(name, str) or not name.strip():
+                raise ValueError("resource name must be non-empty")
+            resources.append(ResourceRequirement(kind=kind, name=name.strip()))
         status = item.get("status", "pending") if revised else "pending"
         step_id = item.get("id", index) if revised else index
         if status not in ("pending", "in_progress", "completed", "blocked"):
@@ -101,6 +119,7 @@ def normalize_typed_plan_steps(raw_steps, *, revised: bool = False) -> list[Plan
         steps.append(PlanStep(
             id=step_id, description=description.strip(), status=status,
             required_capability=capability, evidence_requirements=requirements,
+            required_resources=resources,
         ))
     return steps
 
@@ -160,13 +179,23 @@ def planner_tools() -> list[dict]:
         "evidence_requirements": {
             "type": "array", "minItems": 1, "items": evidence_requirement,
         },
+        "required_resources": {
+            "type": "array", "minItems": 1, "items": {
+                "type": "object",
+                "properties": {
+                    "kind": {"type": "string", "enum": ["table", "field"]},
+                    "name": {"type": "string"},
+                },
+                "required": ["kind", "name"],
+            },
+        },
     }
     return [
         tool("plan_write", "Create only MCP-verifiable data/schema/query steps. Never include summary, analysis, report, recommendation, final-answer, or presentation steps.", {
             "goal": {"type": "string"},
             "steps": {"type": "array", "minItems": 1, "items": {
                 "type": "object", "properties": typed_step_properties,
-                "required": ["description", "required_capability", "evidence_requirements"],
+                "required": ["description", "required_capability", "evidence_requirements", "required_resources"],
             }},
         }, ["goal", "steps"]),
         tool("plan_start", "เลือกขั้นเดียวที่จะเริ่มทำ", {
@@ -181,7 +210,7 @@ def planner_tools() -> list[dict]:
                 "id": {"type": "integer"},
                 **typed_step_properties,
                 "status": {"type": "string", "enum": ["pending", "in_progress", "completed", "blocked"]},
-            }, "required": ["id", "description", "required_capability", "evidence_requirements", "status"]}},
+            }, "required": ["id", "description", "required_capability", "evidence_requirements", "required_resources", "status"]}},
         }, ["reason", "steps"]),
     ]
 
@@ -296,7 +325,17 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                 elif plan is None:
                     raise ValueError("ต้องเรียก plan_write ก่อน tool อื่น")
                 elif name == "plan_start":
-                    plan.start(args["step_id"]); result = plan.render()
+                    reused = plan.start(args["step_id"]); result = plan.render()
+                    if reused:
+                        evidence = plan.step(args["step_id"]).evidence[-1]
+                        print(
+                            f"[EVIDENCE REUSED] step={args['step_id']} "
+                            f"from={evidence.reused_from_evidence_id}"
+                        )
+                        result += (
+                            "\n[EVIDENCE REUSED] required claims, capability, and resources "
+                            "were already proven; no MCP call is needed"
+                        )
                 elif name == "plan_complete":
                     plan.complete(args["step_id"]); result = plan.render()
                 elif name == "plan_revise":
@@ -335,6 +374,7 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                                 status=step.status, evidence=list(step.evidence),
                                 required_capability=step.required_capability,
                                 evidence_requirements=list(step.evidence_requirements),
+                                required_resources=list(step.required_resources),
                             )
                             for step in plan.steps
                         ]
@@ -342,6 +382,25 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                         raise ValueError(f"ANALYTICAL CONTRACT: {rejection}; revise the query")
                     result = registry.dispatch(name, args)
                     call_id = call.id or str(uuid.uuid4())
+                    resource_rejection = action_resource_error(
+                        name, args, result, active[0].required_resources
+                    )
+                    if resource_rejection:
+                        trace.append({
+                            "step_id": active[0].id, "tool": name,
+                            "tool_call_id": call_id,
+                            "observation": {
+                                "action_succeeded": True,
+                                "supports_step": False,
+                                "decision": "retry",
+                                "reason": resource_rejection,
+                            },
+                        })
+                        print(
+                            f"[OBSERVATION] step={active[0].id} decision=retry "
+                            f"reason={resource_rejection}"
+                        )
+                        raise ValueError("RESOURCE BINDING: " + resource_rejection)
                     observation = None
                     if dynamic_observation:
                         observation = observe_result(

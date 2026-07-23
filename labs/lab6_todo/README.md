@@ -21,7 +21,8 @@
 เจ้าของ state transition แทนการเชื่อคำประกาศของ LLM:
 
 - มี `PlannerState`, revision และสถานะของแต่ละขั้น
-- LLM ต้องประกาศ `required_capability` และ `evidence_requirements` แบบ typed ใน
+- LLM ต้องประกาศ `required_capability`, `required_resources` และ
+  `evidence_requirements` แบบ typed ใน
   `plan_write/plan_revise`; description มีไว้ให้มนุษย์อ่าน ไม่ถูก Python ใช้เดา intent
 - Dynamic Observation Policy compile typed `ObservationState` จาก typed step + action
   capability + tool result + prior evidence + declarative contract
@@ -29,6 +30,10 @@
   Python core และ semantic retry ใช้ hint จาก contract
   (policy HR รุ่นเดิมยังคงไว้เพื่อ backward compatibility)
 - MCP result ถูกผูกกับ step ที่ `in_progress` เมื่อ observation ตัดสิน `accept`
+- Observation ตรวจ resource binding ด้วย: tool อาจทำงานสำเร็จ แต่ถ้า action/result
+  ไม่ใช้ table/field ที่ step ประกาศ จะได้ `supports_step=false` และไม่รับเป็น evidence
+- step ถัดไปที่ประกาศ claim, capability และ resources เดิมสามารถ reuse accepted evidence
+  โดยไม่เรียก MCP ซ้ำ พร้อมเก็บ `reused_from_evidence_id` เพื่อย้อน provenance
 - เมื่อ Observation รับ tool evidence แล้ว Python runtime จะ complete step อัตโนมัติ;
   `plan_complete` ที่เรียกซ้ำเป็น idempotent และขั้นที่ไม่มี evidence ยัง complete ไม่ได้
 - `plan_revise` แก้ future work ได้ แต่เปิดหรือลบ completed evidence เดิมไม่ได้
@@ -55,17 +60,22 @@ ObservationState
 └─ suggested_action
 
 EvidenceRecord
-└─ evidence_id / plan_id / plan_revision / step_id / action / result / proven_claim_ids
+└─ evidence_id / plan_id / plan_revision / step_id / action / result
+   / proven_claim_ids / bound_resources / reused_from_evidence_id
 
 PlanStep
 ├─ description (human-readable only)
 ├─ required_capability
+├─ required_resources: kind(table/field) / name
 └─ evidence_requirements: claim_id / predicate / target
 ```
 
 Capability และ evidence predicate เป็น vocabulary กลาง เช่น `schema_inspection`,
 `aggregation`, `schema_inspected`, `aggregation_executed` ไม่ใช่ชื่อ table/field ของ
 โจทย์ LLM เลือกความหมายแบบ dynamic ส่วน Python ตรวจว่า action ทำสิ่งที่ประกาศจริง
+ชื่อ resource มาจากแผนของ LLM และ schema ที่ตรวจพบ ไม่ได้ hard-code ชื่อ HR/สินเชื่อ
+ในกลไก binding; การ reuse จะเกิดเฉพาะ claim ID เดียวกัน ภายใต้ capability และ resource
+ที่เข้ากัน จึงไม่ให้ claim ชื่อซ้ำจากคนละตารางข้ามหลักฐานกัน
 เมื่อ Observation เรียก Qwen reviewer จะส่ง typed capability และ evidence requirements
 ไปด้วย เพื่อให้ reviewer ตรวจ semantic alignment จาก declaration เดียวกับ runtime
 

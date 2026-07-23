@@ -7,10 +7,97 @@ from labs.lab6_todo.contract_runtime import (
 )
 from labs.lab6_todo.observation_policy import observe_result
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
-from labs.lab6_todo.observation_types import EvidenceRequirement
+from labs.lab6_todo.observation_types import EvidenceRequirement, ResourceRequirement
+from labs.lab6_todo.capabilities import action_resource_error
 
 
 class GenericObservationRuntimeTests(unittest.TestCase):
+    def test_resource_binding_rejects_wrong_table_even_when_query_succeeds(self):
+        error = action_resource_error(
+            "execute_query_tool", {"query": "SELECT COUNT(*) FROM projects"}, "[{\"count\": 2}]",
+            [ResourceRequirement("table", "employees")],
+        )
+        self.assertIn("table:employees", error)
+
+    def test_resource_binding_uses_identifier_boundaries(self):
+        error = action_resource_error(
+            "execute_query_tool", {"query": "SELECT * FROM employees_archive"}, "rows",
+            [ResourceRequirement("table", "employees")],
+        )
+        self.assertIn("table:employees", error)
+
+    def test_resource_binding_accepts_table_and_aliased_field(self):
+        error = action_resource_error(
+            "execute_query_tool",
+            {"query": "SELECT e.department_id, COUNT(*) FROM employees e GROUP BY e.department_id"},
+            "rows",
+            [ResourceRequirement("table", "employees"),
+             ResourceRequirement("field", "employees.department_id")],
+        )
+        self.assertIsNone(error)
+
+    def test_schema_context_binds_resources_from_payload(self):
+        error = action_resource_error(
+            "get_database_context", {}, "employees(employee_id, department_id)",
+            [ResourceRequirement("table", "employees"),
+             ResourceRequirement("field", "employees.employee_id")],
+        )
+        self.assertIsNone(error)
+
+    def test_claim_evidence_reuse_preserves_provenance_without_new_tool_call(self):
+        requirement = EvidenceRequirement("headcount", "aggregation_executed", "headcount")
+        resources = [ResourceRequirement("table", "employees")]
+        plan = PlannerState("goal", [
+            PlanStep(1, "first", required_capability="aggregation",
+                     evidence_requirements=[requirement], required_resources=resources),
+            PlanStep(2, "same claim", required_capability="aggregation",
+                     evidence_requirements=[requirement], required_resources=resources),
+        ])
+        plan.start(1)
+        plan.observe(1, tool="execute_query_tool", tool_call_id="call-1", result="rows",
+                     action={"query": "SELECT COUNT(*) FROM employees"},
+                     proven_claim_ids=["headcount"])
+        plan.complete(1)
+        source = plan.step(1).evidence[0]
+        self.assertTrue(plan.start(2))
+        reused = plan.step(2).evidence[0]
+        self.assertEqual(plan.step(2).status, "completed")
+        self.assertEqual(reused.reused_from_evidence_id, source.evidence_id)
+        self.assertEqual(reused.tool_call_id, "call-1")
+
+    def test_claim_id_collision_cannot_reuse_different_resource(self):
+        requirement = EvidenceRequirement("count", "aggregation_executed")
+        plan = PlannerState("goal", [
+            PlanStep(1, "employees", required_capability="aggregation",
+                     evidence_requirements=[requirement],
+                     required_resources=[ResourceRequirement("table", "employees")]),
+            PlanStep(2, "projects", required_capability="aggregation",
+                     evidence_requirements=[requirement],
+                     required_resources=[ResourceRequirement("table", "projects")]),
+        ])
+        plan.start(1)
+        plan.observe(1, tool="query", tool_call_id="one", result="rows",
+                     proven_claim_ids=["count"])
+        plan.complete(1)
+        self.assertFalse(plan.start(2))
+        self.assertEqual(plan.step(2).status, "in_progress")
+
+    def test_claim_id_collision_cannot_reuse_different_predicate(self):
+        resources = [ResourceRequirement("table", "employees")]
+        plan = PlannerState("goal", [
+            PlanStep(1, "schema", required_capability="schema_inspection",
+                     evidence_requirements=[EvidenceRequirement("same", "schema_inspected")],
+                     required_resources=resources),
+            PlanStep(2, "rows", required_capability="schema_inspection",
+                     evidence_requirements=[EvidenceRequirement("same", "rows_returned")],
+                     required_resources=resources),
+        ])
+        plan.start(1)
+        plan.observe(1, tool="schema", tool_call_id="one", result="employees",
+                     proven_claim_ids=["same"])
+        plan.complete(1)
+        self.assertFalse(plan.start(2))
+
     def test_information_schema_query_has_schema_capability(self):
         capabilities = infer_action_capabilities(
             "execute_query_tool",
