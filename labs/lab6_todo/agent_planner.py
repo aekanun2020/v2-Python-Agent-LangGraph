@@ -289,7 +289,8 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
             plan, plan_tools, registry.openai_tools,
             replan_authorized=replan_authorized,
         )
-        response = llm.chat(messages=messages, tools=available_tools)
+        phase_kwargs = {"tool_choice": "required"} if plan is None else {}
+        response = llm.chat(messages=messages, tools=available_tools, **phase_kwargs)
         message = response.choices[0].message
         if not message.tool_calls:
             final_review_decision = None

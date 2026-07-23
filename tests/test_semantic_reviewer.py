@@ -4,12 +4,24 @@ from unittest.mock import patch
 
 from labs.lab6_todo.observation_policy import ObservationState
 from labs.lab6_todo.semantic_reviewer import (
-    FINAL_SYSTEM, PLAN_SYSTEM, SemanticReview, _parse_json, hybrid_decision,
+    FINAL_SYSTEM, PLAN_SYSTEM, SemanticReview, _parse_json, _validate_plan_review,
+    hybrid_decision,
     review_final_answer, review_observation, review_plan,
 )
 
 
 class SemanticReviewerTests(unittest.TestCase):
+    def test_plan_review_normalizes_qwen_verdict_alias(self):
+        review = _validate_plan_review({
+            "verdict": "incomplete", "explanation": "missing aggregation",
+        }, elapsed_ms=1)
+        self.assertEqual(review.decision, "query_more")
+
+    def test_plan_review_missing_decision_fails_closed_without_exception(self):
+        review = _validate_plan_review({"checks": []}, elapsed_ms=1)
+        self.assertEqual(review.decision, "query_more")
+        self.assertIn("no valid decision", review.reason)
+
     def test_parse_json_allows_plain_or_fenced_object(self):
         self.assertEqual(_parse_json('{"decision":"accept"}')["decision"], "accept")
         self.assertEqual(_parse_json('```json\n{"decision":"retry"}\n```')["decision"], "retry")
