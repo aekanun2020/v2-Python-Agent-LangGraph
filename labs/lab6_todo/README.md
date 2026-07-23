@@ -70,6 +70,10 @@
   ก่อนใช้จริง จึงไม่สามารถลบ pending analytical work แล้วหลุดเข้า final phase
 - Plan Reviewer ถูกกำชับว่า CTE/pre-aggregated output ไม่ใช่ physical table resource และ
   query เดียวสามารถ pre-aggregate, join, คำนวณค่าองค์กร และ comparison ได้ครบ
+- discovery phase ใช้ deterministic contract แทน semantic coverage reviewer:
+  อนุญาตเฉพาะ schema/sample/existence สูงสุด 8 ขั้นและห้าม aggregation/comparison;
+  หากไม่มี declarative resource contract แผนแรกต้องเริ่ม `catalog:*` + `replan`
+  ทำให้ reviewer ไม่สามารถบังคับให้เดาชื่อตารางหรือยัด full analytics ก่อนเห็น schema
 - final deterministic provenance gate ปฏิเสธการอ้าง step ID ที่ไม่มีจริง และ evidence
   predicate/status ที่ไม่อยู่ใน proven claims แม้ถ้อยคำอื่นในคำตอบจะดูถูกต้อง
 

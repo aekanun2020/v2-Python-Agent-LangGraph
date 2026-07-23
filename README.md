@@ -65,6 +65,8 @@ Alibaba Qwen thinking mode ปฏิเสธด้วย HTTP 400
 สำหรับฐานข้อมูลที่ยังไม่รู้ชื่อ resource ใช้ phased plan แบบ `catalog:*` +
 `completion_mode=replan`; revision หลัง schema discovery จะถูก coverage-review อีกครั้ง
 ก่อนอนุญาตให้รัน และตอบสุดท้ายได้เฉพาะ `completion_mode=answer`
+ตัว discovery phase ตรวจด้วยกฎโครงสร้างแบบ deterministic และห้ามมี aggregation/comparison
+จึงไม่ให้ Plan Reviewer เปลี่ยน schema bootstrap เป็นแผนใหญ่ที่เดาชื่อ resource
 
 ```bash
 python labs/lab6_todo/agent_planner.py --routing-mode enforce

@@ -1,10 +1,11 @@
 import unittest
 
-from labs.lab6_todo.observation_types import Claim
+from labs.lab6_todo.observation_types import Claim, ResourceRequirement
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
 from labs.lab6_todo.agent_planner import (
     build_goal_contract, normalize_typed_plan_steps, require_final_answer,
     planner_tools, select_available_tools, semantic_recovery_hint,
+    validate_discovery_plan,
     validate_final_semantics,
 )
 
@@ -45,6 +46,29 @@ class PurePythonPlannerTests(unittest.TestCase):
         self.assertEqual(names, ["plan_revise"])
         with self.assertRaisesRegex(ValueError, "completion_mode=replan"):
             discovery.approve_answer()
+
+    def test_initial_discovery_rejects_guessed_physical_resources(self):
+        step = PlanStep(
+            1, "guess", required_capability="schema_inspection",
+            required_resources=[ResourceRequirement("table", "employees")],
+        )
+        with self.assertRaisesRegex(ValueError, "catalog"):
+            validate_discovery_plan([step], initial=True)
+
+    def test_discovery_rejects_analytical_steps(self):
+        step = PlanStep(
+            1, "aggregate", required_capability="aggregation",
+            required_resources=[ResourceRequirement("catalog", "*")],
+        )
+        with self.assertRaisesRegex(ValueError, "schema/sample/existence"):
+            validate_discovery_plan([step], initial=True)
+
+    def test_initial_catalog_discovery_is_accepted(self):
+        step = PlanStep(
+            1, "discover", required_capability="schema_inspection",
+            required_resources=[ResourceRequirement("catalog", "*")],
+        )
+        validate_discovery_plan([step], initial=True)
     def test_dynamic_goal_contract_names_required_fields_and_forbidden_status(self):
         contract = build_goal_contract("ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน")
         self.assertIn("emp_length_dim", contract)
