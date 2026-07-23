@@ -59,7 +59,8 @@
 - ในโหมด `shadow/enforce` มี Plan Coverage Reviewer ก่อนเริ่ม Action เพื่อกันแผนที่ตรวจ
   schema อย่างเดียวแล้วปิดงาน ทั้งที่ goal ขอ calculation/analysis; reviewer ใช้ goal,
   typed plan และ declarative contract ไม่ใช้ชื่อ domain ที่ hard-code ใน Python
-- phase แรกบังคับ tool choice เป็น `plan_write`; Plan Reviewer รองรับ verdict aliases
+- phase แรกเปิดให้เห็นเฉพาะ `plan_write` (ไม่ส่ง `tool_choice=required` เพราะ Qwen
+  thinking mode ของ Alibaba ไม่รองรับ); Plan Reviewer รองรับ verdict aliases
   ของโมเดลและหาก response ขาด `decision` จะ fail-closed เป็น `query_more` พร้อม feedback
   แทนการโยน exception/วนด้วย `invalid semantic review decision`
 - final deterministic provenance gate ปฏิเสธการอ้าง step ID ที่ไม่มีจริง และ evidence
