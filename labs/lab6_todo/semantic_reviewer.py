@@ -82,6 +82,13 @@ schema discovery when resources must be verified and require data retrieval/calc
 steps for requested results; schema-only evidence cannot answer an analytical question.
 Do not require presentation, summary, recommendation, or final-answer steps because those
 are not MCP evidence steps. Do not invent domain rules beyond the goal and contract.
+Incremental schema discovery is valid when actual resources are not known yet, but only
+when completion_mode is replan. In that mode, accept a bounded discovery plan that will
+force plan revision after evidence arrives; do not demand guessed table/field names.
+When completion_mode is answer, require full goal coverage. Review one SQL/CTE action as
+one evidence step even when it pre-aggregates several sources, calculates organization
+metrics, joins, and compares them. Never treat CTE names or prior step outputs as physical
+table resources, and do not require presentation or contract-statement steps.
 
 Use accept only when completing every proposed step would make the goal answerable.
 Use retry when plan steps or typed declarations must be corrected. Use query_more when
@@ -125,7 +132,13 @@ def _validate_review(data: dict, *, elapsed_ms: int, usage=None) -> SemanticRevi
     decision = data.get("decision")
     if decision not in ("accept", "retry", "query_more", "reject"):
         raise ValueError(f"invalid semantic review decision: {decision!r}")
-    confidence = max(0.0, min(1.0, float(data.get("confidence", 0.0))))
+    raw_confidence = data.get("confidence", 0.0)
+    confidence_aliases = {"low": 0.25, "medium": 0.5, "high": 0.85}
+    try:
+        confidence = float(raw_confidence)
+    except (TypeError, ValueError):
+        confidence = confidence_aliases.get(str(raw_confidence).strip().lower(), 0.0)
+    confidence = max(0.0, min(1.0, confidence))
     return SemanticReview(
         derived_requirements=list(data.get("derived_requirements") or []),
         checks=list(data.get("checks") or []),
@@ -203,11 +216,28 @@ def review_observation(*, goal: str, active_step: str, analytical_contract: str,
 
 
 def review_plan(*, goal: str, proposed_plan: list[dict], contract_context: str = "",
+                completion_mode: str = "answer", accepted_evidence: list[dict] | None = None,
                 model: str | None = None) -> SemanticReview:
+    compact_evidence = []
+    remaining = 20000
+    for item in accepted_evidence or []:
+        if remaining <= 0:
+            break
+        compact = {
+            "step_id": item.get("step_id"), "tool": item.get("tool"),
+            "action": item.get("action", {}),
+            "proven_claim_ids": item.get("proven_claim_ids", []),
+            "bound_resources": item.get("bound_resources", []),
+            "result": str(item.get("result", ""))[:5000],
+        }
+        remaining -= len(json.dumps(compact, ensure_ascii=False))
+        compact_evidence.append(compact)
     payload = {
         "user_goal": goal,
         "authoritative_runtime_contract": contract_context,
+        "completion_mode": completion_mode,
         "proposed_typed_plan": proposed_plan,
+        "accepted_evidence": compact_evidence,
     }
     started = time.perf_counter()
     response = llm.chat(
@@ -219,7 +249,15 @@ def review_plan(*, goal: str, proposed_plan: list[dict], contract_context: str =
         response_format={"type": "json_object"}, temperature=0,
     )
     elapsed_ms = int((time.perf_counter() - started) * 1000)
-    data = _parse_json(response.choices[0].message.content or "")
+    try:
+        data = _parse_json(response.choices[0].message.content or "")
+    except (json.JSONDecodeError, ValueError) as exc:
+        data = {
+            "decision": "query_more", "supports_step": False,
+            "sufficient": False, "confidence": 0,
+            "reason": f"plan reviewer returned invalid JSON; revise plan ({exc})",
+            "suggested_next_action": "return the required JSON verdict for the revised plan",
+        }
     return _validate_plan_review(data, elapsed_ms=elapsed_ms, usage=response.usage)
 
 

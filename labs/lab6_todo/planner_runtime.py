@@ -15,6 +15,7 @@ from labs.lab6_todo.observation_types import (
 )
 
 StepStatus = Literal["pending", "in_progress", "completed", "blocked"]
+CompletionMode = Literal["answer", "replan"]
 
 
 @dataclass
@@ -37,6 +38,7 @@ class PlannerState:
     last_reason: str = "initial plan"
     answer_approved: bool = False
     plan_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    completion_mode: CompletionMode = "answer"
 
     def step(self, step_id: int) -> PlanStep:
         match = next((step for step in self.steps if step.id == step_id), None)
@@ -153,7 +155,8 @@ class PlannerState:
             raise ValueError("cannot complete a step without tool evidence")
         target.status = "completed"
 
-    def revise(self, steps: list[PlanStep], reason: str) -> None:
+    def revise(self, steps: list[PlanStep], reason: str,
+               completion_mode: CompletionMode = "answer") -> None:
         """Replace future work while preserving evidence for matching step ids."""
         old = {step.id: step for step in self.steps}
         proposed_ids = {step.id for step in steps}
@@ -193,8 +196,13 @@ class PlannerState:
         self.revision += 1
         self.last_reason = reason
         self.answer_approved = False
+        self.completion_mode = completion_mode
 
     def approve_answer(self) -> None:
+        if self.completion_mode != "answer":
+            raise ValueError(
+                "answer gate rejected: completion_mode=replan requires plan revision"
+            )
         incomplete = [step.id for step in self.steps if step.status != "completed"]
         unsupported = [step.id for step in self.steps if not step.evidence]
         if incomplete or unsupported:
@@ -204,7 +212,8 @@ class PlannerState:
         self.answer_approved = True
 
     def render(self) -> str:
-        lines = [f"Goal: {self.goal}", f"Revision: {self.revision}"]
+        lines = [f"Goal: {self.goal}", f"Revision: {self.revision}",
+                 f"Completion mode: {self.completion_mode}"]
         for step in self.steps:
             lines.append(
                 f"[{step.status}] {step.id}. {step.description} "

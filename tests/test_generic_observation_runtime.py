@@ -44,6 +44,16 @@ class GenericObservationRuntimeTests(unittest.TestCase):
         )
         self.assertIsNone(error)
 
+    def test_catalog_resource_supports_schema_bootstrap_without_guessed_table(self):
+        self.assertIsNone(action_resource_error(
+            "get_database_context", {}, "database schema",
+            [ResourceRequirement("catalog", "*")],
+        ))
+        self.assertIsNotNone(action_resource_error(
+            "execute_query_tool", {"query": "SELECT * FROM employees"}, "rows",
+            [ResourceRequirement("catalog", "*")],
+        ))
+
     def test_claim_evidence_reuse_preserves_provenance_without_new_tool_call(self):
         requirement = EvidenceRequirement("headcount", "aggregation_executed", "headcount")
         resources = [ResourceRequirement("table", "employees")]

@@ -56,6 +56,9 @@ description ใช้อธิบายให้มนุษย์อ่าน�
 ผล MCP จะถูก runtime ผูกเป็น evidence ของขั้นที่ in_progress โดยอัตโนมัติ
 เมื่อ observation รับหลักฐาน runtime จะ complete ขั้นนั้นอัตโนมัติ ไม่ต้องเรียก plan_complete ซ้ำ
 ถ้าหลักฐานทำให้แผนเดิมไม่พอให้ plan_revise
+ถ้ายังไม่รู้ชื่อ table/field จริง ให้ใช้ required_resources kind=catalog name=* และสร้าง
+schema-discovery plan พร้อม completion_mode=replan
+เมื่อ discovery completed runtime จะเปิดเฉพาะ plan_revise; ห้ามเดาชื่อ resource
 ห้ามกล่าวว่าเพิ่มขึ้น/ลดลงตามลำดับหรือมีแนวโน้ม เว้นแต่ accepted evidence มี
 monotonic_increase_violations, monotonic_decrease_violations, trend_slope,
 spearman_rho หรือ correlation ที่คำนวณ claim นั้นโดยตรง
@@ -107,8 +110,8 @@ def normalize_typed_plan_steps(raw_steps, *, revised: bool = False) -> list[Plan
                     f"steps[{index}].required_resources[{resource_index}] must be an object"
                 )
             kind, name = raw.get("kind"), raw.get("name")
-            if kind not in ("table", "field"):
-                raise ValueError("resource kind must be table or field")
+            if kind not in ("catalog", "table", "field"):
+                raise ValueError("resource kind must be catalog, table, or field")
             if not isinstance(name, str) or not name.strip():
                 raise ValueError("resource name must be non-empty")
             resources.append(ResourceRequirement(kind=kind, name=name.strip()))
@@ -220,7 +223,7 @@ def planner_tools() -> list[dict]:
             "type": "array", "minItems": 1, "items": {
                 "type": "object",
                 "properties": {
-                    "kind": {"type": "string", "enum": ["table", "field"]},
+                    "kind": {"type": "string", "enum": ["catalog", "table", "field"]},
                     "name": {"type": "string"},
                 },
                 "required": ["kind", "name"],
@@ -230,11 +233,12 @@ def planner_tools() -> list[dict]:
     return [
         tool("plan_write", "Create only MCP-verifiable data/schema/query steps. Never include summary, analysis, report, recommendation, final-answer, or presentation steps.", {
             "goal": {"type": "string"},
+            "completion_mode": {"type": "string", "enum": ["answer", "replan"]},
             "steps": {"type": "array", "minItems": 1, "items": {
                 "type": "object", "properties": typed_step_properties,
                 "required": ["description", "required_capability", "evidence_requirements", "required_resources"],
             }},
-        }, ["goal", "steps"]),
+        }, ["goal", "completion_mode", "steps"]),
         tool("plan_start", "เลือกขั้นเดียวที่จะเริ่มทำ", {
             "step_id": {"type": "integer"},
         }, ["step_id"]),
@@ -243,12 +247,13 @@ def planner_tools() -> list[dict]:
         }, ["step_id"]),
         tool("plan_revise", "Revise only MCP-verifiable steps; never add synthesis, summary, report, recommendation, or final-answer steps.", {
             "reason": {"type": "string"},
+            "completion_mode": {"type": "string", "enum": ["answer", "replan"]},
             "steps": {"type": "array", "minItems": 1, "items": {"type": "object", "properties": {
                 "id": {"type": "integer"},
                 **typed_step_properties,
                 "status": {"type": "string", "enum": ["pending", "in_progress", "completed", "blocked"]},
             }, "required": ["id", "description", "required_capability", "evidence_requirements", "required_resources", "status"]}},
-        }, ["reason", "steps"]),
+        }, ["reason", "completion_mode", "steps"]),
     ]
 
 
@@ -261,8 +266,19 @@ def select_available_tools(
     if plan is None:
         return [by_name["plan_write"]]
     if all(step.status == "completed" for step in plan.steps):
-        return [by_name["plan_revise"]] if replan_authorized else []
+        must_replan = plan.completion_mode == "replan"
+        return [by_name["plan_revise"]] if (replan_authorized or must_replan) else []
     return plan_tools + registry_tools
+
+
+def plan_review_payload(steps: list[PlanStep]) -> list[dict]:
+    return [{
+        "id": step.id,
+        "description": step.description,
+        "required_capability": step.required_capability,
+        "required_resources": [item.as_dict() for item in step.required_resources],
+        "evidence_requirements": [item.as_dict() for item in step.evidence_requirements],
+    } for step in steps]
 
 
 def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validator=None,
@@ -298,6 +314,12 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
             final_review_decision = None
             if plan is None:
                 feedback = "Answer gate rejected: ยังไม่มี plan_write"
+            elif (all(step.status == "completed" for step in plan.steps)
+                  and plan.completion_mode == "replan"):
+                feedback = (
+                    "Discovery phase completed; completion_mode=replan requires "
+                    "plan_revise before a final answer"
+                )
             else:
                 try:
                     final_answer = require_final_answer(message.content)
@@ -359,6 +381,12 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                     "หลักฐานยังไม่พอสำหรับข้อกล่าวอ้างใน final answer; เรียก plan_revise "
                     "เพื่อเพิ่ม MCP-verifiable step แล้ว query เพิ่มตาม reviewer"
                 )
+            elif (plan is not None and plan.completion_mode == "replan"
+                  and all(step.status == "completed" for step in plan.steps)):
+                instruction = (
+                    "schema/discovery evidence พร้อมแล้ว; ต้องเรียก plan_revise "
+                    "โดยอ้างชื่อ resource จริงจาก accepted evidence"
+                )
             elif plan is not None and all(step.status == "completed" for step in plan.steps):
                 instruction = (
                     "ทุกขั้น completed แล้ว ห้ามเรียก tool เพิ่ม; เขียน final answer ที่ไม่ว่าง "
@@ -377,7 +405,9 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                 args = json.loads(call.function.arguments or "{}")
                 if (plan is not None
                         and all(step.status == "completed" for step in plan.steps)
-                        and not (name == "plan_revise" and replan_authorized)):
+                        and not (name == "plan_revise" and (
+                            replan_authorized or plan.completion_mode == "replan"
+                        ))):
                     raise ValueError(
                         "FINAL PHASE: all plan steps are completed; MCP and plan actions "
                         "are disabled—return a final answer"
@@ -386,21 +416,13 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                     if plan is not None:
                         raise ValueError("plan_write is allowed once; use plan_revise")
                     typed_steps = normalize_typed_plan_steps(args["steps"])
+                    completion_mode = args["completion_mode"]
                     if routing_mode in ("shadow", "enforce"):
                         plan_review = review_plan(
                             goal=question,
-                            proposed_plan=[{
-                                "id": step.id,
-                                "description": step.description,
-                                "required_capability": step.required_capability,
-                                "required_resources": [
-                                    item.as_dict() for item in step.required_resources
-                                ],
-                                "evidence_requirements": [
-                                    item.as_dict() for item in step.evidence_requirements
-                                ],
-                            } for step in typed_steps],
+                            proposed_plan=plan_review_payload(typed_steps),
                             contract_context=goal_contract,
+                            completion_mode=completion_mode,
                         )
                         plan_decision = (
                             plan_review.decision if routing_mode == "enforce" else "accept"
@@ -416,7 +438,9 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                                 f"decision={plan_review.decision}; {plan_review.reason}; "
                                 f"next={plan_review.suggested_next_action}"
                             )
-                    plan = PlannerState(args["goal"], typed_steps)
+                    plan = PlannerState(
+                        args["goal"], typed_steps, completion_mode=completion_mode
+                    )
                     result = plan.render()
                 elif plan is None:
                     raise ValueError("ต้องเรียก plan_write ก่อน tool อื่น")
@@ -436,7 +460,34 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                     plan.complete(args["step_id"]); result = plan.render()
                 elif name == "plan_revise":
                     revised = normalize_typed_plan_steps(args["steps"], revised=True)
-                    plan.revise(revised, args["reason"]); result = plan.render()
+                    completion_mode = args["completion_mode"]
+                    if routing_mode in ("shadow", "enforce"):
+                        revision_review = review_plan(
+                            goal=question,
+                            proposed_plan=plan_review_payload(revised),
+                            contract_context=goal_contract,
+                            completion_mode=completion_mode,
+                            accepted_evidence=[
+                                item.as_dict() for item in plan.accepted_evidence
+                            ],
+                        )
+                        revision_decision = (
+                            revision_review.decision if routing_mode == "enforce" else "accept"
+                        )
+                        print(
+                            f"[PLAN REVISION REVIEW] review={revision_review.decision} "
+                            f"mode={routing_mode} final={revision_decision} "
+                            f"reason={revision_review.reason}"
+                        )
+                        if revision_decision != "accept":
+                            raise ValueError(
+                                "PLAN COVERAGE: revised plan cannot yet answer/continue "
+                                f"the goal; decision={revision_review.decision}; "
+                                f"{revision_review.reason}; "
+                                f"next={revision_review.suggested_next_action}"
+                            )
+                    plan.revise(revised, args["reason"], completion_mode)
+                    result = plan.render()
                     replan_authorized = False
                 else:
                     active = [step for step in plan.steps if step.status == "in_progress"]
@@ -475,7 +526,11 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                             )
                             for step in plan.steps
                         ]
-                        plan.revise(revised, f"analytical contract rejected tool call: {rejection}")
+                        plan.revise(
+                            revised,
+                            f"analytical contract rejected tool call: {rejection}",
+                            plan.completion_mode,
+                        )
                         raise ValueError(f"ANALYTICAL CONTRACT: {rejection}; revise the query")
                     result = registry.dispatch(name, args)
                     call_id = call.id or str(uuid.uuid4())

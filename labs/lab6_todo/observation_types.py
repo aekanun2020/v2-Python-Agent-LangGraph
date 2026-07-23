@@ -12,7 +12,7 @@ ClaimStatus = Literal["proven", "contradicted", "unsupported"]
 class ResourceRequirement:
     """A model-declared database resource, independent of domain vocabulary."""
 
-    kind: Literal["table", "field"]
+    kind: Literal["catalog", "table", "field"]
     name: str
 
     def as_dict(self) -> dict:

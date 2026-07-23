@@ -89,6 +89,11 @@ def action_resource_error(
     broad_schema_inspector = "database_context" in name or "schema" in name
     missing: list[str] = []
     for requirement in requirements:
+        if requirement.kind == "catalog":
+            if broad_schema_inspector or analyze_sql_structure(query).reads_catalog:
+                continue
+            missing.append(f"catalog:{requirement.name}")
+            continue
         resource = requirement.name.lower().replace("[", "").replace("]", "")
         terminal = resource.split(".")[-1]
         # SQL aliases may replace table qualifiers, so a field binds by its terminal

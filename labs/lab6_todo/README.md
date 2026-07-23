@@ -63,6 +63,13 @@
   thinking mode ของ Alibaba ไม่รองรับ); Plan Reviewer รองรับ verdict aliases
   ของโมเดลและหาก response ขาด `decision` จะ fail-closed เป็น `query_more` พร้อม feedback
   แทนการโยน exception/วนด้วย `invalid semantic review decision`
+- รองรับ incremental planning: ถ้ายังไม่รู้ schema ให้ใช้ resource `catalog:*` และ
+  `completion_mode=replan`; เมื่อ discovery evidence ครบ runtime เปิดเฉพาะ `plan_revise`
+  และไม่อนุญาต final answer จน revision เปลี่ยนเป็น `completion_mode=answer`
+- ทุก `plan_revise` ต้องผ่าน Plan Coverage Review โดยเห็น accepted discovery evidence
+  ก่อนใช้จริง จึงไม่สามารถลบ pending analytical work แล้วหลุดเข้า final phase
+- Plan Reviewer ถูกกำชับว่า CTE/pre-aggregated output ไม่ใช่ physical table resource และ
+  query เดียวสามารถ pre-aggregate, join, คำนวณค่าองค์กร และ comparison ได้ครบ
 - final deterministic provenance gate ปฏิเสธการอ้าง step ID ที่ไม่มีจริง และ evidence
   predicate/status ที่ไม่อยู่ใน proven claims แม้ถ้อยคำอื่นในคำตอบจะดูถูกต้อง
 

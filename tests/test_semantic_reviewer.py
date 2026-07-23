@@ -22,6 +22,12 @@ class SemanticReviewerTests(unittest.TestCase):
         self.assertEqual(review.decision, "query_more")
         self.assertIn("no valid decision", review.reason)
 
+    def test_text_confidence_is_normalized(self):
+        review = _validate_plan_review({
+            "decision": "accept", "confidence": "high",
+        }, elapsed_ms=1)
+        self.assertEqual(review.confidence, 0.85)
+
     def test_parse_json_allows_plain_or_fenced_object(self):
         self.assertEqual(_parse_json('{"decision":"accept"}')["decision"], "accept")
         self.assertEqual(_parse_json('```json\n{"decision":"retry"}\n```')["decision"], "retry")
@@ -62,6 +68,7 @@ class SemanticReviewerTests(unittest.TestCase):
         )
         review = review_plan(
             goal="calculate grouped average", contract_context="metric must be verified",
+            completion_mode="replan",
             proposed_plan=[{
                 "id": 1, "required_capability": "schema_inspection",
                 "required_resources": [{"kind": "table", "name": "facts"}],
@@ -72,6 +79,7 @@ class SemanticReviewerTests(unittest.TestCase):
         self.assertIn("calculate grouped average", payload)
         self.assertIn("schema_inspection", payload)
         self.assertIn("metric must be verified", payload)
+        self.assertIn('"completion_mode": "replan"', payload)
 
     @patch("labs.lab6_todo.semantic_reviewer.llm.chat")
     def test_final_reviewer_receives_answer_and_accepted_evidence(self, chat):

@@ -31,6 +31,20 @@ class PurePythonPlannerTests(unittest.TestCase):
             )],
             ["plan_revise"],
         )
+
+    def test_discovery_completion_mode_forces_replan_phase(self):
+        management = planner_tools()
+        discovery = PlannerState(
+            "discover", [PlanStep(1, "schema")], completion_mode="replan"
+        )
+        discovery.start(1)
+        discovery.observe(1, tool="schema", tool_call_id="one", result="schema")
+        discovery.complete(1)
+        names = [item["function"]["name"] for item in
+                 select_available_tools(discovery, management, [])]
+        self.assertEqual(names, ["plan_revise"])
+        with self.assertRaisesRegex(ValueError, "completion_mode=replan"):
+            discovery.approve_answer()
     def test_dynamic_goal_contract_names_required_fields_and_forbidden_status(self):
         contract = build_goal_contract("ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน")
         self.assertIn("emp_length_dim", contract)
