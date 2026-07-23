@@ -34,6 +34,8 @@
   ไม่ใช้ table/field ที่ step ประกาศ จะได้ `supports_step=false` และไม่รับเป็น evidence
 - step ถัดไปที่ประกาศ claim, capability และ resources เดิมสามารถ reuse accepted evidence
   โดยไม่เรียก MCP ซ้ำ พร้อมเก็บ `reused_from_evidence_id` เพื่อย้อน provenance
+- หลังรับ evidence แต่ละครั้ง runtime จะตรวจ pending steps และ auto-complete ขั้นที่มี typed
+  claim signature + capability + resources ตรงกันทันที ไม่ต้องรอ LLM เรียก `plan_start`
 - เมื่อ Observation รับ tool evidence แล้ว Python runtime จะ complete step อัตโนมัติ;
   `plan_complete` ที่เรียกซ้ำเป็น idempotent และขั้นที่ไม่มี evidence ยัง complete ไม่ได้
 - `plan_revise` แก้ future work ได้ แต่เปิดหรือลบ completed evidence เดิมไม่ได้
@@ -45,10 +47,15 @@
   `monotonic_increase_violations=0` หรือ `trend_slope`; grouped rows อย่างเดียวไม่พอ
 - แก้แผนระหว่างทำงานผ่าน `plan_revise` และรักษาหลักฐานเดิม
 - final answer ถูก runtime gate ปฏิเสธจนกว่าทุกขั้นเสร็จและมีหลักฐาน
+- tool visibility เปลี่ยนตาม phase: ก่อนมีแผนเห็นเฉพาะ `plan_write`; ระหว่างทำงานจึงเห็น
+  MCP; เมื่อทุกขั้น completed จะซ่อนทุก tool และเข้าสู่ final-answer phase โดยเปิด
+  `plan_revise` กลับมาเฉพาะเมื่อ Final Observation ตัดสิน `query_more`
 - `shadow/enforce` ส่ง final answer พร้อม accepted MCP evidence ให้ independent reviewer;
   `enforce` สั่ง rewrite หรือ `plan_revise` + query เพิ่มเมื่อมีตัวเลขใหม่ที่ไม่ grounded
 - resolved declarative contract ถูกส่งให้ Final Reviewer เป็น authority; ถ้า reviewer
   ยังเสนอ action ที่ contract ห้าม Python จะ override แทนการเปิด query/replan loop
+- Final Reviewer แยกตรวจ title, headings, table headers, footnotes และ conclusion รวมทั้ง
+  contradiction ข้ามส่วน; disclaimer ในเนื้อหาไม่สามารถชดเชยหัวข้อที่ relabel proxy ผิด
 
 Typed state หลัก:
 

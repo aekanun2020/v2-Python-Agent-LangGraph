@@ -4,11 +4,33 @@ from labs.lab6_todo.observation_types import Claim
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
 from labs.lab6_todo.agent_planner import (
     build_goal_contract, normalize_typed_plan_steps, require_final_answer,
-    semantic_recovery_hint, validate_final_semantics,
+    planner_tools, select_available_tools, semantic_recovery_hint,
+    validate_final_semantics,
 )
 
 
 class PurePythonPlannerTests(unittest.TestCase):
+    def test_tool_visibility_follows_runtime_phase(self):
+        management = planner_tools()
+        mcp = [{"type": "function", "function": {"name": "query"}}]
+        self.assertEqual(
+            [item["function"]["name"] for item in
+             select_available_tools(None, management, mcp)],
+            ["plan_write"],
+        )
+        active = PlannerState("goal", [PlanStep(1, "work")])
+        self.assertIn("query", [item["function"]["name"] for item in
+                               select_available_tools(active, management, mcp)])
+        active.start(1)
+        active.observe(1, tool="query", tool_call_id="one", result="rows")
+        active.complete(1)
+        self.assertEqual(select_available_tools(active, management, mcp), [])
+        self.assertEqual(
+            [item["function"]["name"] for item in select_available_tools(
+                active, management, mcp, replan_authorized=True
+            )],
+            ["plan_revise"],
+        )
     def test_dynamic_goal_contract_names_required_fields_and_forbidden_status(self):
         contract = build_goal_contract("ระยะเวลาการทำงานที่มีผลต่อการอนุมัติวงเงิน")
         self.assertIn("emp_length_dim", contract)

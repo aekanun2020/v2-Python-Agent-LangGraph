@@ -97,6 +97,30 @@ class PlannerState:
                 return evidence
         return None
 
+    def reuse_pending_evidence(self) -> list[tuple[int, str]]:
+        """Complete redundant pending steps from exact typed evidence signatures."""
+        reused: list[tuple[int, str]] = []
+        for target in self.steps:
+            if target.status != "pending":
+                continue
+            evidence = self._reusable_evidence(target)
+            if evidence is None:
+                continue
+            target.evidence.append(EvidenceRecord(
+                evidence_id=str(uuid.uuid4()), plan_id=self.plan_id,
+                plan_revision=self.revision, step_id=target.id, tool=evidence.tool,
+                tool_call_id=evidence.tool_call_id, action=dict(evidence.action),
+                result=evidence.result, proven_claim_ids=list(evidence.proven_claim_ids),
+                claim_requirements=list(evidence.claim_requirements),
+                bound_resources=list(evidence.bound_resources),
+                required_capability=evidence.required_capability,
+                reused_from_evidence_id=evidence.evidence_id,
+                observation=evidence.observation,
+            ))
+            target.status = "completed"
+            reused.append((target.id, evidence.evidence_id))
+        return reused
+
     def observe(self, step_id: int, *, tool: str, tool_call_id: str, result: str,
                 observation: dict | None = None, action: dict | None = None,
                 proven_claim_ids: list[str] | None = None) -> None:

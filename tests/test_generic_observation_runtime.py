@@ -65,6 +65,23 @@ class GenericObservationRuntimeTests(unittest.TestCase):
         self.assertEqual(reused.reused_from_evidence_id, source.evidence_id)
         self.assertEqual(reused.tool_call_id, "call-1")
 
+    def test_accepted_evidence_auto_completes_redundant_pending_step(self):
+        requirement = EvidenceRequirement("headcount", "aggregation_executed", "headcount")
+        resources = [ResourceRequirement("table", "employees")]
+        plan = PlannerState("goal", [
+            PlanStep(1, "first", required_capability="aggregation",
+                     evidence_requirements=[requirement], required_resources=resources),
+            PlanStep(2, "redundant", required_capability="aggregation",
+                     evidence_requirements=[requirement], required_resources=resources),
+        ])
+        plan.start(1)
+        plan.observe(1, tool="query", tool_call_id="call-1", result="rows",
+                     proven_claim_ids=["headcount"])
+        plan.complete(1)
+        reused = plan.reuse_pending_evidence()
+        self.assertEqual(reused[0][0], 2)
+        self.assertEqual(plan.step(2).status, "completed")
+
     def test_claim_id_collision_cannot_reuse_different_resource(self):
         requirement = EvidenceRequirement("count", "aggregation_executed")
         plan = PlannerState("goal", [

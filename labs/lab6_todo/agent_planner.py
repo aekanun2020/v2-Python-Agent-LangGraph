@@ -215,6 +215,19 @@ def planner_tools() -> list[dict]:
     ]
 
 
+def select_available_tools(
+    plan: PlannerState | None, plan_tools: list[dict], registry_tools: list[dict],
+    *, replan_authorized: bool = False,
+) -> list[dict]:
+    """Expose only transitions valid in the current deterministic runtime phase."""
+    by_name = {item["function"]["name"]: item for item in plan_tools}
+    if plan is None:
+        return [by_name["plan_write"]]
+    if all(step.status == "completed" for step in plan.steps):
+        return [by_name["plan_revise"]] if replan_authorized else []
+    return plan_tools + registry_tools
+
+
 def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validator=None,
         dynamic_observation: bool = False, prompt_semantic_review: bool = False,
         observation_routing_mode: str = "rules"):
@@ -225,7 +238,8 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
     routing_mode = validate_routing_mode(
         "enforce" if prompt_semantic_review else observation_routing_mode
     )
-    tools = planner_tools() + registry.openai_tools
+    plan_tools = planner_tools()
+    replan_authorized = False
     messages = [{"role": "system", "content": SYSTEM}]
     contract = resolve_contract(question)
     goal_contract = contract.system_context if contract else ""
@@ -234,7 +248,11 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
     messages.append({"role": "user", "content": question})
 
     for turn in range(1, max_steps + 1):
-        response = llm.chat(messages=messages, tools=tools)
+        available_tools = select_available_tools(
+            plan, plan_tools, registry.openai_tools,
+            replan_authorized=replan_authorized,
+        )
+        response = llm.chat(messages=messages, tools=available_tools)
         message = response.choices[0].message
         if not message.tool_calls:
             final_review_decision = None
@@ -296,6 +314,7 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
             print(f"[ANSWER REJECTED] {feedback}")
             messages.append({"role": "assistant", "content": message.content or ""})
             if final_review_decision == "query_more":
+                replan_authorized = True
                 instruction = (
                     "หลักฐานยังไม่พอสำหรับข้อกล่าวอ้างใน final answer; เรียก plan_revise "
                     "เพื่อเพิ่ม MCP-verifiable step แล้ว query เพิ่มตาม reviewer"
@@ -316,6 +335,13 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
             name = call.function.name
             try:
                 args = json.loads(call.function.arguments or "{}")
+                if (plan is not None
+                        and all(step.status == "completed" for step in plan.steps)
+                        and not (name == "plan_revise" and replan_authorized)):
+                    raise ValueError(
+                        "FINAL PHASE: all plan steps are completed; MCP and plan actions "
+                        "are disabled—return a final answer"
+                    )
                 if name == "plan_write":
                     if plan is not None:
                         raise ValueError("plan_write is allowed once; use plan_revise")
@@ -341,6 +367,7 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                 elif name == "plan_revise":
                     revised = normalize_typed_plan_steps(args["steps"], revised=True)
                     plan.revise(revised, args["reason"]); result = plan.render()
+                    replan_authorized = False
                 else:
                     active = [step for step in plan.steps if step.status == "in_progress"]
                     if len(active) != 1:
@@ -489,6 +516,10 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                                  ] if observation else [])
                     if dynamic_observation:
                         plan.complete(active[0].id)
+                        for reused_step_id, source_id in plan.reuse_pending_evidence():
+                            print(
+                                f"[EVIDENCE REUSED] step={reused_step_id} from={source_id}"
+                            )
                     breaker.clear_step(active[0].id)
                     result += (
                         "\n\n[RUNTIME STATE]\n" + plan.render()

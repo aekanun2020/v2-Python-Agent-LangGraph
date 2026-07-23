@@ -32,6 +32,8 @@ class SemanticReviewerTests(unittest.TestCase):
     def test_final_reviewer_requires_derived_aggregates_to_be_grounded(self):
         self.assertIn("accepted MCP evidence", FINAL_SYSTEM)
         self.assertIn("formula and weighting", FINAL_SYSTEM)
+        self.assertIn("title, headings", FINAL_SYSTEM)
+        self.assertIn("disclaimer cannot repair", FINAL_SYSTEM)
 
     @patch("labs.lab6_todo.semantic_reviewer.llm.chat")
     def test_final_reviewer_receives_answer_and_accepted_evidence(self, chat):
@@ -45,7 +47,7 @@ class SemanticReviewerTests(unittest.TestCase):
         )
         review = review_final_answer(
             goal="compare tenure",
-            answer="10+ years = 16514.62",
+            answer="# Funding by tenure\n10+ years = 16514.62",
             contract_context="Do not interpret status as approval.",
             accepted_evidence=[{
                 "step_id": 1, "step_description": "aggregate", "tool": "execute_query_tool",
@@ -58,6 +60,7 @@ class SemanticReviewerTests(unittest.TestCase):
         self.assertIn("16514.62", payload)
         self.assertIn("accepted_mcp_evidence", payload)
         self.assertIn("authoritative_runtime_contract", payload)
+        self.assertIn('"answer_headings": ["# Funding by tenure"]', payload)
         self.assertIn("Do not interpret status as approval", payload)
 
     @patch("labs.lab6_todo.semantic_reviewer.llm.chat")

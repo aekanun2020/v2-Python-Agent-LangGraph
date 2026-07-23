@@ -53,6 +53,12 @@ is sufficient but wording/arithmetic must be corrected, use retry.
 Never infer a row-level majority or proportion from similar column averages. Such a
 claim requires direct row-level numerator/denominator evidence. Treat proxy semantics
 as contract data; do not invent a domain interpretation that evidence does not define.
+Review every part of the proposed answer, including its title, headings, table headers,
+captions, footnotes, and conclusion. First extract their material claims, then check for
+internal contradictions between sections. A disclaimer cannot repair a contradictory
+title or heading. Reject a heading that semantically relabels a proxy even when the body
+later describes the proxy correctly. Apply this generically from the supplied contract
+and evidence; do not depend on a fixed domain vocabulary.
 
 Decision meanings:
 - accept: every material claim and number is entailed by accepted evidence
@@ -170,6 +176,10 @@ def review_final_answer(*, goal: str, answer: str, accepted_evidence: list[dict]
         "user_goal": goal,
         "authoritative_runtime_contract": contract_context,
         "proposed_final_answer": answer,
+        "answer_headings": [
+            line.strip() for line in answer.splitlines()
+            if line.lstrip().startswith("#")
+        ],
         "accepted_mcp_evidence": compact_evidence,
     }
     started = time.perf_counter()
