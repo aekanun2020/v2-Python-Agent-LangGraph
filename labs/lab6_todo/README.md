@@ -56,6 +56,11 @@
   ยังเสนอ action ที่ contract ห้าม Python จะ override แทนการเปิด query/replan loop
 - Final Reviewer แยกตรวจ title, headings, table headers, footnotes และ conclusion รวมทั้ง
   contradiction ข้ามส่วน; disclaimer ในเนื้อหาไม่สามารถชดเชยหัวข้อที่ relabel proxy ผิด
+- ในโหมด `shadow/enforce` มี Plan Coverage Reviewer ก่อนเริ่ม Action เพื่อกันแผนที่ตรวจ
+  schema อย่างเดียวแล้วปิดงาน ทั้งที่ goal ขอ calculation/analysis; reviewer ใช้ goal,
+  typed plan และ declarative contract ไม่ใช้ชื่อ domain ที่ hard-code ใน Python
+- final deterministic provenance gate ปฏิเสธการอ้าง step ID ที่ไม่มีจริง และ evidence
+  predicate/status ที่ไม่อยู่ใน proven claims แม้ถ้อยคำอื่นในคำตอบจะดูถูกต้อง
 
 Typed state หลัก:
 

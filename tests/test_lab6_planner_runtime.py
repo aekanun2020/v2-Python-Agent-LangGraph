@@ -148,6 +148,27 @@ class PurePythonPlannerTests(unittest.TestCase):
             "หลักฐาน row-level แสดงว่าคำขอส่วนใหญ่ได้รับ funding เต็มจำนวน",
             ratio,
         )
+
+    def test_final_gate_rejects_fabricated_step_reference(self):
+        evidence = [{"step_id": 1, "result": "schema"}]
+        with self.assertRaisesRegex(ValueError, "unknown step references"):
+            validate_final_semantics(
+                "inspect data", "Step 2 verified the metric", evidence,
+            )
+
+    def test_final_gate_rejects_unproven_evidence_status(self):
+        evidence = [{
+            "step_id": 1,
+            "proven_claim_ids": ["schema"],
+            "claim_requirements": [{
+                "claim_id": "schema", "predicate": "schema_inspected",
+            }],
+            "result": "schema",
+        }]
+        with self.assertRaisesRegex(ValueError, "existence_checked"):
+            validate_final_semantics(
+                "inspect data", "schema_inspected and existence_checked", evidence,
+            )
     def setUp(self):
         self.plan = PlannerState("goal", [PlanStep(1, "query")])
         self.plan.start(1)

@@ -59,6 +59,11 @@ internal contradictions between sections. A disclaimer cannot repair a contradic
 title or heading. Reject a heading that semantically relabels a proxy even when the body
 later describes the proxy correctly. Apply this generically from the supplied contract
 and evidence; do not depend on a fixed domain vocabulary.
+Correct statements are not sufficient if they do not answer the user goal. If the user
+requests an analysis or calculation and the answer merely lists schema, describes what
+could be calculated, or proposes SQL without presenting the requested evidenced result,
+use query_more. Reject fabricated step numbers, capability labels, or evidence statuses
+that are not present in accepted evidence provenance.
 
 Decision meanings:
 - accept: every material claim and number is entailed by accepted evidence
@@ -69,6 +74,19 @@ Decision meanings:
 Return one JSON object only with exactly these top-level keys:
 derived_requirements, checks, supports_step, sufficient, decision, confidence,
 reason, suggested_next_action. Never include markdown."""
+
+PLAN_SYSTEM = """You are an independent Plan Coverage Reviewer inside a data-agent runtime.
+Check whether the proposed typed MCP-verifiable plan can produce sufficient evidence to
+answer the full user goal. Use the authoritative runtime contract when present. Require
+schema discovery when resources must be verified and require data retrieval/calculation
+steps for requested results; schema-only evidence cannot answer an analytical question.
+Do not require presentation, summary, recommendation, or final-answer steps because those
+are not MCP evidence steps. Do not invent domain rules beyond the goal and contract.
+
+Use accept only when completing every proposed step would make the goal answerable.
+Use retry when plan steps or typed declarations must be corrected. Use query_more when
+additional MCP-verifiable steps are missing. Use reject only for an unusable plan.
+Return the same JSON shape as other reviewers and no markdown."""
 
 
 @dataclass
@@ -146,6 +164,27 @@ def review_observation(*, goal: str, active_step: str, analytical_contract: str,
         ],
         response_format={"type": "json_object"},
         temperature=0,
+    )
+    elapsed_ms = int((time.perf_counter() - started) * 1000)
+    data = _parse_json(response.choices[0].message.content or "")
+    return _validate_review(data, elapsed_ms=elapsed_ms, usage=response.usage)
+
+
+def review_plan(*, goal: str, proposed_plan: list[dict], contract_context: str = "",
+                model: str | None = None) -> SemanticReview:
+    payload = {
+        "user_goal": goal,
+        "authoritative_runtime_contract": contract_context,
+        "proposed_typed_plan": proposed_plan,
+    }
+    started = time.perf_counter()
+    response = llm.chat(
+        model=model or config.OPENROUTER_MODEL,
+        messages=[
+            {"role": "system", "content": PLAN_SYSTEM},
+            {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+        ],
+        response_format={"type": "json_object"}, temperature=0,
     )
     elapsed_ms = int((time.perf_counter() - started) * 1000)
     data = _parse_json(response.choices[0].message.content or "")

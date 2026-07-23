@@ -56,6 +56,8 @@ Planner รุ่นล่าสุดให้ LLM ประกาศ table/fie
 capability และ resource ตรงกัน จึงลด query ซ้ำโดยไม่ hard-code ชื่อ resource ใน Python core
 เมื่อหลักฐานครบ runtime จะซ่อน MCP tools และบังคับเข้าสู่ final-answer phase; Final
 Observation ตรวจหัวข้อและเนื้อหาทุกส่วนเพื่อจับ semantic relabelling หรือข้อความขัดกัน
+ก่อนเริ่ม tool calls ยังมี Plan Coverage Review กันแผนที่ครบตามสถานะแต่ไม่ครอบคลุม goal
+และ final provenance gate กันการอ้าง step/evidence status ที่ไม่มีอยู่จริง
 
 ```bash
 python labs/lab6_todo/agent_planner.py --routing-mode enforce

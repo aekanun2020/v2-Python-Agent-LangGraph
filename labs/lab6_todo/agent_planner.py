@@ -19,7 +19,9 @@ from labs.core import config, llm
 from labs.core.registry import ToolRegistry
 from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
 from labs.lab6_todo.observation_policy import extract_numeric_facts, observe_result
-from labs.lab6_todo.semantic_reviewer import review_final_answer, review_observation
+from labs.lab6_todo.semantic_reviewer import (
+    review_final_answer, review_observation, review_plan,
+)
 from labs.lab6_todo.circuit_breaker import FailureCircuitBreaker
 from labs.lab6_todo.contract_runtime import (
     ResolvedContract, resolve_contract, validate_final_contract,
@@ -136,12 +138,42 @@ def validate_final_semantics(question: str, answer: str,
                              accepted_evidence: list[dict] | None = None,
                              contract: ResolvedContract | None = None) -> None:
     """Apply final-answer rules supplied by the resolved extension contract."""
+    evidence_items = accepted_evidence or []
     if contract is None:
         contract = resolve_contract(question)
-    validate_final_claims(answer, accepted_evidence or [])
+    validate_final_claims(answer, evidence_items)
+    known_steps = {
+        int(item["step_id"]) for item in evidence_items
+        if item.get("step_id") is not None
+    }
+    cited_steps = {
+        int(match) for match in re.findall(
+            r"(?:\bstep|ขั้น)\s*#?\s*(\d+)", answer, flags=re.IGNORECASE
+        )
+    }
+    unknown_steps = sorted(cited_steps - known_steps)
+    if unknown_steps:
+        raise ValueError(
+            f"final evidence provenance rejected: unknown step references={unknown_steps}"
+        )
+    proven_predicates = {
+        str(requirement.get("predicate", ""))
+        for item in evidence_items
+        for requirement in item.get("claim_requirements", [])
+        if requirement.get("claim_id") in item.get("proven_claim_ids", [])
+    }
+    unsupported_statuses = sorted(
+        predicate for predicate in EVIDENCE_PREDICATE_CATALOG
+        if predicate in answer and predicate not in proven_predicates
+    )
+    if unsupported_statuses:
+        raise ValueError(
+            "final evidence provenance rejected: unproven evidence statuses="
+            + ", ".join(unsupported_statuses)
+        )
     queries = " ".join(
         str(item.get("action", item.get("tool_arguments", {})).get("query", "")).lower()
-        for item in (accepted_evidence or [])
+        for item in evidence_items
     )
     failures = validate_final_contract(contract, answer, queries)
     if failures:
@@ -166,6 +198,11 @@ def planner_tools() -> list[dict]:
                 "parameters": {"type": "object", "properties": properties, "required": required}}}
     evidence_requirement = {
         "type": "object",
+        "description": (
+            "Predicate must prove required_capability: schema_inspection→schema_inspected; "
+            "sample_rows/query_execution→rows_returned; aggregation→aggregation_executed; "
+            "comparison→comparison_executed; existence_check→existence_checked"
+        ),
         "properties": {
             "claim_id": {"type": "string"},
             "predicate": {"type": "string", "enum": list(EVIDENCE_PREDICATE_CATALOG)},
@@ -346,6 +383,36 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                     if plan is not None:
                         raise ValueError("plan_write is allowed once; use plan_revise")
                     typed_steps = normalize_typed_plan_steps(args["steps"])
+                    if routing_mode in ("shadow", "enforce"):
+                        plan_review = review_plan(
+                            goal=question,
+                            proposed_plan=[{
+                                "id": step.id,
+                                "description": step.description,
+                                "required_capability": step.required_capability,
+                                "required_resources": [
+                                    item.as_dict() for item in step.required_resources
+                                ],
+                                "evidence_requirements": [
+                                    item.as_dict() for item in step.evidence_requirements
+                                ],
+                            } for step in typed_steps],
+                            contract_context=goal_contract,
+                        )
+                        plan_decision = (
+                            plan_review.decision if routing_mode == "enforce" else "accept"
+                        )
+                        print(
+                            f"[PLAN REVIEW] review={plan_review.decision} "
+                            f"mode={routing_mode} final={plan_decision} "
+                            f"reason={plan_review.reason}"
+                        )
+                        if plan_decision != "accept":
+                            raise ValueError(
+                                "PLAN COVERAGE: proposed plan cannot yet answer the goal; "
+                                f"decision={plan_review.decision}; {plan_review.reason}; "
+                                f"next={plan_review.suggested_next_action}"
+                            )
                     plan = PlannerState(args["goal"], typed_steps)
                     result = plan.render()
                 elif plan is None:

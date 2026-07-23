@@ -4,8 +4,8 @@ from unittest.mock import patch
 
 from labs.lab6_todo.observation_policy import ObservationState
 from labs.lab6_todo.semantic_reviewer import (
-    FINAL_SYSTEM, SemanticReview, _parse_json, hybrid_decision,
-    review_final_answer, review_observation,
+    FINAL_SYSTEM, PLAN_SYSTEM, SemanticReview, _parse_json, hybrid_decision,
+    review_final_answer, review_observation, review_plan,
 )
 
 
@@ -34,6 +34,32 @@ class SemanticReviewerTests(unittest.TestCase):
         self.assertIn("formula and weighting", FINAL_SYSTEM)
         self.assertIn("title, headings", FINAL_SYSTEM)
         self.assertIn("disclaimer cannot repair", FINAL_SYSTEM)
+        self.assertIn("merely lists schema", FINAL_SYSTEM)
+        self.assertIn("fabricated step numbers", FINAL_SYSTEM)
+        self.assertIn("schema-only evidence", PLAN_SYSTEM)
+
+    @patch("labs.lab6_todo.semantic_reviewer.llm.chat")
+    def test_plan_reviewer_receives_goal_contract_and_typed_plan(self, chat):
+        chat.return_value = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content=(
+                '{"derived_requirements":[],"checks":[],"supports_step":false,'
+                '"sufficient":false,"decision":"query_more","confidence":1,'
+                '"reason":"schema-only","suggested_next_action":"add aggregation"}'
+            )))],
+            usage=SimpleNamespace(prompt_tokens=10, completion_tokens=5),
+        )
+        review = review_plan(
+            goal="calculate grouped average", contract_context="metric must be verified",
+            proposed_plan=[{
+                "id": 1, "required_capability": "schema_inspection",
+                "required_resources": [{"kind": "table", "name": "facts"}],
+            }],
+        )
+        self.assertEqual(review.decision, "query_more")
+        payload = chat.call_args.kwargs["messages"][1]["content"]
+        self.assertIn("calculate grouped average", payload)
+        self.assertIn("schema_inspection", payload)
+        self.assertIn("metric must be verified", payload)
 
     @patch("labs.lab6_todo.semantic_reviewer.llm.chat")
     def test_final_reviewer_receives_answer_and_accepted_evidence(self, chat):
