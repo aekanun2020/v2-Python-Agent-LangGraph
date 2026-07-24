@@ -36,12 +36,11 @@ plan_write
     ↓
 MCP action
     ↓
-observe
-    ├─ accept     → เก็บ evidence และไป step ถัดไป
-    ├─ retry      → ทำ action เดิมใหม่
-    ├─ query_more → หา evidence เพิ่ม
-    ├─ replan     → plan_revise
-    └─ stop       → หยุดพร้อมเหตุผล
+Python เรียก Observer LLM ด้วย fresh context
+    ├─ evidence: accept / reject
+    └─ next: continue / retry / query_more / replan / stop
+                            ↓
+ทุก step เสร็จ → Draft answer → Final Observer → Answer
 ```
 
 `PlannerState` เก็บ goal, steps, revision และ accepted evidence ส่วน
@@ -51,7 +50,8 @@ observe
 - result สนับสนุน active step หรือไม่
 - evidence ครบหรือยัง
 - claim ที่พิสูจน์ได้หรือขัดแย้ง
-- decision และเหตุผล
+- requirement IDs ที่พิสูจน์แล้วหรือยังขาด
+- evidence verdict, next action และเหตุผล
 
 ## อะไรเป็น Dynamic และอะไรเป็น Deterministic
 
@@ -61,11 +61,15 @@ LLM อ่านเป้าหมาย, active step, action และ tool res
 Python runtime ไม่พยายามเข้าใจความหมายของโดเมน ทำหน้าที่เพียง:
 
 - บังคับให้สร้างแผนก่อนเรียก MCP
-- บังคับให้ observe หลัง MCP ทุกครั้ง
-- ไม่ยอมรับ `accept` ถ้า action/result/evidence ไม่ผ่านครบ
+- เรียก Observer อัตโนมัติหลัง MCP ทุกครั้งด้วย context แยกจาก executor
+- ไม่ยอมรับ `accept` ถ้า action/result/evidence/requirement IDs ไม่ผ่านครบ
+- downgrade verdict ที่ขัดกันเป็น `reject + query_more`
+- สะสม partial evidence ภายใน active step เมื่อต้อง query เพิ่ม
+- เปิด `plan_revise` เฉพาะเมื่อ Observer คืน `next_action=replan`
+- ปฏิเสธ tool ที่ไม่ได้เปิดใน phase ปัจจุบัน
 - ผูก accepted evidence กับ step ที่กำลังทำ
 - เก็บ evidence ที่เสร็จแล้วไว้เมื่อแก้แผน
-- ไม่ยอมให้ตอบก่อนแผนครบหรือถูกสั่ง stop
+- ส่ง draft answer ให้ Final Observer ตรวจ accepted evidence ก่อนแสดง
 
 นี่เป็น teaching implementation ที่ตั้งใจให้เล็กและอ่านง่าย ไม่ใช่ production
 semantic assurance และยังไม่มี Domain Skill หรือ ontology เฉพาะทาง
@@ -75,10 +79,11 @@ semantic assurance และยังไม่มี Domain Skill หรือ o
 เวอร์ชันนี้เป็น **experimental baseline** สำหรับให้ผู้เรียนสังเกตความไม่แน่นอนของ
 LLM-based Observation ไม่ใช่เวอร์ชัน production:
 
-- live run 1: tool call จริง แต่ Observation accept หลักฐานผิดขั้น
-- live run 2: recovery สำเร็จและตอบจำนวนจาก query evidence ถูกต้อง
-- Python guard กันการข้ามลำดับและกัน `accept` ที่ boolean ไม่ครบได้
-- Python guard ยังพิสูจน์ไม่ได้ว่าเหตุผลเชิงความหมายของ LLM ถูกต้อง
+- คำถามนับพนักงาน: live smoke test ผ่านทั้ง MCP, Observer และ Final Observer
+- Workforce Matrix: ไปถึง 5/7 steps โดยไม่ปล่อยคำตอบผิด แต่ยังไม่จบภายในเวลา
+- Observer จับ query ผิด step, SQL error และ requirement ที่ขาดได้
+- ยังพบความเสี่ยงที่ Planner สร้าง requirement ไม่ละเอียดพอ เช่นนิยาม denominator
+- Python guard ยังไม่ใช่ Domain Skill และไม่รับรอง semantic correctness ระดับ production
 
 ควรรันคำถามเดิมซ้ำอย่างน้อย 5 รอบและเก็บ trace `[ACTION]`, `[RESULT]`,
 `[OBSERVATION]`, `[ANSWER]` ก่อนตัดสินความเสถียร
@@ -89,4 +94,4 @@ LLM-based Observation ไม่ใช่เวอร์ชัน production:
 python -m unittest -v tests.test_lab6_planner_runtime
 ```
 
-ชุดทดสอบไม่เรียก API และตรวจ state transition หลัก 6 กรณี
+ชุดทดสอบไม่เรียก API และตรวจ state transition หลัก 10 กรณี
