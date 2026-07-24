@@ -1,5 +1,17 @@
 # v2-Python-Agent-LangGraph
 
+> เส้นทางที่แนะนำล่าสุดคือ **Pure Python** ใน Lab 6 ไม่ใช้ LangGraph:
+>
+> ```bash
+> conda activate agentic-ai
+> cd v2-Python-Agent-LangGraph
+> python labs/lab6_todo/agent_planner.py \
+>   "นับพนักงานที่ยังปฏิบัติงานแยกตามแผนก"
+> ```
+>
+> อ่านคำอธิบายและ agent loop แบบไฟล์เดียวที่
+> [`labs/lab6_todo/README.md`](labs/lab6_todo/README.md)
+
 ## ถ้าจะรัน Agent ตัวล่าสุด ให้ทำตามนี้
 
 มีสองอย่างที่มักสับสนกัน:

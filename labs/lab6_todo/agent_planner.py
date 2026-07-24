@@ -1,751 +1,356 @@
-"""Lab 6 enhanced — evidence-driven planner in a plain Python agent loop.
+"""Lab 6 — Pure Python Planner + Dynamic Observation.
 
-No LangGraph is used. Python owns plan state, evidence capture, transitions and
-the answer gate; the model only proposes actions through tools.
+โค้ดตั้งใจให้เห็น agent loop ทั้งหมดในไฟล์เดียว ไม่ใช้ LangGraph และไม่มีกฎเฉพาะโดเมน
+
+รัน:
+    python labs/lab6_todo/agent_planner.py "คำถามของคุณ"
 """
 
 from __future__ import annotations
 
-import json
 import argparse
+import json
 import os
-import re
 import sys
-import uuid
+from dataclasses import asdict, dataclass, field
+from typing import Literal
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from labs.core import config, llm
 from labs.core.registry import ToolRegistry
-from labs.lab6_todo.planner_runtime import PlanStep, PlannerState
-from labs.lab6_todo.observation_policy import extract_numeric_facts, observe_result
-from labs.lab6_todo.semantic_reviewer import (
-    review_final_answer, review_observation, review_plan,
-)
-from labs.lab6_todo.circuit_breaker import FailureCircuitBreaker
-from labs.lab6_todo.contract_runtime import (
-    ResolvedContract, resolve_contract, validate_final_contract,
-    validate_reviewer_action,
-)
-from labs.lab6_todo.claim_adjudication import validate_final_claims
-from labs.lab6_todo.observation_types import ActionHint
-from labs.lab6_todo.observation_types import EvidenceRequirement, ResourceRequirement
-from labs.lab6_todo.capabilities import (
-    CAPABILITY_CATALOG, EVIDENCE_PREDICATE_CATALOG, action_capability_error,
-    action_resource_error,
-    validate_capability_requirements, validate_declared_capability,
-    validate_evidence_predicate,
-)
-from labs.lab6_todo.observation_router import (
-    assess_observation_risk, routed_decision, validate_routing_mode,
-)
-
-SYSTEM = """คุณคือ data agent ที่ทำงานตามแผน, schema และหลักฐานจริงจาก MCP
-รักษาความหมายของ dimension และ metric จากคำถามเดิม ห้ามแทนคำที่คล้ายกันเอง
-หากข้อมูลมีเพียง proxy ให้ระบุ proxy และข้อจำกัด ห้ามอ้างเหตุและผลจาก association
-ห้ามระบุสกุลเงินถ้า schema หรือ evidence ไม่ได้บอกหน่วย และห้ามกล่าวว่า field ไม่มีโดยไม่ตรวจ schema
-ก่อนเรียก MCP ต้องใช้ plan_write แล้ว plan_start ทีละขั้น
-ทุก plan step ต้องประกาศ required_capability และ evidence_requirements แบบ typed
-ทุก step ต้องประกาศ required_resources เป็น table/field ที่ action ต้องใช้จริง
-ถ้าหลาย step ต้องพิสูจน์ claim เดียวกัน ให้ใช้ claim_id เดิมเพื่อให้ runtime reuse evidence ได้
-เลือก required_capability จาก: schema_inspection, sample_rows, query_execution, aggregation, comparison, existence_check
-เลือก evidence predicate จาก: inspectable_payload, schema_inspected, rows_returned, aggregation_executed, comparison_executed, existence_checked
-ต้องเลือก capability ที่เฉพาะที่สุด: SQL ที่มี GROUP BY/AVG/SUM/COUNT ใช้ aggregation ไม่ใช้ query_execution
-description ใช้อธิบายให้มนุษย์อ่านเท่านั้น runtime จะไม่เดา capability จากข้อความ
-อย่าสร้างขั้น "สรุปคำตอบ" แยกต่างหาก เพราะขั้นต้องมีหลักฐานจาก MCP
-ผล MCP จะถูก runtime ผูกเป็น evidence ของขั้นที่ in_progress โดยอัตโนมัติ
-เมื่อ observation รับหลักฐาน runtime จะ complete ขั้นนั้นอัตโนมัติ ไม่ต้องเรียก plan_complete ซ้ำ
-ถ้าหลักฐานทำให้แผนเดิมไม่พอให้ plan_revise
-ถ้ายังไม่รู้ชื่อ table/field จริง ให้ใช้ required_resources kind=catalog name=* และสร้าง
-schema-discovery plan พร้อม completion_mode=replan
-เมื่อ discovery completed runtime จะเปิดเฉพาะ plan_revise; ห้ามเดาชื่อ resource
-completion_mode=replan ใช้ได้เฉพาะ schema/sample/existence discovery แบบ bounded;
-ห้ามใส่ aggregation/comparison/final matrix ใน discovery plan
-ห้ามกล่าวว่าเพิ่มขึ้น/ลดลงตามลำดับหรือมีแนวโน้ม เว้นแต่ accepted evidence มี
-monotonic_increase_violations, monotonic_decrease_violations, trend_slope,
-spearman_rho หรือ correlation ที่คำนวณ claim นั้นโดยตรง
-ค่า rate ระดับองค์กรให้ใช้ผลรวมนumerator/ผลรวมdenominator ไม่ใช้ AVG(rate รายกลุ่ม)
-เว้นแต่ผู้ใช้ขอ unweighted mean; ค่าเฉลี่ยรวมต้อง weight ด้วยจำนวน eligible records
-metric ที่เป็น NULL/NaN ต้องระบุ unknown/insufficient ห้ามจัดเป็น below หรือ at/above
-ตอบสุดท้ายได้เมื่อทุกขั้น completed เท่านั้น ใช้ T-SQL TOP ไม่ใช้ LIMIT"""
-
-def normalize_typed_plan_steps(raw_steps, *, revised: bool = False) -> list[PlanStep]:
-    """Parse model-declared intent without inferring semantics from description text."""
-    if not isinstance(raw_steps, list) or not raw_steps:
-        raise ValueError("plan steps must be a non-empty array")
-    steps: list[PlanStep] = []
-    for index, item in enumerate(raw_steps, start=1):
-        if not isinstance(item, dict):
-            raise ValueError(f"steps[{index}] must be a typed object, not free text")
-        description = item.get("description")
-        capability = item.get("required_capability")
-        raw_requirements = item.get("evidence_requirements")
-        raw_resources = item.get("required_resources")
-        if not isinstance(description, str) or not description.strip():
-            raise ValueError(f"steps[{index}].description must be non-empty")
-        if not isinstance(capability, str):
-            raise ValueError(f"steps[{index}].required_capability is required")
-        validate_declared_capability(capability)
-        if not isinstance(raw_requirements, list) or not raw_requirements:
-            raise ValueError(f"steps[{index}].evidence_requirements must be non-empty")
-        requirements: list[EvidenceRequirement] = []
-        for req_index, raw in enumerate(raw_requirements, start=1):
-            if not isinstance(raw, dict):
-                raise ValueError(
-                    f"steps[{index}].evidence_requirements[{req_index}] must be an object"
-                )
-            claim_id = raw.get("claim_id")
-            predicate = raw.get("predicate")
-            if not isinstance(claim_id, str) or not claim_id.strip():
-                raise ValueError("evidence requirement claim_id must be non-empty")
-            if not isinstance(predicate, str):
-                raise ValueError("evidence requirement predicate is required")
-            validate_evidence_predicate(predicate)
-            requirements.append(EvidenceRequirement(
-                claim_id=claim_id.strip(), predicate=predicate,
-                target=str(raw.get("target", "")).strip(),
-            ))
-        validate_capability_requirements(capability, requirements)
-        if not isinstance(raw_resources, list) or not raw_resources:
-            raise ValueError(f"steps[{index}].required_resources must be non-empty")
-        resources: list[ResourceRequirement] = []
-        for resource_index, raw in enumerate(raw_resources, start=1):
-            if not isinstance(raw, dict):
-                raise ValueError(
-                    f"steps[{index}].required_resources[{resource_index}] must be an object"
-                )
-            kind, name = raw.get("kind"), raw.get("name")
-            if kind not in ("catalog", "table", "field"):
-                raise ValueError("resource kind must be catalog, table, or field")
-            if not isinstance(name, str) or not name.strip():
-                raise ValueError("resource name must be non-empty")
-            resources.append(ResourceRequirement(kind=kind, name=name.strip()))
-        status = item.get("status", "pending") if revised else "pending"
-        step_id = item.get("id", index) if revised else index
-        if status not in ("pending", "in_progress", "completed", "blocked"):
-            raise ValueError(f"steps[{index}].status is invalid")
-        if not isinstance(step_id, int):
-            raise ValueError(f"steps[{index}].id must be an integer")
-        steps.append(PlanStep(
-            id=step_id, description=description.strip(), status=status,
-            required_capability=capability, evidence_requirements=requirements,
-            required_resources=resources,
-        ))
-    return steps
 
 
-def require_final_answer(content) -> str:
-    if not isinstance(content, str) or not content.strip():
-        raise ValueError(
-            "final answer is empty; return a non-empty user-facing synthesis from accepted evidence"
+Decision = Literal["accept", "retry", "query_more", "replan", "stop"]
+
+SYSTEM = """คุณคือ agent ที่ทำงานด้วยวงจร Thought → Action → Observation
+
+กติกา:
+1. เรียก plan_write ก่อนทำงาน ใช้จำนวนขั้น MCP ที่น้อยที่สุดและแต่ละขั้นต้องพิสูจน์ได้
+   อย่าแยก filter/join/aggregate เป็นคนละ step ถ้า query เดียวทำและพิสูจน์พร้อมกันได้
+2. ทำ MCP action ได้ครั้งละหนึ่ง action สำหรับ step ที่ active
+3. หลัง MCP คืนผล ต้องเรียก observe ก่อน action ถัดไปเสมอ
+4. Observation ต้องตีความตามเป้าหมาย, active step, action และผลจริง:
+   - action สำเร็จหรือไม่
+   - result สนับสนุน step หรือไม่
+   - evidence ครบหรือยัง
+   - claim ใดถูกพิสูจน์หรือขัดแย้ง
+   - ตัดสิน accept / retry / query_more / replan / stop
+5. accept เฉพาะเมื่อ action สำเร็จ, result สนับสนุน step และ evidence ครบ
+6. ใช้ plan_revise เมื่อผลจริงทำให้แผนเดิมไม่เหมาะสม
+7. ตอบสุดท้ายจาก accepted evidence เท่านั้น และบอกข้อจำกัดที่หลักฐานพิสูจน์ไม่ได้
+
+Observation เป็น semantic judgment ของคุณ ไม่ใช่ keyword matching ของ Python
+และห้ามถือว่า tool สำเร็จเท่ากับคำตอบถูกเชิงความหมาย
+ถ้าเขียน T-SQL และเปรียบเทียบ Unicode text ให้ใช้ N'...' เป็น string literal
+เรียก tool ครั้งละหนึ่งรายการเท่านั้น ห้ามส่ง parallel tool calls
+"""
+
+
+@dataclass
+class PlanStep:
+    id: int
+    task: str
+    status: Literal["pending", "active", "completed"] = "pending"
+    evidence: list[dict] = field(default_factory=list)
+
+
+@dataclass
+class ObservationState:
+    action_succeeded: bool
+    supports_step: bool
+    evidence_complete: bool
+    proven_claims: list[str]
+    contradicted_claims: list[str]
+    decision: Decision
+    reason: str
+
+
+@dataclass
+class PlannerState:
+    goal: str
+    steps: list[PlanStep]
+    revision: int = 1
+    awaiting_observation: bool = False
+    latest_action: dict | None = None
+    latest_result: str | None = None
+    observations: list[ObservationState] = field(default_factory=list)
+    stopped: bool = False
+
+    @property
+    def active_step(self) -> PlanStep | None:
+        return next((step for step in self.steps if step.status == "active"), None)
+
+    @property
+    def complete(self) -> bool:
+        return bool(self.steps) and all(step.status == "completed" for step in self.steps)
+
+    def activate_next(self) -> None:
+        if self.active_step is None:
+            next_step = next((step for step in self.steps if step.status == "pending"), None)
+            if next_step:
+                next_step.status = "active"
+
+    def record_action(self, name: str, arguments: dict, result: str, call_id: str) -> None:
+        if self.awaiting_observation:
+            raise ValueError("ต้อง observe ผล action ก่อนเรียก MCP อีกครั้ง")
+        self.activate_next()
+        if self.active_step is None:
+            raise ValueError("ไม่มี active plan step สำหรับ MCP action")
+        self.latest_action = {
+            "step_id": self.active_step.id,
+            "tool": name,
+            "arguments": arguments,
+            "tool_call_id": call_id,
+        }
+        self.latest_result = result
+        self.awaiting_observation = True
+
+    def observe(self, observation: ObservationState) -> None:
+        if not self.awaiting_observation or self.active_step is None:
+            raise ValueError("ไม่มี MCP result ที่รอ Observation")
+        if observation.decision == "accept" and not (
+            observation.action_succeeded
+            and observation.supports_step
+            and observation.evidence_complete
+        ):
+            raise ValueError("accept ไม่ได้: action/result/evidence ยังไม่ผ่านครบ")
+
+        self.observations.append(observation)
+        if observation.decision == "accept":
+            self.active_step.evidence.append({
+                **(self.latest_action or {}),
+                "result": self.latest_result,
+                "proven_claims": observation.proven_claims,
+                "contradicted_claims": observation.contradicted_claims,
+            })
+            self.active_step.status = "completed"
+            self.awaiting_observation = False
+            self.latest_action = None
+            self.latest_result = None
+            self.activate_next()
+        elif observation.decision in {"retry", "query_more"}:
+            self.awaiting_observation = False
+            self.latest_action = None
+            self.latest_result = None
+        elif observation.decision == "replan":
+            self.awaiting_observation = False
+        elif observation.decision == "stop":
+            self.awaiting_observation = False
+            self.stopped = True
+
+    def revise(self, reason: str, future_steps: list[str]) -> None:
+        if self.awaiting_observation:
+            last = self.observations[-1] if self.observations else None
+            if not last or last.decision != "replan":
+                raise ValueError("ต้อง observe ด้วย decision=replan ก่อนแก้แผน")
+        completed = [step for step in self.steps if step.status == "completed"]
+        start = len(completed) + 1
+        self.steps = completed + [
+            PlanStep(start + index, task) for index, task in enumerate(future_steps)
+        ]
+        self.revision += 1
+        self.awaiting_observation = False
+        self.latest_action = None
+        self.latest_result = None
+        self.activate_next()
+
+    def render(self) -> str:
+        marks = {"pending": "[ ]", "active": "[~]", "completed": "[x]"}
+        rows = [f"Goal: {self.goal} | revision={self.revision}"]
+        rows.extend(
+            f"{marks[step.status]} {step.id}. {step.task} (evidence={len(step.evidence)})"
+            for step in self.steps
         )
-    return content.strip()
+        return "\n".join(rows)
 
 
-def validate_final_semantics(question: str, answer: str,
-                             accepted_evidence: list[dict] | None = None,
-                             contract: ResolvedContract | None = None) -> None:
-    """Apply final-answer rules supplied by the resolved extension contract."""
-    evidence_items = accepted_evidence or []
-    if contract is None:
-        contract = resolve_contract(question)
-    validate_final_claims(answer, evidence_items)
-    known_steps = {
-        int(item["step_id"]) for item in evidence_items
-        if item.get("step_id") is not None
-    }
-    cited_steps = {
-        int(match) for match in re.findall(
-            r"(?:\bstep|ขั้น)\s*#?\s*(\d+)", answer, flags=re.IGNORECASE
-        )
-    }
-    unknown_steps = sorted(cited_steps - known_steps)
-    if unknown_steps:
-        raise ValueError(
-            f"final evidence provenance rejected: unknown step references={unknown_steps}"
-        )
-    proven_predicates = {
-        str(requirement.get("predicate", ""))
-        for item in evidence_items
-        for requirement in item.get("claim_requirements", [])
-        if requirement.get("claim_id") in item.get("proven_claim_ids", [])
-    }
-    unsupported_statuses = sorted(
-        predicate for predicate in EVIDENCE_PREDICATE_CATALOG
-        if predicate in answer and predicate not in proven_predicates
-    )
-    if unsupported_statuses:
-        raise ValueError(
-            "final evidence provenance rejected: unproven evidence statuses="
-            + ", ".join(unsupported_statuses)
-        )
-    queries = " ".join(
-        str(item.get("action", item.get("tool_arguments", {})).get("query", "")).lower()
-        for item in evidence_items
-    )
-    failures = validate_final_contract(contract, answer, queries)
-    if failures:
-        raise ValueError("final semantic gate rejected: " + "; ".join(failures))
-
-
-def build_goal_contract(question: str) -> str:
-    contract = resolve_contract(question)
-    return contract.system_context if contract else ""
-
-
-def semantic_recovery_hint(failed: list[str], unsupported_claims=None) -> str:
-    del failed
-    return " | ".join(
-        claim.basis for claim in (unsupported_claims or []) if claim.basis
-    )
-
-
-def planner_tools() -> list[dict]:
-    def tool(name, description, properties, required):
-        return {"type": "function", "function": {"name": name, "description": description,
-                "parameters": {"type": "object", "properties": properties, "required": required}}}
-    evidence_requirement = {
-        "type": "object",
-        "description": (
-            "Predicate must prove required_capability: schema_inspection→schema_inspected; "
-            "sample_rows/query_execution→rows_returned; aggregation→aggregation_executed; "
-            "comparison→comparison_executed; existence_check→existence_checked"
-        ),
-        "properties": {
-            "claim_id": {"type": "string"},
-            "predicate": {"type": "string", "enum": list(EVIDENCE_PREDICATE_CATALOG)},
-            "target": {"type": "string"},
-        },
-        "required": ["claim_id", "predicate"],
-    }
-    typed_step_properties = {
-        "description": {"type": "string"},
-        "required_capability": {"type": "string", "enum": list(CAPABILITY_CATALOG)},
-        "evidence_requirements": {
-            "type": "array", "minItems": 1, "items": evidence_requirement,
-        },
-        "required_resources": {
-            "type": "array", "minItems": 1, "items": {
+def internal_tools() -> list[dict]:
+    def tool(name: str, description: str, properties: dict, required: list[str]) -> dict:
+        return {"type": "function", "function": {
+            "name": name,
+            "description": description,
+            "parameters": {
                 "type": "object",
-                "properties": {
-                    "kind": {"type": "string", "enum": ["catalog", "table", "field"]},
-                    "name": {"type": "string"},
-                },
-                "required": ["kind", "name"],
+                "properties": properties,
+                "required": required,
+                "additionalProperties": False,
             },
-        },
-    }
+        }}
+
     return [
-        tool("plan_write", "Create only MCP-verifiable data/schema/query steps. Never include summary, analysis, report, recommendation, final-answer, or presentation steps.", {
-            "goal": {"type": "string"},
-            "completion_mode": {"type": "string", "enum": ["answer", "replan"]},
-            "steps": {"type": "array", "minItems": 1, "items": {
-                "type": "object", "properties": typed_step_properties,
-                "required": ["description", "required_capability", "evidence_requirements", "required_resources"],
-            }},
-        }, ["goal", "completion_mode", "steps"]),
-        tool("plan_start", "เลือกขั้นเดียวที่จะเริ่มทำ", {
-            "step_id": {"type": "integer"},
-        }, ["step_id"]),
-        tool("plan_complete", "ขอปิดขั้น; runtime จะปฏิเสธถ้าไม่มี tool evidence", {
-            "step_id": {"type": "integer"},
-        }, ["step_id"]),
-        tool("plan_revise", "Revise only MCP-verifiable steps; never add synthesis, summary, report, recommendation, or final-answer steps.", {
+        tool("plan_write", "สร้างแผนเริ่มต้นที่แต่ละขั้นพิสูจน์ได้ด้วย tool", {
+            "steps": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        }, ["steps"]),
+        tool("plan_revise", "แก้เฉพาะงานที่ยังไม่เสร็จเมื่อ Observation สั่ง replan", {
             "reason": {"type": "string"},
-            "completion_mode": {"type": "string", "enum": ["answer", "replan"]},
-            "steps": {"type": "array", "minItems": 1, "items": {"type": "object", "properties": {
-                "id": {"type": "integer"},
-                **typed_step_properties,
-                "status": {"type": "string", "enum": ["pending", "in_progress", "completed", "blocked"]},
-            }, "required": ["id", "description", "required_capability", "evidence_requirements", "required_resources", "status"]}},
-        }, ["reason", "completion_mode", "steps"]),
+            "future_steps": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        }, ["reason", "future_steps"]),
+        tool("observe", "ตีความ MCP result ล่าสุดเทียบกับ active plan step", {
+            "action_succeeded": {"type": "boolean"},
+            "supports_step": {"type": "boolean"},
+            "evidence_complete": {"type": "boolean"},
+            "proven_claims": {"type": "array", "items": {"type": "string"}},
+            "contradicted_claims": {"type": "array", "items": {"type": "string"}},
+            "decision": {
+                "type": "string",
+                "enum": ["accept", "retry", "query_more", "replan", "stop"],
+            },
+            "reason": {"type": "string"},
+        }, [
+            "action_succeeded", "supports_step", "evidence_complete",
+            "proven_claims", "contradicted_claims", "decision", "reason",
+        ]),
     ]
 
 
-def select_available_tools(
-    plan: PlannerState | None, plan_tools: list[dict], registry_tools: list[dict],
-    *, replan_authorized: bool = False,
-) -> list[dict]:
-    """Expose only transitions valid in the current deterministic runtime phase."""
-    by_name = {item["function"]["name"]: item for item in plan_tools}
-    if plan is None:
-        return [by_name["plan_write"]]
-    if all(step.status == "completed" for step in plan.steps):
-        must_replan = plan.completion_mode == "replan"
-        return [by_name["plan_revise"]] if (replan_authorized or must_replan) else []
-    return plan_tools + registry_tools
+def visible_tools(state: PlannerState | None, registry: ToolRegistry) -> list[dict]:
+    tools = {item["function"]["name"]: item for item in internal_tools()}
+    if state is None:
+        return [tools["plan_write"]]
+    if state.awaiting_observation:
+        last = state.observations[-1] if state.observations else None
+        return [tools["plan_revise"]] if last and last.decision == "replan" else [tools["observe"]]
+    if state.complete or state.stopped:
+        return []
+    return [tools["plan_revise"], *registry.openai_tools]
 
 
-def plan_review_payload(steps: list[PlanStep]) -> list[dict]:
-    return [{
-        "id": step.id,
-        "description": step.description,
-        "required_capability": step.required_capability,
-        "required_resources": [item.as_dict() for item in step.required_resources],
-        "evidence_requirements": [item.as_dict() for item in step.evidence_requirements],
-    } for step in steps]
-
-
-def validate_discovery_plan(steps: list[PlanStep], *, initial: bool) -> None:
-    """Deterministic phase contract; semantic goal coverage belongs to answer plans."""
-    allowed = {"schema_inspection", "sample_rows", "existence_check"}
-    invalid = [step.id for step in steps if step.required_capability not in allowed]
-    if invalid:
-        raise ValueError(
-            "DISCOVERY PHASE: completion_mode=replan may contain only schema/sample/"
-            f"existence steps; invalid steps={invalid}"
+def state_context(state: PlannerState | None) -> str:
+    if state is None:
+        return "ยังไม่มีแผน: ต้องเรียก plan_write"
+    text = state.render()
+    if state.awaiting_observation:
+        text += "\n\nMCP action ล่าสุด:\n" + json.dumps(
+            state.latest_action, ensure_ascii=False, indent=2
         )
-    if len(steps) > 8:
-        raise ValueError("DISCOVERY PHASE: keep discovery bounded to at most 8 steps")
-    if initial:
-        guessed = [
-            step.id for step in steps
-            if any(resource.kind != "catalog" for resource in step.required_resources)
-        ]
-        if guessed:
-            raise ValueError(
-                "DISCOVERY PHASE: initial plan does not know physical resources; "
-                f"use catalog:* only, guessed-resource steps={guessed}"
-            )
+        text += "\nMCP result ล่าสุด:\n" + str(state.latest_result)
+        text += "\nต้องเรียก observe เท่านั้น"
+    return text
 
 
-def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validator=None,
-        dynamic_observation: bool = False, prompt_semantic_review: bool = False,
-        observation_routing_mode: str = "rules"):
-    plan: PlannerState | None = None
-    trace: list[dict] = []
-    accepted_facts: dict[str, float] = {}
-    breaker = FailureCircuitBreaker()
-    routing_mode = validate_routing_mode(
-        "enforce" if prompt_semantic_review else observation_routing_mode
-    )
-    plan_tools = planner_tools()
-    replan_authorized = False
-    messages = [{"role": "system", "content": SYSTEM}]
-    contract = resolve_contract(question)
-    goal_contract = contract.system_context if contract else ""
-    if goal_contract:
-        messages.append({"role": "system", "content": goal_contract})
-    messages.append({"role": "user", "content": question})
+def run(
+    question: str,
+    registry: ToolRegistry,
+    max_turns: int = 30,
+    return_details: bool = False,
+):
+    state: PlannerState | None = None
+    messages = [
+        {"role": "system", "content": SYSTEM},
+        {"role": "user", "content": question},
+    ]
 
-    for turn in range(1, max_steps + 1):
-        available_tools = select_available_tools(
-            plan, plan_tools, registry.openai_tools,
-            replan_authorized=replan_authorized,
-        )
-        # Some thinking-mode providers (including Alibaba's Qwen endpoint) reject
-        # tool_choice="required". Phase safety comes from exposing only plan_write
-        # here and from the runtime gate, without provider-specific forcing.
-        response = llm.chat(messages=messages, tools=available_tools)
+    for turn in range(1, max_turns + 1):
+        messages.append({"role": "system", "content": state_context(state)})
+        tools = visible_tools(state, registry)
+        response = llm.chat(messages=messages, tools=tools)
         message = response.choices[0].message
+
         if not message.tool_calls:
-            final_review_decision = None
-            if plan is None:
-                feedback = "Answer gate rejected: ยังไม่มี plan_write"
-            elif (all(step.status == "completed" for step in plan.steps)
-                  and plan.completion_mode == "replan"):
-                feedback = (
-                    "Discovery phase completed; completion_mode=replan requires "
-                    "plan_revise before a final answer"
-                )
-            else:
-                try:
-                    final_answer = require_final_answer(message.content)
-                    # Do not spend a reviewer call—or ask it for more evidence—until
-                    # the deterministic planner proves every step is complete.
-                    plan.approve_answer()
-                    evidence_payload = [item.as_dict() for item in plan.accepted_evidence]
-                    validate_final_semantics(
-                        question, final_answer, evidence_payload, contract
-                    )
-                    if routing_mode in ("shadow", "enforce"):
-                        final_review = review_final_answer(
-                            goal=question,
-                            answer=final_answer,
-                            accepted_evidence=evidence_payload,
-                            contract_context=goal_contract,
-                        )
-                        reviewer_contract_failures = validate_reviewer_action(
-                            contract,
-                            decision=final_review.decision,
-                            reason=final_review.reason,
-                            suggested_next_action=final_review.suggested_next_action,
-                        )
-                        if reviewer_contract_failures:
-                            print(
-                                "[FINAL REVIEW OVERRIDDEN] reviewer action conflicts with "
-                                "runtime contract: " + "; ".join(reviewer_contract_failures)
-                            )
-                            final_decision = "accept"
-                        else:
-                            final_decision = (
-                                final_review.decision
-                                if routing_mode == "enforce" else "accept"
-                            )
-                        final_review_decision = final_review.decision
-                        print(
-                            f"[FINAL SEMANTIC REVIEW] review={final_review.decision} "
-                            f"mode={routing_mode} final={final_decision} "
-                            f"reason={final_review.reason}"
-                        )
-                        if final_decision != "accept":
-                            plan.answer_approved = False
-                            raise ValueError(
-                                "final semantic reviewer rejected: "
-                                f"decision={final_review.decision}; {final_review.reason}; "
-                                f"next={final_review.suggested_next_action}"
-                            )
-                    print(f"[ANSWER APPROVED] revision={plan.revision} tool_calls={len(trace)}")
-                    print(final_answer)
-                    return {"answer": final_answer, "planner": plan, "tool_trace": trace}
-                except ValueError as exc:
-                    plan.answer_approved = False
-                    feedback = str(exc)
-            print(f"[ANSWER REJECTED] {feedback}")
-            messages.append({"role": "assistant", "content": message.content or ""})
-            if final_review_decision == "query_more":
-                replan_authorized = True
-                instruction = (
-                    "หลักฐานยังไม่พอสำหรับข้อกล่าวอ้างใน final answer; เรียก plan_revise "
-                    "เพื่อเพิ่ม MCP-verifiable step แล้ว query เพิ่มตาม reviewer"
-                )
-            elif (plan is not None and plan.completion_mode == "replan"
-                  and all(step.status == "completed" for step in plan.steps)):
-                instruction = (
-                    "schema/discovery evidence พร้อมแล้ว; ต้องเรียก plan_revise "
-                    "โดยอ้างชื่อ resource จริงจาก accepted evidence"
-                )
-            elif plan is not None and all(step.status == "completed" for step in plan.steps):
-                instruction = (
-                    "ทุกขั้น completed แล้ว ห้ามเรียก tool เพิ่ม; เขียน final answer ที่ไม่ว่าง "
-                    "โดยสรุปจาก accepted evidence ให้ผู้ใช้อ่านได้ทันที"
-                )
-            else:
-                instruction = "ทำงานต่อและเรียก tool ที่จำเป็น"
-            messages.append({"role": "user", "content": f"[RUNTIME GATE] {feedback}. {instruction}"})
+            if state is None or (not state.complete and not state.stopped):
+                messages.append({"role": "assistant", "content": message.content or ""})
+                messages.append({"role": "user", "content": (
+                    "ยังจบไม่ได้: ทำตาม state และเรียก tool ที่เปิดให้ใช้"
+                )})
+                continue
+            print(f"\n[ANSWER]\n{message.content}")
+            details = {
+                "answer": message.content,
+                "planner": asdict(state),
+                "turns": turn,
+            }
+            return details if return_details else message.content
+
+        messages.append({
+            "role": "assistant",
+            "content": message.content or "",
+            "tool_calls": [call.model_dump() for call in message.tool_calls],
+        })
+
+        if len(message.tool_calls) != 1:
+            rejection = (
+                "[RUNTIME REJECTED] เรียกได้ครั้งละหนึ่ง tool เท่านั้น "
+                "เพื่อรักษาลำดับ Action → Observation"
+            )
+            print(rejection)
+            for call in message.tool_calls:
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": call.id,
+                    "content": rejection,
+                })
             continue
 
-        messages.append({"role": "assistant", "content": message.content or "",
-                         "tool_calls": [call.model_dump() for call in message.tool_calls]})
         for call in message.tool_calls:
             name = call.function.name
+            arguments = json.loads(call.function.arguments or "{}")
             try:
-                args = json.loads(call.function.arguments or "{}")
-                if (plan is not None
-                        and all(step.status == "completed" for step in plan.steps)
-                        and not (name == "plan_revise" and (
-                            replan_authorized or plan.completion_mode == "replan"
-                        ))):
-                    if plan.completion_mode == "replan":
-                        raise ValueError(
-                            "REPLAN PHASE: discovery completed; only plan_revise is "
-                            "allowed—use accepted schema evidence"
-                        )
-                    raise ValueError(
-                        "FINAL PHASE: all plan steps are completed; MCP and plan actions "
-                        "are disabled—return a final answer"
-                    )
                 if name == "plan_write":
-                    if plan is not None:
-                        raise ValueError("plan_write is allowed once; use plan_revise")
-                    typed_steps = normalize_typed_plan_steps(args["steps"])
-                    completion_mode = args["completion_mode"]
-                    if contract is None and completion_mode != "replan":
-                        raise ValueError(
-                            "UNKNOWN SCHEMA: no authoritative resource contract is loaded; "
-                            "start with completion_mode=replan and catalog:* discovery"
-                        )
-                    if completion_mode == "replan":
-                        validate_discovery_plan(typed_steps, initial=True)
-                        print("[DISCOVERY PLAN] deterministic phase validation=accept")
-                    elif routing_mode in ("shadow", "enforce"):
-                        plan_review = review_plan(
-                            goal=question,
-                            proposed_plan=plan_review_payload(typed_steps),
-                            contract_context=goal_contract,
-                            completion_mode=completion_mode,
-                        )
-                        plan_decision = (
-                            plan_review.decision if routing_mode == "enforce" else "accept"
-                        )
-                        print(
-                            f"[PLAN REVIEW] review={plan_review.decision} "
-                            f"mode={routing_mode} final={plan_decision} "
-                            f"reason={plan_review.reason}"
-                        )
-                        if plan_decision != "accept":
-                            raise ValueError(
-                                "PLAN COVERAGE: proposed plan cannot yet answer the goal; "
-                                f"decision={plan_review.decision}; {plan_review.reason}; "
-                                f"next={plan_review.suggested_next_action}"
-                            )
-                    plan = PlannerState(
-                        args["goal"], typed_steps, completion_mode=completion_mode
+                    if state is not None:
+                        raise ValueError("plan_write ใช้ได้ครั้งเดียว; ใช้ plan_revise")
+                    state = PlannerState(
+                        goal=question,
+                        steps=[
+                            PlanStep(index + 1, task)
+                            for index, task in enumerate(arguments["steps"])
+                        ],
                     )
-                    result = plan.render()
-                elif plan is None:
-                    raise ValueError("ต้องเรียก plan_write ก่อน tool อื่น")
-                elif name == "plan_start":
-                    reused = plan.start(args["step_id"]); result = plan.render()
-                    if reused:
-                        evidence = plan.step(args["step_id"]).evidence[-1]
-                        print(
-                            f"[EVIDENCE REUSED] step={args['step_id']} "
-                            f"from={evidence.reused_from_evidence_id}"
-                        )
-                        result += (
-                            "\n[EVIDENCE REUSED] required claims, capability, and resources "
-                            "were already proven; no MCP call is needed"
-                        )
-                elif name == "plan_complete":
-                    plan.complete(args["step_id"]); result = plan.render()
+                    state.activate_next()
+                    result = state.render()
+                    print(f"\n[PLAN]\n{result}")
                 elif name == "plan_revise":
-                    revised = normalize_typed_plan_steps(args["steps"], revised=True)
-                    completion_mode = args["completion_mode"]
-                    if completion_mode == "replan":
-                        validate_discovery_plan(revised, initial=False)
-                        print("[DISCOVERY REVISION] deterministic phase validation=accept")
-                    elif routing_mode in ("shadow", "enforce"):
-                        revision_review = review_plan(
-                            goal=question,
-                            proposed_plan=plan_review_payload(revised),
-                            contract_context=goal_contract,
-                            completion_mode=completion_mode,
-                            accepted_evidence=[
-                                item.as_dict() for item in plan.accepted_evidence
-                            ],
-                        )
-                        revision_decision = (
-                            revision_review.decision if routing_mode == "enforce" else "accept"
-                        )
-                        print(
-                            f"[PLAN REVISION REVIEW] review={revision_review.decision} "
-                            f"mode={routing_mode} final={revision_decision} "
-                            f"reason={revision_review.reason}"
-                        )
-                        if revision_decision != "accept":
-                            raise ValueError(
-                                "PLAN COVERAGE: revised plan cannot yet answer/continue "
-                                f"the goal; decision={revision_review.decision}; "
-                                f"{revision_review.reason}; "
-                                f"next={revision_review.suggested_next_action}"
-                            )
-                    plan.revise(revised, args["reason"], completion_mode)
-                    for reused_step_id, source_id in plan.reuse_pending_evidence():
-                        print(
-                            f"[EVIDENCE REUSED] step={reused_step_id} from={source_id}"
-                        )
-                    result = plan.render()
-                    replan_authorized = False
+                    if state is None:
+                        raise ValueError("ยังไม่มีแผน")
+                    state.revise(arguments["reason"], arguments["future_steps"])
+                    result = state.render()
+                    print(f"\n[REPLAN]\n{result}")
+                elif name == "observe":
+                    if state is None:
+                        raise ValueError("ยังไม่มีแผน")
+                    observation = ObservationState(**arguments)
+                    state.observe(observation)
+                    result = state.render()
+                    print(
+                        f"\n[OBSERVATION] decision={observation.decision} "
+                        f"reason={observation.reason}\n{result}"
+                    )
                 else:
-                    active = [step for step in plan.steps if step.status == "in_progress"]
-                    if len(active) != 1:
-                        raise ValueError("ต้องมี plan step ที่ in_progress หนึ่งขั้นก่อนเรียก MCP")
-                    capability_rejection = action_capability_error(
-                        active[0].required_capability, name, args
+                    if state is None:
+                        raise ValueError("ต้องสร้างแผนก่อนเรียก MCP")
+                    result = registry.dispatch(name, arguments)
+                    state.record_action(name, arguments, result, call.id)
+                    print(
+                        f"\n[ACTION] step={state.latest_action['step_id']} "
+                        f"tool={name}\n[RESULT] {result[:500]}"
                     )
-                    if capability_rejection:
-                        failure_count, escalation = breaker.record(
-                            step_id=active[0].id, tool=name, decision="reject",
-                            failed=["action_capability"],
-                        )
-                        if escalation == "stop":
-                            raise RuntimeError(
-                                "circuit breaker stopped repeated action-capability "
-                                f"failure after {failure_count} attempts"
-                            )
-                        suffix = (
-                            "; CIRCUIT BREAKER: use plan_revise and change the declared "
-                            "capability or action shape"
-                            if escalation == "replan" else ""
-                        )
-                        raise ValueError(
-                            "ACTION CAPABILITY: " + capability_rejection + suffix
-                        )
-                    rejection = tool_validator(name, args) if tool_validator else None
-                    if rejection:
-                        revised = [
-                            PlanStep(
-                                id=step.id, description=step.description,
-                                status=step.status, evidence=list(step.evidence),
-                                required_capability=step.required_capability,
-                                evidence_requirements=list(step.evidence_requirements),
-                                required_resources=list(step.required_resources),
-                            )
-                            for step in plan.steps
-                        ]
-                        plan.revise(
-                            revised,
-                            f"analytical contract rejected tool call: {rejection}",
-                            plan.completion_mode,
-                        )
-                        raise ValueError(f"ANALYTICAL CONTRACT: {rejection}; revise the query")
-                    result = registry.dispatch(name, args)
-                    call_id = call.id or str(uuid.uuid4())
-                    resource_rejection = action_resource_error(
-                        name, args, result, active[0].required_resources
-                    )
-                    if resource_rejection:
-                        trace.append({
-                            "step_id": active[0].id, "tool": name,
-                            "tool_call_id": call_id,
-                            "observation": {
-                                "action_succeeded": True,
-                                "supports_step": False,
-                                "decision": "retry",
-                                "reason": resource_rejection,
-                            },
-                        })
-                        print(
-                            f"[OBSERVATION] step={active[0].id} decision=retry "
-                            f"reason={resource_rejection}"
-                        )
-                        raise ValueError("RESOURCE BINDING: " + resource_rejection)
-                    observation = None
-                    if dynamic_observation:
-                        observation = observe_result(
-                            step_description=active[0].description, tool=name, result=result,
-                            tool_arguments=args, semantic_checks=True,
-                            prior_facts=accepted_facts or None,
-                            goal_description=question,
-                            contract=contract,
-                            required_capability=active[0].required_capability,
-                            evidence_requirements=active[0].evidence_requirements,
-                        )
-                        trace.append({"step_id": active[0].id, "tool": name,
-                                      "tool_call_id": call_id, "observation": observation.as_dict()})
-                        risk = assess_observation_risk(
-                            hard=observation, step_description=active[0].description,
-                            tool=name, tool_arguments=args,
-                        )
-                        trace[-1]["risk"] = risk.as_dict()
-                        print(f"[OBSERVATION] step={active[0].id} type={observation.result_type} "
-                              f"decision={observation.decision} reason={observation.reason}")
-                        if observation.decision != "accept":
-                            recovery = semantic_recovery_hint(
-                                observation.failed, observation.unsupported_claims
-                            )
-                            failure_count, escalation = breaker.record(
-                                step_id=active[0].id, tool=name,
-                                decision=observation.decision, failed=observation.failed,
-                            )
-                            result += "\n\n[OBSERVATION POLICY]\n" + json.dumps(
-                                observation.as_dict(), ensure_ascii=False
-                            ) + "\nผลนี้ยังไม่ถูกบันทึกเป็น evidence; retry/query_more/replan ตาม decision"
-                            if recovery:
-                                result += "\n[ACTIONABLE FIX] " + recovery
-                            if escalation == "replan":
-                                observation.decision = "replan"
-                                observation.suggested_action = ActionHint(
-                                    "replan", "Repeated failure requires a different action capability"
-                                )
-                                trace[-1]["observation"] = observation.as_dict()
-                                result += (
-                                    f"\n[CIRCUIT BREAKER] repeated failure={failure_count}; "
-                                    "ต้อง plan_revise และเปลี่ยน action capability"
-                                )
-                            elif escalation == "stop":
-                                observation.decision = "stop"
-                                observation.suggested_action = ActionHint(
-                                    "stop", "Repeated identical failure reached the fail-fast limit"
-                                )
-                                trace[-1]["observation"] = observation.as_dict()
-                                raise RuntimeError(
-                                    f"circuit breaker stopped repeated failure after {failure_count} attempts"
-                                )
-                            messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
-                            continue
-                        if routing_mode in ("shadow", "enforce") and risk.reviewer_required:
-                            semantic_review = review_observation(
-                                goal=plan.goal, active_step=active[0].description,
-                                analytical_contract=question, tool=name, tool_arguments=args,
-                                result=result, prior_facts=accepted_facts or None,
-                                required_capability=active[0].required_capability,
-                                evidence_requirements=[
-                                    item.as_dict() for item in active[0].evidence_requirements
-                                ],
-                            )
-                            final_observation_decision = routed_decision(
-                                routing_mode, observation, semantic_review
-                            )
-                            trace[-1]["semantic_review"] = semantic_review.as_dict()
-                            trace[-1]["routed_decision"] = final_observation_decision
-                            trace[-1]["routing_mode"] = routing_mode
-                            print(f"[SEMANTIC REVIEW] step={active[0].id} "
-                                  f"risk={risk.level} review={semantic_review.decision} "
-                                  f"mode={routing_mode} final={final_observation_decision}")
-                            if final_observation_decision != "accept":
-                                result += "\n\n[PROMPT SEMANTIC REVIEW]\n" + json.dumps(
-                                    semantic_review.as_dict(), ensure_ascii=False
-                                ) + "\nผลนี้ยังไม่ถูกบันทึกเป็น evidence"
-                                messages.append({"role": "tool", "tool_call_id": call.id,
-                                                 "content": result})
-                                continue
-                    plan.observe(active[0].id, tool=name, tool_call_id=call_id, result=result,
-                                 observation=observation.as_dict() if observation else None,
-                                 action=args,
-                                 proven_claim_ids=[
-                                     claim.id for claim in observation.proven_claims
-                                 ] if observation else [])
-                    if dynamic_observation:
-                        plan.complete(active[0].id)
-                        for reused_step_id, source_id in plan.reuse_pending_evidence():
-                            print(
-                                f"[EVIDENCE REUSED] step={reused_step_id} from={source_id}"
-                            )
-                    breaker.clear_step(active[0].id)
-                    if (all(step.status == "completed" for step in plan.steps)
-                            and plan.completion_mode == "replan"):
-                        next_transition = (
-                            "discovery completed; MUST call plan_revise using accepted "
-                            "schema evidence; final answer is forbidden"
-                        )
-                    elif all(step.status == "completed" for step in plan.steps):
-                        next_transition = "all evidence complete; write the final answer"
-                    else:
-                        next_transition = "call plan_start for the next pending step"
-                    result += (
-                        "\n\n[RUNTIME STATE]\n" + plan.render()
-                        + "\nหลักฐานถูกรับและ step completed อัตโนมัติ; "
-                        "next transition: " + next_transition
-                    )
-                    if dynamic_observation:
-                        accepted_facts.update(extract_numeric_facts(result))
-                    if not dynamic_observation:
-                        trace.append({"step_id": active[0].id, "tool": name, "tool_call_id": call_id})
-                    print(f"[EVIDENCE] step={active[0].id} tool={name} id={call_id}")
-            except (AttributeError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
-                result = f"[RUNTIME REJECTED] {exc}"
-                if plan is not None:
-                    result += "\n[CURRENT PLAN]\n" + plan.render()
+            except (KeyError, TypeError, ValueError) as error:
+                result = f"[RUNTIME REJECTED] {error}"
                 print(result)
-            messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
-    raise RuntimeError(f"planner exceeded max_steps={max_steps}")
+
+            messages.append({
+                "role": "tool",
+                "tool_call_id": call.id,
+                "content": result,
+            })
+
+    raise RuntimeError(f"agent เกิน max_turns={max_turns} โดยยังทำงานไม่จบ")
 
 
-def main():
-    default_question = (
-        "สร้าง workforce risk matrix รายแผนกจาก skills, training, performance และ projects "
-        "โดยตรวจ schema และป้องกันการ join ที่ทำให้ยอดซ้ำ"
-    )
-    parser = argparse.ArgumentParser(description="Pure Python evidence-driven HR agent")
-    parser.add_argument("question", nargs="?", default=default_question,
-                        help="คำถาม HR; ถ้าไม่ระบุจะใช้ workforce-risk example")
-    parser.add_argument(
-        "--routing-mode", choices=("rules", "shadow", "enforce"),
-        default=os.environ.get("OBSERVATION_ROUTING_MODE", "rules"),
-        help="rules=ไม่เรียก reviewer, shadow=review แต่ไม่ block, enforce=review และ block",
-    )
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Pure Python Planner + Observation")
+    parser.add_argument("question", nargs="?", default=(
+        "นับพนักงานที่ยังปฏิบัติงานแยกตามแผนก และสรุปจากหลักฐาน"
+    ))
+    parser.add_argument("--max-turns", type=int, default=30)
     args = parser.parse_args()
+
     registry = ToolRegistry()
-    registry.add_server(config.MCP_SERVER_URL)
+    count = registry.add_server(config.MCP_SERVER_URL)
+    print(f"[MCP] discovered={count} tools={registry.tool_names}")
+    print(f"[USER] {args.question}")
     try:
-        prompt_review = os.environ.get("PROMPT_SEMANTIC_REVIEW", "0").lower() in (
-            "1", "true", "yes"
-        )
-        run(args.question, registry, dynamic_observation=True,
-            prompt_semantic_review=prompt_review,
-            observation_routing_mode=args.routing_mode)
+        run(args.question, registry, max_turns=args.max_turns)
     finally:
         registry.close()
 

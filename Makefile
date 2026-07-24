@@ -1,61 +1,15 @@
 PYTHON ?= python
-HR_CHALLENGE ?= skills_project_risk
 
-.PHONY: test proof proof-pure-planner run-agent run-agent-shadow run-agent-enforce run-pure-planner compare-lab6-hr compare-lab6-hr-adversarial compare-observation-policy-hr compare-semantic-observation-hr compare-semantic-matrix-hr compare-prompt-observation-hr compare-shadow-router-hr run-planner compare-lab8 compare-lab8-hr validate-hr-challenges compile
+.PHONY: test run-agent run-original compile
 
 test:
-	$(PYTHON) -m unittest -v tests.test_lab6_planner_runtime tests.test_observation_policy tests.test_semantic_reviewer tests.test_observation_router tests.test_hr_analytical_contract tests.test_lab8_planner tests.test_lab8_comparison tests.test_hr_challenges
-
-proof:
-	$(PYTHON) -m scripts.prove_planner_mcp
-
-proof-pure-planner:
-	$(PYTHON) -m scripts.prove_pure_python_planner
+	$(PYTHON) -m unittest -v tests.test_lab6_planner_runtime
 
 run-agent:
-	$(PYTHON) labs/lab6_todo/agent_planner.py --routing-mode rules
+	$(PYTHON) labs/lab6_todo/agent_planner.py
 
-run-agent-shadow:
-	$(PYTHON) labs/lab6_todo/agent_planner.py --routing-mode shadow
-
-run-agent-enforce:
-	$(PYTHON) labs/lab6_todo/agent_planner.py --routing-mode enforce
-
-# ชื่อเดิม เก็บไว้ไม่ให้บทเรียน/สคริปต์เก่าพัง
-run-pure-planner: run-agent
-
-compare-lab6-hr:
-	$(PYTHON) -m scripts.compare_lab6_hr --challenge $(HR_CHALLENGE)
-
-compare-lab6-hr-adversarial:
-	$(PYTHON) -m scripts.compare_lab6_hr --challenge $(HR_CHALLENGE) --adversarial
-
-compare-observation-policy-hr:
-	$(PYTHON) -m scripts.compare_observation_policy_hr
-
-compare-semantic-observation-hr:
-	$(PYTHON) -m scripts.compare_semantic_observation_hr
-
-compare-semantic-matrix-hr:
-	$(PYTHON) -m scripts.compare_semantic_matrix_hr
-
-compare-prompt-observation-hr:
-	$(PYTHON) -m scripts.compare_prompt_observation_hr
-
-compare-shadow-router-hr:
-	$(PYTHON) -m scripts.compare_shadow_router_hr
-
-run-planner:
-	$(PYTHON) labs/lab8_langgraph/agent_langgraph.py
-
-compare-lab8:
-	$(PYTHON) -m scripts.compare_lab8
-
-validate-hr-challenges:
-	$(PYTHON) -m scripts.validate_hr_challenges
-
-compare-lab8-hr:
-	$(PYTHON) -m scripts.compare_lab8_hr --challenge $(HR_CHALLENGE)
+run-original:
+	$(PYTHON) labs/lab6_todo/agent_todo.py
 
 compile:
-	$(PYTHON) -m compileall -q labs scripts tests
+	$(PYTHON) -m py_compile labs/lab6_todo/agent_todo.py labs/lab6_todo/agent_planner.py
