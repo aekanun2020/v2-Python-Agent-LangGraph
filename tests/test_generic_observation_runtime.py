@@ -92,6 +92,37 @@ class GenericObservationRuntimeTests(unittest.TestCase):
         self.assertEqual(reused[0][0], 2)
         self.assertEqual(plan.step(2).status, "completed")
 
+    def test_catalog_schema_evidence_entails_later_table_schema_claim(self):
+        plan = PlannerState("discover", [
+            PlanStep(
+                1, "catalog", required_capability="schema_inspection",
+                evidence_requirements=[EvidenceRequirement(
+                    "catalog_seen", "schema_inspected", "catalog"
+                )],
+                required_resources=[ResourceRequirement("catalog", "*")],
+            ),
+            PlanStep(
+                2, "employees schema", required_capability="schema_inspection",
+                evidence_requirements=[EvidenceRequirement(
+                    "employees_schema", "schema_inspected", "employees"
+                )],
+                required_resources=[ResourceRequirement("table", "employees")],
+            ),
+        ])
+        plan.start(1)
+        plan.observe(
+            1, tool="get_database_context", tool_call_id="catalog-call",
+            result="employees(employee_id, department, status)",
+            proven_claim_ids=["catalog_seen"],
+        )
+        plan.complete(1)
+        reused = plan.reuse_pending_evidence()
+        self.assertEqual(reused[0][0], 2)
+        derived = plan.step(2).evidence[0]
+        self.assertEqual(derived.proven_claim_ids, ["employees_schema"])
+        self.assertEqual(derived.reused_from_evidence_id,
+                         plan.step(1).evidence[0].evidence_id)
+
     def test_claim_id_collision_cannot_reuse_different_resource(self):
         requirement = EvidenceRequirement("count", "aggregation_executed")
         plan = PlannerState("goal", [

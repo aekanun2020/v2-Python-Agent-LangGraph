@@ -109,6 +109,10 @@ and a distinct unknown/insufficient-data comparison state for NULL metrics; NULL
 be treated as at-or-above or below a benchmark.
 
 Use accept only when completing every proposed step would make the goal answerable.
+Judge whether completion of the proposed pending steps would cover the goal; do not reject
+a plan merely because its new pending steps have not executed yet. Accepted evidence is
+context for what is already known, not a requirement that every future step already have
+evidence at plan-review time.
 Use retry when plan steps or typed declarations must be corrected. Use query_more when
 additional MCP-verifiable steps are missing. Use reject only for an unusable plan.
 Return one JSON object only with exactly these top-level keys:

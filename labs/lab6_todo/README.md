@@ -34,6 +34,9 @@
   ไม่ใช้ table/field ที่ step ประกาศ จะได้ `supports_step=false` และไม่รับเป็น evidence
 - step ถัดไปที่ประกาศ claim, capability และ resources เดิมสามารถ reuse accepted evidence
   โดยไม่เรียก MCP ซ้ำ พร้อมเก็บ `reused_from_evidence_id` เพื่อย้อน provenance
+- accepted `catalog` schema payload สามารถ entail schema claim ของ table ที่พบภายหลังได้
+  โดย runtime ตรวจ resource against payload แล้ว rebind claim/provenance ให้ step ใหม่
+  จึงไม่ต้อง preview schema ซ้ำเพียงเพราะ LLM ตั้ง claim ID คนละชื่อ
 - หลังรับ evidence แต่ละครั้ง runtime จะตรวจ pending steps และ auto-complete ขั้นที่มี typed
   claim signature + capability + resources ตรงกันทันที ไม่ต้องรอ LLM เรียก `plan_start`
 - เมื่อ Observation รับ tool evidence แล้ว Python runtime จะ complete step อัตโนมัติ;
@@ -68,6 +71,10 @@
   และไม่อนุญาต final answer จน revision เปลี่ยนเป็น `completion_mode=answer`
 - ทุก `plan_revise` ต้องผ่าน Plan Coverage Review โดยเห็น accepted discovery evidence
   ก่อนใช้จริง จึงไม่สามารถลบ pending analytical work แล้วหลุดเข้า final phase
+- Plan Coverage Review ประเมินว่า pending steps “เมื่อทำครบแล้ว” ครอบคลุม goal หรือไม่
+  ไม่ปฏิเสธแผนเพียงเพราะ future steps ยังไม่มี evidence ณ เวลาตรวจแผน
+- เมื่อ discovery ครบ runtime ระบุ transition เป็น `plan_revise` เท่านั้น ไม่ส่งคำแนะนำ
+  final-answer แบบทั่วไปที่ขัดกับ `completion_mode=replan`
 - Plan Reviewer ถูกกำชับว่า CTE/pre-aggregated output ไม่ใช่ physical table resource และ
   query เดียวสามารถ pre-aggregate, join, คำนวณค่าองค์กร และ comparison ได้ครบ
 - discovery phase ใช้ deterministic contract แทน semantic coverage reviewer:

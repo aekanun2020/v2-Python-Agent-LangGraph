@@ -436,6 +436,11 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                         and not (name == "plan_revise" and (
                             replan_authorized or plan.completion_mode == "replan"
                         ))):
+                    if plan.completion_mode == "replan":
+                        raise ValueError(
+                            "REPLAN PHASE: discovery completed; only plan_revise is "
+                            "allowed—use accepted schema evidence"
+                        )
                     raise ValueError(
                         "FINAL PHASE: all plan steps are completed; MCP and plan actions "
                         "are disabled—return a final answer"
@@ -526,6 +531,10 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                                 f"next={revision_review.suggested_next_action}"
                             )
                     plan.revise(revised, args["reason"], completion_mode)
+                    for reused_step_id, source_id in plan.reuse_pending_evidence():
+                        print(
+                            f"[EVIDENCE REUSED] step={reused_step_id} from={source_id}"
+                        )
                     result = plan.render()
                     replan_authorized = False
                 else:
@@ -685,11 +694,20 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 60, tool_validat
                                 f"[EVIDENCE REUSED] step={reused_step_id} from={source_id}"
                             )
                     breaker.clear_step(active[0].id)
+                    if (all(step.status == "completed" for step in plan.steps)
+                            and plan.completion_mode == "replan"):
+                        next_transition = (
+                            "discovery completed; MUST call plan_revise using accepted "
+                            "schema evidence; final answer is forbidden"
+                        )
+                    elif all(step.status == "completed" for step in plan.steps):
+                        next_transition = "all evidence complete; write the final answer"
+                    else:
+                        next_transition = "call plan_start for the next pending step"
                     result += (
                         "\n\n[RUNTIME STATE]\n" + plan.render()
                         + "\nหลักฐานถูกรับและ step completed อัตโนมัติ; "
-                        "next transition: plan_start(step_id ของ pending step ถัดไป) "
-                        "หรือเขียน final answer เมื่อทุก step completed"
+                        "next transition: " + next_transition
                     )
                     if dynamic_observation:
                         accepted_facts.update(extract_numeric_facts(result))

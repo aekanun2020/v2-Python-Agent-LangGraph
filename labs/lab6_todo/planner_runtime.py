@@ -13,6 +13,7 @@ import uuid
 from labs.lab6_todo.observation_types import (
     EvidenceRecord, EvidenceRequirement, ResourceRequirement,
 )
+from labs.lab6_todo.capabilities import action_resource_error
 
 StepStatus = Literal["pending", "in_progress", "completed", "blocked"]
 CompletionMode = Literal["answer", "replan"]
@@ -57,23 +58,34 @@ class PlannerState:
                 raise ValueError(f"step {step.id} is already in progress")
         reusable = self._reusable_evidence(target)
         if reusable is not None:
+            source, derived = reusable
             target.evidence.append(EvidenceRecord(
                 evidence_id=str(uuid.uuid4()), plan_id=self.plan_id,
-                plan_revision=self.revision, step_id=target.id, tool=reusable.tool,
-                tool_call_id=reusable.tool_call_id, action=dict(reusable.action),
-                result=reusable.result, proven_claim_ids=list(reusable.proven_claim_ids),
-                claim_requirements=list(reusable.claim_requirements),
-                bound_resources=list(reusable.bound_resources),
-                required_capability=reusable.required_capability,
-                reused_from_evidence_id=reusable.evidence_id,
-                observation=reusable.observation,
+                plan_revision=self.revision, step_id=target.id, tool=source.tool,
+                tool_call_id=source.tool_call_id, action=dict(source.action),
+                result=source.result,
+                proven_claim_ids=(
+                    [item.claim_id for item in target.evidence_requirements]
+                    if derived else list(source.proven_claim_ids)
+                ),
+                claim_requirements=(
+                    [item.as_dict() for item in target.evidence_requirements]
+                    if derived else list(source.claim_requirements)
+                ),
+                bound_resources=(
+                    [item.as_dict() for item in target.required_resources]
+                    if derived else list(source.bound_resources)
+                ),
+                required_capability=target.required_capability,
+                reused_from_evidence_id=source.evidence_id,
+                observation=source.observation,
             ))
             target.status = "completed"
             return True
         target.status = "in_progress"
         return False
 
-    def _reusable_evidence(self, target: PlanStep) -> EvidenceRecord | None:
+    def _reusable_evidence(self, target: PlanStep) -> tuple[EvidenceRecord, bool] | None:
         """Reuse only exact claims backed by compatible capability and resources."""
         claim_signatures = {
             (item.claim_id, item.predicate, item.target)
@@ -96,7 +108,20 @@ class PlannerState:
             if (claim_signatures <= proven_signatures
                     and resources <= bound
                     and target.required_capability == evidence.required_capability):
-                return evidence
+                return evidence, False
+        # A broad accepted schema payload may entail newly declared schema claims
+        # after catalog discovery. This is structural rebinding, not text-intent guessing.
+        if (target.required_capability == "schema_inspection"
+                and all(item.predicate == "schema_inspected"
+                        for item in target.evidence_requirements)):
+            for evidence in self.accepted_evidence:
+                if evidence.required_capability != "schema_inspection":
+                    continue
+                if action_resource_error(
+                    evidence.tool, evidence.action, evidence.result,
+                    target.required_resources,
+                ) is None:
+                    return evidence, True
         return None
 
     def reuse_pending_evidence(self) -> list[tuple[int, str]]:
@@ -105,17 +130,28 @@ class PlannerState:
         for target in self.steps:
             if target.status != "pending":
                 continue
-            evidence = self._reusable_evidence(target)
-            if evidence is None:
+            reusable = self._reusable_evidence(target)
+            if reusable is None:
                 continue
+            evidence, derived = reusable
             target.evidence.append(EvidenceRecord(
                 evidence_id=str(uuid.uuid4()), plan_id=self.plan_id,
                 plan_revision=self.revision, step_id=target.id, tool=evidence.tool,
                 tool_call_id=evidence.tool_call_id, action=dict(evidence.action),
-                result=evidence.result, proven_claim_ids=list(evidence.proven_claim_ids),
-                claim_requirements=list(evidence.claim_requirements),
-                bound_resources=list(evidence.bound_resources),
-                required_capability=evidence.required_capability,
+                result=evidence.result,
+                proven_claim_ids=(
+                    [item.claim_id for item in target.evidence_requirements]
+                    if derived else list(evidence.proven_claim_ids)
+                ),
+                claim_requirements=(
+                    [item.as_dict() for item in target.evidence_requirements]
+                    if derived else list(evidence.claim_requirements)
+                ),
+                bound_resources=(
+                    [item.as_dict() for item in target.required_resources]
+                    if derived else list(evidence.bound_resources)
+                ),
+                required_capability=target.required_capability,
                 reused_from_evidence_id=evidence.evidence_id,
                 observation=evidence.observation,
             ))

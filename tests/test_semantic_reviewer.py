@@ -59,6 +59,7 @@ class SemanticReviewerTests(unittest.TestCase):
         self.assertIn("Missing/NaN metrics", FINAL_SYSTEM)
         self.assertIn("every flag", FINAL_SYSTEM)
         self.assertIn("micro-averages", PLAN_SYSTEM)
+        self.assertIn("pending steps have not executed yet", PLAN_SYSTEM)
         self.assertIn("AVG(group_rate)", SYSTEM)
 
     @patch("labs.lab6_todo.semantic_reviewer.llm.chat")

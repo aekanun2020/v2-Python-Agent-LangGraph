@@ -69,6 +69,8 @@ Alibaba Qwen thinking mode ปฏิเสธด้วย HTTP 400
 จึงไม่ให้ Plan Reviewer เปลี่ยน schema bootstrap เป็นแผนใหญ่ที่เดาชื่อ resource
 สำหรับ matrix/comparison ค่าองค์กรใช้ weighted micro-average จาก numerator/denominator;
 NULL เป็น unknown และ summary ต้องตรงกับ flags ใน evidence ไม่ใช้ค่าเฉลี่ยของ rate รายกลุ่ม
+catalog schema evidence สามารถ rebind ไปยัง table-schema claim ภายหลังเมื่อ payload รองรับ
+พร้อม provenance เดิม และ discovery completion จะบังคับ transition ไป `plan_revise` เท่านั้น
 
 ```bash
 python labs/lab6_todo/agent_planner.py --routing-mode enforce
