@@ -1,6 +1,7 @@
 import unittest
 
 from labs.lab6_todo.agent_planner import (
+    FINAL_OBSERVER_SYSTEM,
     FinalReview,
     ObservationState,
     PlanStep,
@@ -162,6 +163,13 @@ class PurePythonPlannerTests(unittest.TestCase):
         )
         self.assertEqual(review.verdict, "query_more")
         self.assertIn("weighted denominator", review.missing_requirements)
+
+    def test_final_observer_scopes_exact_grounding_to_evidence_values(self):
+        self.assertIn("canonical value", FINAL_OBSERVER_SYSTEM)
+        self.assertIn("คำแปล", FINAL_OBSERVER_SYSTEM)
+        self.assertIn("rewrite", FINAL_OBSERVER_SYSTEM)
+        self.assertIn("methodological caveat", FINAL_OBSERVER_SYSTEM)
+        self.assertIn("data limitations ที่ไม่มี evidence", FINAL_OBSERVER_SYSTEM)
 
 
 if __name__ == "__main__":

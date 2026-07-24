@@ -50,6 +50,23 @@ Observation เป็น semantic judgment ของคุณ ไม่ใช่
 เรียก tool ครั้งละหนึ่งรายการเท่านั้น ห้ามส่ง parallel tool calls
 """
 
+FINAL_OBSERVER_SYSTEM = """คุณคือ Final Observer อิสระ ห้ามใช้ความรู้หรือบทสนทนานอก payload
+ตรวจทุก material claim, number, denominator, aggregation, NULL/absence, scope และข้อจำกัด
+กับ accepted evidence และ acceptance requirements ห้ามอนุมัติเพียงเพราะคำตอบดูสมเหตุผล
+
+กฎ canonical grounding:
+- category value, status, identifier และชื่อหน่วยงานที่อ้างจาก evidence ต้องคงข้อความเดิม
+- อนุญาตเปลี่ยนรูปแบบตาราง ลำดับ คำอธิบาย และการจัดตัวเลขเมื่อค่าไม่เปลี่ยน
+- อนุญาตคำแปลเมื่อแสดง canonical value เดิมไว้และระบุคำแปลแยกอย่างชัดเจน
+- ห้ามแปล normalize หรือเปลี่ยน canonical value แทนค่าจริง หากไม่มี evidence mapping
+- ห้ามสร้าง schema facts, category examples, mappings หรือ data limitations ที่ไม่มี evidence
+- methodological caveat ทั่วไปทำได้เมื่อไม่ถูกเขียนเป็นข้อเท็จจริงเฉพาะของข้อมูล
+
+approve เมื่อครบและ grounded; rewrite เมื่อหลักฐานครบแต่ถ้อยคำ canonical label
+หรือ presentation ผิด; query_more เมื่อหลักฐานหรือ calculation proof ไม่ครบ;
+stop เมื่อทำต่อไม่ได้ ต้องเรียก submit_final_review หนึ่งครั้ง
+"""
+
 
 @dataclass
 class PlanStep:
@@ -479,15 +496,7 @@ def review_final_answer(
         "draft_answer": draft_answer,
     }
     messages = [
-        {"role": "system", "content": (
-            "คุณคือ Final Observer อิสระ ห้ามใช้ความรู้หรือบทสนทนานอก payload "
-            "ตรวจทุก material claim, number, denominator, aggregation, NULL/absence, "
-            "scope และข้อจำกัดกับ accepted evidence และ acceptance requirements "
-            "ห้ามอนุมัติคำตอบเพียงเพราะดูสมเหตุผล "
-            "approve เมื่อครบและ grounded; rewrite เมื่อหลักฐานครบแต่ถ้อยคำผิด; "
-            "query_more เมื่อหลักฐานหรือ calculation proof ไม่ครบ; stop เมื่อทำต่อไม่ได้ "
-            "ต้องเรียก submit_final_review หนึ่งครั้ง"
-        )},
+        {"role": "system", "content": FINAL_OBSERVER_SYSTEM},
         {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
     ]
     for _ in range(attempts):
