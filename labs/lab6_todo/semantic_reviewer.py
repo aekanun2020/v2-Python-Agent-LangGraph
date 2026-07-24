@@ -24,6 +24,12 @@ Execution success and non-empty rows are not proof that a result supports the st
 Check population, analytical grain, denominator, time window, join cardinality,
 metric definition, and contradictions when relevant. Do not invent requirements
 that are not supported by the inputs.
+For organization/global rates, require the organization-wide numerator divided by the
+organization-wide denominator unless the goal explicitly asks for an unweighted mean of
+group rates. Do not accept AVG(group_rate) as a global rate when group sizes differ.
+Likewise, global averages over eligible records must be weighted by their eligible counts.
+Missing values cannot be classified as below, equal, or above a benchmark; require an
+explicit unknown/insufficient-data state rather than silently mapping NULL to false/zero.
 
 Decision meanings:
 - accept: relevant, semantically sufficient, and safe to bind as evidence
@@ -64,6 +70,13 @@ requests an analysis or calculation and the answer merely lists schema, describe
 could be calculated, or proposes SQL without presenting the requested evidenced result,
 use query_more. Reject fabricated step numbers, capability labels, or evidence statuses
 that are not present in accepted evidence provenance.
+Recompute global rates from displayed group numerators and denominators when feasible.
+Unless explicitly requested otherwise, a global/organization rate is a micro-average
+(sum of numerators / sum of denominators), not AVG(group rates); a global record average
+must be weighted by eligible record counts. Missing/NaN metrics must not be labelled
+below or at/above a benchmark. Cross-check narrative counts and lists against every flag
+in the displayed table (for example, never say four failed metrics when only three flags
+are set). Any such mismatch requires retry, or query_more if corrected evidence is needed.
 
 Decision meanings:
 - accept: every material claim and number is entailed by accepted evidence
@@ -89,6 +102,11 @@ When completion_mode is answer, require full goal coverage. Review one SQL/CTE a
 one evidence step even when it pre-aggregates several sources, calculates organization
 metrics, joins, and compares them. Never treat CTE names or prior step outputs as physical
 table resources, and do not require presentation or contract-statement steps.
+For global/organization comparisons, require plans to compute global numerators and
+denominators directly (micro-averages), not unweighted AVG of department/group rates,
+unless the goal explicitly requests a mean of groups. Require weighted record averages
+and a distinct unknown/insufficient-data comparison state for NULL metrics; NULL must not
+be treated as at-or-above or below a benchmark.
 
 Use accept only when completing every proposed step would make the goal answerable.
 Use retry when plan steps or typed declarations must be corrected. Use query_more when

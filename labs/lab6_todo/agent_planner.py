@@ -64,6 +64,9 @@ completion_mode=replan ใช้ได้เฉพาะ schema/sample/existence
 ห้ามกล่าวว่าเพิ่มขึ้น/ลดลงตามลำดับหรือมีแนวโน้ม เว้นแต่ accepted evidence มี
 monotonic_increase_violations, monotonic_decrease_violations, trend_slope,
 spearman_rho หรือ correlation ที่คำนวณ claim นั้นโดยตรง
+ค่า rate ระดับองค์กรให้ใช้ผลรวมนumerator/ผลรวมdenominator ไม่ใช้ AVG(rate รายกลุ่ม)
+เว้นแต่ผู้ใช้ขอ unweighted mean; ค่าเฉลี่ยรวมต้อง weight ด้วยจำนวน eligible records
+metric ที่เป็น NULL/NaN ต้องระบุ unknown/insufficient ห้ามจัดเป็น below หรือ at/above
 ตอบสุดท้ายได้เมื่อทุกขั้น completed เท่านั้น ใช้ T-SQL TOP ไม่ใช้ LIMIT"""
 
 def normalize_typed_plan_steps(raw_steps, *, revised: bool = False) -> list[PlanStep]:

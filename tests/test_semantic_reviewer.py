@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from labs.lab6_todo.observation_policy import ObservationState
 from labs.lab6_todo.semantic_reviewer import (
-    FINAL_SYSTEM, PLAN_SYSTEM, SemanticReview, _parse_json, _validate_plan_review,
+    FINAL_SYSTEM, PLAN_SYSTEM, SYSTEM, SemanticReview, _parse_json, _validate_plan_review,
     hybrid_decision,
     review_final_answer, review_observation, review_plan,
 )
@@ -55,6 +55,11 @@ class SemanticReviewerTests(unittest.TestCase):
         self.assertIn("merely lists schema", FINAL_SYSTEM)
         self.assertIn("fabricated step numbers", FINAL_SYSTEM)
         self.assertIn("schema-only evidence", PLAN_SYSTEM)
+        self.assertIn("sum of numerators / sum of denominators", FINAL_SYSTEM)
+        self.assertIn("Missing/NaN metrics", FINAL_SYSTEM)
+        self.assertIn("every flag", FINAL_SYSTEM)
+        self.assertIn("micro-averages", PLAN_SYSTEM)
+        self.assertIn("AVG(group_rate)", SYSTEM)
 
     @patch("labs.lab6_todo.semantic_reviewer.llm.chat")
     def test_plan_reviewer_receives_goal_contract_and_typed_plan(self, chat):

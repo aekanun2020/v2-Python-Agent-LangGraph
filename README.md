@@ -67,6 +67,8 @@ Alibaba Qwen thinking mode ปฏิเสธด้วย HTTP 400
 ก่อนอนุญาตให้รัน และตอบสุดท้ายได้เฉพาะ `completion_mode=answer`
 ตัว discovery phase ตรวจด้วยกฎโครงสร้างแบบ deterministic และห้ามมี aggregation/comparison
 จึงไม่ให้ Plan Reviewer เปลี่ยน schema bootstrap เป็นแผนใหญ่ที่เดาชื่อ resource
+สำหรับ matrix/comparison ค่าองค์กรใช้ weighted micro-average จาก numerator/denominator;
+NULL เป็น unknown และ summary ต้องตรงกับ flags ใน evidence ไม่ใช้ค่าเฉลี่ยของ rate รายกลุ่ม
 
 ```bash
 python labs/lab6_todo/agent_planner.py --routing-mode enforce

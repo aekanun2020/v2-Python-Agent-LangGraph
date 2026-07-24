@@ -76,6 +76,11 @@
   ทำให้ reviewer ไม่สามารถบังคับให้เดาชื่อตารางหรือยัด full analytics ก่อนเห็น schema
 - final deterministic provenance gate ปฏิเสธการอ้าง step ID ที่ไม่มีจริง และ evidence
   predicate/status ที่ไม่อยู่ใน proven claims แม้ถ้อยคำอื่นในคำตอบจะดูถูกต้อง
+- analytical semantic reviewer ใช้กฎกลางสำหรับ global metrics: rate ระดับองค์กรต้องเป็น
+  `SUM(numerator)/SUM(denominator)` ไม่ใช่ `AVG(group_rate)` และ record average ต้อง
+  weighted ด้วย eligible count; NULL/NaN ต้องเป็น unknown ไม่ใช่ below/at-or-above
+- Final Reviewer ต้อง cross-check จำนวนและรายการใน narrative กับ comparison flags ทุกช่อง
+  เพื่อจับคำสรุปเช่น “ต่ำกว่า 4 ตัว” ในขณะที่ตารางมีเพียง 3 flags
 
 Typed state หลัก:
 
