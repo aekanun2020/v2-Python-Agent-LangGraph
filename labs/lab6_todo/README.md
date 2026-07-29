@@ -228,6 +228,12 @@ The live report supersedes the “architecture-complete” wording above:
 termination and safety are bounded, but provider-dependent planning/rechecking
 still prevents operational completion. Phase 2B remains experimental.
 
+- [Full 10-question rerun at commit 4518267](../../artifacts/lab6_phase2_full_rerun_4518267_report.md)
+- `artifacts/lab6_phase2_full_rerun_4518267.json` contains all 20 raw runs
+
+The full rerun scored Phase 2A at 5/10 and Phase 2B at 0/10 under strict
+grounded grading. Phase 2B must not be merged in its current form.
+
 ---
 
 ## ผลลัพธ์ที่คาดหวัง
