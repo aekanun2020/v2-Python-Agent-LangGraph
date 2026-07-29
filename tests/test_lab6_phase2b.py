@@ -1,4 +1,5 @@
 import json
+import time
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -25,6 +26,7 @@ from labs.lab6_todo.evidence_state import (
 from labs.lab6_todo.phase2_runtime import (
     Phase2Budget,
     RuntimeBudgetExhausted,
+    hard_deadline,
 )
 from labs.lab6_todo.semantic_observer import (
     apply_bounded_rewrite,
@@ -88,6 +90,36 @@ class Phase2BTests(unittest.TestCase):
         self.assertEqual(
             ledger.claims[0].required_fields,
             ("employee_id", "department"),
+        )
+
+    def test_user_input_constraints_are_preproved_with_provenance(self):
+        ledger = ClaimLedger([
+            ClaimRequirement(
+                "claim_policy",
+                "threshold and comparison supplied by user",
+                "metadata",
+                ("threshold", "comparison_operator"),
+                evidence_source="user_input",
+            ),
+            ClaimRequirement(
+                "claim_data",
+                "retrieved aggregate",
+                "aggregate",
+                ("total",),
+            ),
+        ])
+        ledger.accept_user_input_claims()
+        self.assertEqual(
+            ledger.claims[0].status,
+            ClaimStatus.PROVED,
+        )
+        self.assertEqual(
+            ledger.claims[0].evidence_ids,
+            ["user_question"],
+        )
+        self.assertEqual(
+            ledger.claims[1].status,
+            ClaimStatus.REQUIRED,
         )
 
     @patch("labs.lab6_todo.dynamic_observer.llm.chat")
@@ -290,6 +322,11 @@ class Phase2BTests(unittest.TestCase):
             budget.consume_agent()
         with self.assertRaises(RuntimeBudgetExhausted):
             budget.check_time()
+
+    def test_hard_deadline_interrupts_blocking_work(self):
+        with self.assertRaises(RuntimeBudgetExhausted):
+            with hard_deadline(0.02):
+                time.sleep(0.2)
 
     def test_evidence_state_renders_structured_observation(self):
         state = EvidenceState()

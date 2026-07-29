@@ -222,6 +222,12 @@ completion, structured `query_more`, tool termination, budgets, and bounded
 rewrite. This is architecture-complete but still requires a new live benchmark
 before it can be considered better than Phase 2A.
 
+- [Phase 2B architecture live completion report](../../artifacts/lab6_phase2b_completion_live_report.md)
+
+The live report supersedes the “architecture-complete” wording above:
+termination and safety are bounded, but provider-dependent planning/rechecking
+still prevents operational completion. Phase 2B remains experimental.
+
 ---
 
 ## ผลลัพธ์ที่คาดหวัง

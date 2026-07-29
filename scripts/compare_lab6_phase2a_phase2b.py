@@ -40,6 +40,7 @@ def run_one(
 ) -> dict:
     command = [
         sys.executable,
+        "-u",
         "labs/lab6_todo/agent_todo.py",
         "--semantic-observer",
         variant["semantic_observer"],
@@ -108,6 +109,12 @@ def main() -> None:
         action="append",
         help="Run only selected IDs; may be supplied more than once.",
     )
+    parser.add_argument(
+        "--variant",
+        action="append",
+        choices=tuple(VARIANTS),
+        help="Run only selected variants; may be supplied more than once.",
+    )
     args = parser.parse_args()
 
     selected = set(args.question_id or [])
@@ -130,8 +137,11 @@ def main() -> None:
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
 
+    selected_variants = set(args.variant or VARIANTS)
     for question in questions:
         for variant_name, variant in VARIANTS.items():
+            if variant_name not in selected_variants:
+                continue
             print(f"[RUN] {question['id']} {variant_name}", flush=True)
             result = run_one(
                 args.repo.resolve(),

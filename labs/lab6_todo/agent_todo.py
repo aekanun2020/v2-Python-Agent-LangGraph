@@ -42,6 +42,7 @@ from labs.lab6_todo.semantic_observer import (
 from labs.lab6_todo.phase2_runtime import (
     Phase2Budget,
     RuntimeBudgetExhausted,
+    hard_deadline,
 )
 
 SYSTEM = (
@@ -156,6 +157,7 @@ def resolve_rewrite(
     evidence: EvidenceState,
     ledger: ClaimLedger,
     dynamic_observer: bool,
+    budget: Phase2Budget,
     timeout: float,
 ) -> str:
     """Phase 2B is bounded; Phase 2A retains its historical LLM recheck."""
@@ -165,7 +167,36 @@ def resolve_rewrite(
             "[FINAL REWRITE] applied once; MCP disabled; "
             f"violations={len(observation.violations)}"
         )
-        return candidate
+        try:
+            budget.consume_final_review()
+            recheck = review_final_answer(
+                question,
+                candidate,
+                evidence,
+                ledger.render(),
+                timeout=budget.call_timeout(60),
+            )
+            recheck = enforce_claim_alignment(recheck, ledger)
+        except Exception as error:
+            return (
+                "ไม่สามารถรับรองคำตอบหลัง rewrite ได้: "
+                f"{type(error).__name__}"
+            )
+        print(
+            f"[FINAL REWRITE CHECK] verdict={recheck.verdict.value} "
+            f"reason={recheck.reason}"
+        )
+        if recheck.verdict is SemanticVerdict.APPROVE:
+            return candidate
+        if (
+            observation.verdict is SemanticVerdict.REFUSE_DECISION
+            and recheck.verdict is SemanticVerdict.QUERY_MORE
+        ):
+            return candidate
+        return (
+            "ไม่สามารถให้ข้อสรุปที่ผ่านหลักฐานได้: "
+            + recheck.reason
+        )
     candidate = observation.revised_answer or proposed
 
     recheck = review_final_answer(
@@ -189,7 +220,7 @@ def resolve_rewrite(
     )
 
 
-def run(
+def _run_impl(
     question: str,
     registry: ToolRegistry,
     max_steps: int = 30,
@@ -486,6 +517,7 @@ def run(
                     evidence,
                     ledger,
                     dynamic_observer,
+                    budget,
                     budget.call_timeout(60),
                 )
         return _print_final(proposed, todo, context)
@@ -546,6 +578,7 @@ def run(
                 evidence,
                 ledger,
                 dynamic_observer,
+                budget,
                 budget.call_timeout(60),
             )
         elif observation.verdict is SemanticVerdict.QUERY_MORE:
@@ -554,6 +587,42 @@ def run(
                 + observation.reason
             )
     return _print_final(content, todo, context)
+
+
+def run(
+    question: str,
+    registry: ToolRegistry,
+    max_steps: int = 30,
+    semantic_observer: bool = True,
+    max_semantic_reviews: int = 2,
+    max_mcp_calls: int = 12,
+    dynamic_observer: bool = True,
+    max_dynamic_observations: int = 6,
+    max_run_seconds: float = 240,
+):
+    """Run under a hard wall-clock deadline, including blocking I/O calls."""
+    try:
+        with hard_deadline(max_run_seconds):
+            return _run_impl(
+                question=question,
+                registry=registry,
+                max_steps=max_steps,
+                semantic_observer=semantic_observer,
+                max_semantic_reviews=max_semantic_reviews,
+                max_mcp_calls=max_mcp_calls,
+                dynamic_observer=dynamic_observer,
+                max_dynamic_observations=max_dynamic_observations,
+                max_run_seconds=max_run_seconds,
+            )
+    except RuntimeBudgetExhausted as error:
+        print(f"[HARD DEADLINE STOP] {error}")
+        content = (
+            "หยุดตามขีดจำกัดเวลารวมโดยไม่สร้างข้อสรุปเกินหลักฐาน: "
+            + str(error)
+        )
+        print("-" * 60)
+        print(f"[answer]\n{content}")
+        return content
 
 
 def main():

@@ -17,6 +17,7 @@ class ClaimRequirement:
     description: str
     required_grain: str
     required_fields: tuple[str, ...] = ()
+    evidence_source: str = "tool"
     status: ClaimStatus = ClaimStatus.REQUIRED
     evidence_ids: list[str] = field(default_factory=list)
     contradiction: str | None = None
@@ -29,6 +30,15 @@ class ClaimLedger:
     @property
     def known_ids(self) -> set[str]:
         return {claim.claim_id for claim in self.claims}
+
+    def accept_user_input_claims(self) -> None:
+        """User-supplied thresholds/operators are constraints, not MCP facts."""
+        for claim in self.claims:
+            if claim.evidence_source != "user_input":
+                continue
+            claim.status = ClaimStatus.PROVED
+            if "user_question" not in claim.evidence_ids:
+                claim.evidence_ids.append("user_question")
 
     def mark_proved(self, claim_ids: list[str], evidence_id: str) -> None:
         for claim in self.claims:
@@ -113,6 +123,7 @@ class ClaimLedger:
             lines.append(
                 f"- {claim.claim_id} [{claim.status.value}] "
                 f"{claim.description} | grain={claim.required_grain} | "
+                f"source={claim.evidence_source} | "
                 f"fields={list(claim.required_fields)} | "
                 f"evidence={claim.evidence_ids}"
                 + (

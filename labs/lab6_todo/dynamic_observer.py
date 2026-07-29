@@ -106,8 +106,13 @@ Return JSON only:
 {"claims":[
   {"claim_id":"claim_001","description":"...",
    "required_grain":"record|entity|group|aggregate|metadata",
-   "required_fields":["..."]}
+   "required_fields":["..."],
+   "evidence_source":"user_input|tool|derived"}
 ]}
+
+Use user_input only for a threshold, comparison operator, scope, or policy
+explicitly supplied by the user. Use tool for facts that must be retrieved.
+Use derived only for arithmetic/comparisons over tool facts.
 """
 
 
@@ -130,8 +135,11 @@ def build_claim_ledger(question: str, timeout: float = 45) -> ClaimLedger:
             description=str(item.get("description", "")),
             required_grain=str(item.get("required_grain", "unknown")),
             required_fields=tuple(map(str, item.get("required_fields", []))),
+            evidence_source=str(item.get("evidence_source", "tool")),
         ))
-    return ClaimLedger(claims)
+    ledger = ClaimLedger(claims)
+    ledger.accept_user_input_claims()
+    return ledger
 
 
 DYNAMIC_OBSERVER_SYSTEM = """Observe one completed tool action against the active

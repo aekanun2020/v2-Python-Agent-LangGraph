@@ -2,11 +2,37 @@
 from __future__ import annotations
 
 import time
+import signal
+from contextlib import contextmanager
 from dataclasses import dataclass
 
 
 class RuntimeBudgetExhausted(RuntimeError):
     pass
+
+
+@contextmanager
+def hard_deadline(seconds: float):
+    """Interrupt a blocking provider/tool call on Unix main-thread runtimes."""
+    if (
+        seconds <= 0
+        or not hasattr(signal, "setitimer")
+    ):
+        yield
+        return
+
+    previous_handler = signal.getsignal(signal.SIGALRM)
+
+    def raise_deadline(_signum, _frame):
+        raise RuntimeBudgetExhausted("whole-run hard deadline exhausted")
+
+    signal.signal(signal.SIGALRM, raise_deadline)
+    signal.setitimer(signal.ITIMER_REAL, seconds)
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
 
 
 @dataclass
