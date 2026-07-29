@@ -16,6 +16,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from labs.core import llm, config
 from labs.core.registry import ToolRegistry
+from labs.lab6_todo.context_state import (
+    ActionKind,
+    AgentPhase,
+    ContextState,
+)
 
 SYSTEM = (
     "คุณคือ agent ที่ทำงานเป็นขั้นตอน ตอบเป็นภาษาไทย\n"
@@ -36,15 +41,21 @@ class TodoState:
         self.items = [{"index": i + 1, "task": t, "status": "todo"} for i, t in enumerate(items)]
         return self.render()
 
-    def update(self, index: int, status: str) -> str:
+    def resolve_index(self, index: int) -> int | None:
+        if not isinstance(index, int):
+            return None
         # normalize: รองรับ index ทั้ง 1-based (ตามที่ render แสดง) และ 0-based (ที่ LLM บางครั้งส่งมา)
         # ถ้า index ตรงกับเลขข้อ 1-based ที่มีอยู่ → ใช้เลย; ไม่งั้นจึงลองตีความเป็น 0-based (index+1)
         valid = {it["index"] for it in self.items}
         if index in valid:
-            target = index
-        elif (index + 1) in valid:
-            target = index + 1
-        else:
+            return index
+        if (index + 1) in valid:
+            return index + 1
+        return None
+
+    def update(self, index: int, status: str) -> str:
+        target = self.resolve_index(index)
+        if target is None:
             return self.render()  # index ไม่ถูกต้อง — ไม่แก้ไขอะไร
         for it in self.items:
             if it["index"] == target:
@@ -76,6 +87,7 @@ def build_tools(registry: ToolRegistry) -> list[dict]:
 
 def run(question: str, registry: ToolRegistry, max_steps: int = 30):
     todo = TodoState()
+    context = ContextState(original_goal=question, phase=AgentPhase.ACT)
     tools = build_tools(registry)
     messages = [
         {"role": "system", "content": SYSTEM},
@@ -90,32 +102,60 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 30):
             for call in msg.tool_calls:
                 args = json.loads(call.function.arguments or "{}")
                 name = call.function.name
-                if name == "todo_write":
-                    result = todo.write(args.get("items", []))
-                    print(f"[step {step}] TODO_WRITE\n{result}")
-                elif name == "todo_update":
-                    result = todo.update(args.get("index"), args.get("status"))
-                    print(f"[step {step}] TODO_UPDATE -> {args}\n{result}")
-                else:
-                    result = registry.dispatch(name, args)
-                    print(f"[step {step}] TOOL {name}")
+                try:
+                    if name == "todo_write":
+                        result = todo.write(args.get("items", []))
+                        kind = ActionKind.PLAN
+                        print(f"[step {step}] TODO_WRITE\n{result}")
+                    elif name == "todo_update":
+                        result = todo.update(args.get("index"), args.get("status"))
+                        kind = ActionKind.STATE_UPDATE
+                        target = todo.resolve_index(args.get("index"))
+                        item = next(
+                            (value for value in todo.items
+                             if value["index"] == target),
+                            None,
+                        )
+                        if item and args.get("status") == "doing":
+                            context.start_step(item["task"])
+                        elif item and args.get("status") == "done":
+                            context.complete_step(item["task"])
+                        print(f"[step {step}] TODO_UPDATE -> {args}\n{result}")
+                    else:
+                        result = registry.dispatch(name, args)
+                        kind = ActionKind.TOOL
+                        context.add_evidence_ref(call.id)
+                        print(f"[step {step}] TOOL {name}")
+                except Exception as error:
+                    report = context.observe_error(error)
+                    if report.alert:
+                        print(f"[CONTEXT ALERT] {'; '.join(report.reasons)}")
+                    raise
+
+                report = context.observe_action(name, args, result, kind=kind)
+                if report.alert:
+                    print(f"[CONTEXT ALERT] {'; '.join(report.reasons)}")
                 messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
             continue
+        context.set_phase(AgentPhase.ANSWER)
         print("-" * 60)
         print(f"[answer]\n{msg.content}")
         print("-" * 60)
         print(f"[todo สุดท้าย]\n{todo.render()}")
+        print(f"[context budget] {context.budgets}")
         return msg.content
 
     # ชนเพดาน max_steps — บังคับให้โมเดลสรุปปิดท้าย จะได้ไม่จบแบบเงียบๆ โดยไม่มีบทสรุป
     messages.append({"role": "user",
                      "content": "ถึงขีดจำกัดขั้นตอนแล้ว ห้ามเรียก tool เพิ่ม — สรุปข้อค้นพบเชิงธุรกิจจากข้อมูลที่ได้มาเป็นข้อความสุดท้าย"})
     final = llm.chat(messages=messages)  # ไม่ส่ง tools — บังคับให้ตอบเป็นข้อความ
+    context.set_phase(AgentPhase.ANSWER)
     content = final.choices[0].message.content
     print("-" * 60)
     print(f"[answer]\n{content}")
     print("-" * 60)
     print(f"[todo สุดท้าย]\n{todo.render()}")
+    print(f"[context budget] {context.budgets}")
     return content
 
 

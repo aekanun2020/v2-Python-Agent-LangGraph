@@ -11,6 +11,7 @@
 - เพิ่ม internal tools (`todo_write`, `todo_update`) เพื่อให้ agent วางแผนงานหลายขั้นก่อนเริ่มลงมือ
 - เข้าใจการจัดการ **state ใน agent** ด้วย class `TodoState` ที่เก็บ todo list ไว้ใน memory
 - เห็นว่า agent ใช้ todo เป็นแผนงาน แล้วอัปเดตสถานะ (todo → doing → done) ระหว่างทำงานจริงด้วย MCP tools
+- เพิ่ม Context State แบบ Pure Python เพื่อสังเกต loop โดยไม่เปลี่ยนการตัดสินใจของ Agent
 
 ---
 
@@ -86,6 +87,43 @@ SYSTEM = (
 ```
 
 pattern นี้คือ **plan-then-execute** ที่ให้ agent โปร่งใสและตรวจสอบได้
+
+## Context State Phase 1
+
+ไฟล์ `context_state.py` เพิ่ม control state ขนาดเล็กโดยไม่ใช้ LangGraph, LLM,
+embedding, relevance scoring หรือ rolling summary:
+
+```text
+ContextState
+├─ original_goal          # immutable anchor
+├─ phase / active_step
+├─ completed_steps
+├─ accepted_evidence_refs # เก็บ reference ไม่ยัดผล tool ซ้ำ
+├─ recent action+result signatures
+├─ recent error signatures
+└─ steps/tool/error budgets
+```
+
+ตรวจ drift แบบ deterministic 3 กรณี:
+
+1. tool + arguments + result เดิมซ้ำ
+2. exception type + message เดิมซ้ำ
+3. action kind ไม่ตรงกับ phase ปัจจุบัน
+
+การตรวจใช้ SHA-256 จาก canonical JSON จึงไม่ถือว่า tool ชื่อเดียวกันแต่ arguments
+หรือผลต่างกันเป็น loop และไม่ใช้ keyword/embedding ที่อาจไม่แม่นกับภาษาไทย
+
+Phase นี้เป็น **observe-only**: เมื่อพบ drift จะแสดง `[CONTEXT ALERT]` แต่ไม่ block
+tool, ไม่ replan และไม่เปลี่ยนคำตอบ เพื่อรักษาพฤติกรรมของ original agent ไว้เป็น baseline
+
+ทดสอบโดยไม่เรียก OpenRouter หรือ MCP:
+
+```bash
+python -m unittest -v tests.test_lab6_context_state
+```
+
+สิ่งที่ยังไม่ทำใน Phase 1: persistence, cold storage จริง, context compaction,
+rolling summary, semantic drift และ recovery policy
 
 ---
 
