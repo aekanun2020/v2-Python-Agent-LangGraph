@@ -257,6 +257,13 @@ The first full run scored Phase 2A at 4/10 and Phase 2C at 5/10 under strict
 grounded grading. Phase 2C is a recovery from Phase 2B, not yet a merge-ready
 replacement.
 
+- [Phase 2C two-run stability report](../../artifacts/lab6_phase2c_stability_report.md)
+- `artifacts/lab6_phase2a_phase2c_full_10_rerun2.json` contains the second 20-run output
+
+Phase 2C scored 5/10 in both full runs, but only Q1 passed in both. Eight of ten
+questions changed pass/fail status, so the stable aggregate score must not be
+interpreted as deterministic behavior.
+
 ---
 
 ## ผลลัพธ์ที่คาดหวัง
