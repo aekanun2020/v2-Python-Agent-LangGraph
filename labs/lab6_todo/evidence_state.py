@@ -16,6 +16,13 @@ class SemanticVerdict(str, Enum):
 
 
 @dataclass(frozen=True)
+class SemanticViolation:
+    kind: str
+    text: str
+    replacement: str = ""
+
+
+@dataclass(frozen=True)
 class EvidenceRecord:
     evidence_id: str
     tool_name: str
@@ -80,7 +87,16 @@ class EvidenceState:
                 "facts": facts,
                 "proved_claim_ids": observation.proved_claim_ids,
                 "contradictions": observation.contradictions,
-                "missing_evidence": observation.missing_evidence,
+                "missing_evidence": [
+                    {
+                        "claim_id": item.claim_id,
+                        "grain": item.grain,
+                        "fields": item.fields,
+                        "operation": item.operation,
+                        "reason": item.reason,
+                    }
+                    for item in observation.missing_evidence
+                ],
                 "claim_updates": observation.claim_updates,
                 "next_action": observation.next_action.value,
                 "reason": observation.reason,
@@ -118,4 +134,5 @@ class ObservationState:
     supported_claims: tuple[str, ...] = ()
     unsupported_claims: tuple[str, ...] = ()
     contradictions: tuple[str, ...] = ()
+    violations: tuple[SemanticViolation, ...] = ()
     revised_answer: str | None = None

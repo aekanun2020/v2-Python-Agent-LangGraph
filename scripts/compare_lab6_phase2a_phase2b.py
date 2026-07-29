@@ -36,6 +36,7 @@ def run_one(
     question: str,
     variant: dict[str, str],
     timeout: int,
+    max_run_seconds: int,
 ) -> dict:
     command = [
         sys.executable,
@@ -44,6 +45,8 @@ def run_one(
         variant["semantic_observer"],
         "--dynamic-observer",
         variant["dynamic_observer"],
+        "--max-run-seconds",
+        str(max_run_seconds),
         question,
     ]
     started = time.perf_counter()
@@ -99,6 +102,7 @@ def main() -> None:
     parser.add_argument("--repo", type=Path, default=Path.cwd())
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--timeout", type=int, default=360)
+    parser.add_argument("--max-run-seconds", type=int, default=240)
     parser.add_argument(
         "--question-id",
         action="append",
@@ -134,6 +138,7 @@ def main() -> None:
                 question["question"],
                 variant,
                 args.timeout,
+                args.max_run_seconds,
             )
             payload["runs"].append(
                 {

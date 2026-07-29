@@ -31,6 +31,22 @@ class EvidenceFact:
 
 
 @dataclass(frozen=True)
+class MissingEvidenceRequest:
+    claim_id: str
+    grain: str
+    fields: tuple[str, ...]
+    operation: str
+    reason: str
+
+    def render(self) -> str:
+        return (
+            f"claim={self.claim_id} grain={self.grain} "
+            f"fields={list(self.fields)} operation={self.operation} "
+            f"reason={self.reason}"
+        )
+
+
+@dataclass(frozen=True)
 class DynamicObservation:
     evidence_id: str
     action_succeeded: bool
@@ -42,7 +58,7 @@ class DynamicObservation:
     facts: tuple[EvidenceFact, ...]
     proved_claim_ids: tuple[str, ...]
     contradictions: tuple[tuple[str, str], ...]
-    missing_evidence: tuple[str, ...]
+    missing_evidence: tuple[MissingEvidenceRequest, ...]
     claim_updates: tuple[tuple[str, str, tuple[str, ...]], ...]
     next_action: NextAction
     reason: str
@@ -65,6 +81,18 @@ def _json_object(text: str) -> dict[str, Any]:
     return value
 
 
+def _appears_in_evidence(value: Any, evidence_text: str) -> bool:
+    if value is None:
+        return True
+    rendered = str(value)
+    if rendered in evidence_text:
+        return True
+    if isinstance(value, (int, float)):
+        compact_evidence = evidence_text.replace(",", "")
+        return rendered in compact_evidence
+    return False
+
+
 CLAIM_PLANNER_SYSTEM = """Create a minimal claim ledger for a tool-using agent.
 Claims are evidence requirements, not answers. Be domain-neutral.
 Split only claims that need distinct evidence. Preserve the user's threshold,
@@ -83,14 +111,14 @@ Return JSON only:
 """
 
 
-def build_claim_ledger(question: str) -> ClaimLedger:
+def build_claim_ledger(question: str, timeout: float = 45) -> ClaimLedger:
     response = llm.chat(
         messages=[
             {"role": "system", "content": CLAIM_PLANNER_SYSTEM},
             {"role": "user", "content": question},
         ],
         temperature=0,
-        timeout=45,
+        timeout=timeout,
         client_max_retries=0,
     )
     data = _json_object(response.choices[0].message.content or "")
@@ -135,7 +163,13 @@ Return JSON only:
  ],
  "proved_claim_ids":["claim_001"],
  "contradictions":[{"claim_id":"claim_002","reason":"..."}],
- "missing_evidence":["specific missing fact"],
+ "missing_evidence":[{
+   "claim_id":"claim_001",
+   "grain":"entity",
+   "fields":["entity_id"],
+   "operation":"COUNT(DISTINCT entity_id)",
+   "reason":"record count cannot prove entity coverage"
+ }],
  "claim_updates":[
    {"claim_id":"claim_001","required_grain":"entity",
     "required_fields":["actual_schema_field"]}
@@ -151,6 +185,7 @@ def observe_tool_result(
     active_step: str | None,
     ledger: ClaimLedger,
     evidence: EvidenceRecord,
+    timeout: float = 45,
 ) -> DynamicObservation:
     payload = (
         f"USER QUESTION:\n{question}\n\n"
@@ -167,10 +202,15 @@ def observe_tool_result(
             {"role": "user", "content": payload},
         ],
         temperature=0,
-        timeout=45,
+        timeout=timeout,
         client_max_retries=0,
     )
     data = _json_object(response.choices[0].message.content or "")
+    source_text = (
+        evidence.raw_result
+        + "\n"
+        + json.dumps(evidence.arguments, ensure_ascii=False, default=str)
+    )
     known_ids = ledger.known_ids
     proved = tuple(
         claim_id for claim_id in map(str, data.get("proved_claim_ids", []))
@@ -190,36 +230,89 @@ def observe_tool_result(
         for item in data.get("claim_updates", [])
         if str(item.get("claim_id")) in known_ids
     )
-    facts = tuple(EvidenceFact(
-        subject=str(item.get("subject", "")),
-        predicate=str(item.get("predicate", "")),
-        value=item.get("value"),
-        unit=(
-            str(item["unit"])
-            if item.get("unit") is not None
-            else None
-        ),
-        grain=str(item.get("grain", data.get("grain", "unknown"))),
-        evidence_id=evidence.evidence_id,
-        derivation=(
+    facts = []
+    for item in data.get("facts", []):
+        subject = str(item.get("subject", ""))
+        value = item.get("value")
+        derivation = (
             str(item["derivation"])
             if item.get("derivation") is not None
             else None
-        ),
-    ) for item in data.get("facts", []))
+        )
+        if not derivation and (
+            not _appears_in_evidence(subject, source_text)
+            or not _appears_in_evidence(value, source_text)
+        ):
+            continue
+        proposed_unit = (
+            str(item["unit"])
+            if item.get("unit") is not None
+            else None
+        )
+        grounded_unit = (
+            proposed_unit
+            if _appears_in_evidence(proposed_unit, source_text)
+            else None
+        )
+        facts.append(EvidenceFact(
+            subject=subject,
+            predicate=str(item.get("predicate", "")),
+            value=value,
+            unit=grounded_unit,
+            grain=str(item.get("grain", data.get("grain", "unknown"))),
+            evidence_id=evidence.evidence_id,
+            derivation=derivation,
+        ))
+    grounded_fields = tuple(
+        field for field in map(str, data.get("fields", []))
+        if _appears_in_evidence(field, source_text)
+    )
+    grounded_labels = tuple(
+        label for label in map(str, data.get("canonical_labels", []))
+        if _appears_in_evidence(label, evidence.raw_result)
+    )
+    missing_requests = []
+    for item in data.get("missing_evidence", []):
+        if isinstance(item, str):
+            missing_requests.append(MissingEvidenceRequest(
+                claim_id="",
+                grain="unknown",
+                fields=(),
+                operation=item,
+                reason=item,
+            ))
+            continue
+        claim_id = str(item.get("claim_id", ""))
+        if claim_id and claim_id not in known_ids:
+            continue
+        missing_requests.append(MissingEvidenceRequest(
+            claim_id=claim_id,
+            grain=str(item.get("grain", "unknown")),
+            fields=tuple(map(str, item.get("fields", []))),
+            operation=str(item.get("operation", "")),
+            reason=str(item.get("reason", "")),
+        ))
+    next_action = NextAction(data.get("next_action", "query_more"))
+    reason = str(data.get("reason", ""))
+    if next_action is NextAction.QUERY_MORE and not missing_requests:
+        next_action = NextAction.REPLAN
+        reason = (
+            "query_more rejected because no structured missing-evidence "
+            "request was supplied"
+        )
     return DynamicObservation(
         evidence_id=evidence.evidence_id,
         action_succeeded=bool(data.get("action_succeeded")),
         supports_active_step=bool(data.get("supports_active_step")),
         evidence_complete=bool(data.get("evidence_complete")),
         grain=str(data.get("grain", "unknown")),
-        fields=tuple(map(str, data.get("fields", []))),
-        canonical_labels=tuple(map(str, data.get("canonical_labels", []))),
-        facts=facts,
+        fields=grounded_fields,
+        canonical_labels=grounded_labels,
+        facts=tuple(facts),
         proved_claim_ids=proved,
         contradictions=contradictions,
-        missing_evidence=tuple(map(str, data.get("missing_evidence", []))),
+        missing_evidence=tuple(missing_requests),
         claim_updates=claim_updates,
-        next_action=NextAction(data.get("next_action", "query_more")),
-        reason=str(data.get("reason", "")),
+        next_action=next_action,
+        reason=reason,
     )

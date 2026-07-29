@@ -15,7 +15,21 @@ from labs.lab6_todo.dynamic_observer import (
     NextAction,
     observe_tool_result,
 )
-from labs.lab6_todo.evidence_state import EvidenceRecord, EvidenceState
+from labs.lab6_todo.evidence_state import (
+    EvidenceRecord,
+    EvidenceState,
+    ObservationState,
+    SemanticVerdict,
+    SemanticViolation,
+)
+from labs.lab6_todo.phase2_runtime import (
+    Phase2Budget,
+    RuntimeBudgetExhausted,
+)
+from labs.lab6_todo.semantic_observer import (
+    apply_bounded_rewrite,
+    enforce_claim_alignment,
+)
 
 
 def fake_response(payload: dict):
@@ -134,7 +148,13 @@ class Phase2BTests(unittest.TestCase):
             "facts": [],
             "proved_claim_ids": [],
             "contradictions": [],
-            "missing_evidence": ["COUNT(DISTINCT employee_id) for 2023"],
+            "missing_evidence": [{
+                "claim_id": "claim_001",
+                "grain": "employee",
+                "fields": ["employee_id"],
+                "operation": "COUNT(DISTINCT employee_id)",
+                "reason": "record count cannot prove employee coverage",
+            }],
             "next_action": "query_more",
             "reason": "record count cannot prove employee coverage",
         })
@@ -152,7 +172,124 @@ class Phase2BTests(unittest.TestCase):
             ),
         )
         self.assertEqual(observation.next_action, NextAction.QUERY_MORE)
-        self.assertIn("COUNT(DISTINCT", observation.missing_evidence[0])
+        request = observation.missing_evidence[0]
+        self.assertEqual(request.claim_id, "claim_001")
+        self.assertEqual(request.grain, "employee")
+        self.assertIn("COUNT(DISTINCT", request.operation)
+
+    def test_claim_proof_requires_matching_grain_and_fields(self):
+        ledger = ClaimLedger([
+            ClaimRequirement(
+                "claim_001",
+                "distinct employee coverage",
+                "employee",
+                ("employee_id", "coverage"),
+            )
+        ])
+        rejected = ledger.mark_proved_if_covered(
+            ["claim_001"],
+            "call-records",
+            "record",
+            ("review_id", "coverage"),
+        )
+        self.assertEqual(rejected, ())
+        self.assertEqual(ledger.claims[0].status, ClaimStatus.REQUIRED)
+
+        accepted = ledger.mark_proved_if_covered(
+            ["claim_001"],
+            "call-employees",
+            "employee",
+            ("employee_id", "coverage"),
+        )
+        self.assertEqual(accepted, ("claim_001",))
+        self.assertTrue(ledger.complete)
+
+    def test_bounded_rewrite_applies_exact_violations_once(self):
+        observation = ObservationState(
+            verdict=SemanticVerdict.REWRITE,
+            reason="unsupported currency",
+            violations=(
+                SemanticViolation("unit", " บาท", ""),
+            ),
+            revised_answer="มูลค่ารวม 28,000,000 บาท",
+        )
+        result = apply_bounded_rewrite("ignored", observation)
+        self.assertEqual(result, "มูลค่ารวม 28,000,000")
+
+    def test_final_approval_is_downgraded_for_unresolved_claims(self):
+        ledger = ClaimLedger([
+            ClaimRequirement("claim_001", "needs evidence", "entity")
+        ])
+        approved = ObservationState(
+            verdict=SemanticVerdict.APPROVE,
+            reason="looks correct",
+        )
+        aligned = enforce_claim_alignment(approved, ledger)
+        self.assertEqual(aligned.verdict, SemanticVerdict.QUERY_MORE)
+        self.assertIn("claim_001", aligned.reason)
+
+    @patch("labs.lab6_todo.dynamic_observer.llm.chat")
+    def test_extractor_drops_ungrounded_labels_values_and_units(self, chat):
+        chat.return_value = fake_response({
+            "action_succeeded": True,
+            "supports_active_step": True,
+            "evidence_complete": True,
+            "grain": "project",
+            "fields": ["project_name", "project_value"],
+            "canonical_labels": ["โครงการจริง", "โครงการแต่ง"],
+            "facts": [{
+                "subject": "โครงการจริง",
+                "predicate": "project_value",
+                "value": 100,
+                "unit": "บาท",
+                "grain": "project",
+                "derivation": None,
+            }, {
+                "subject": "โครงการแต่ง",
+                "predicate": "project_value",
+                "value": 999,
+                "unit": "บาท",
+                "grain": "project",
+                "derivation": None,
+            }],
+            "proved_claim_ids": ["claim_001"],
+            "contradictions": [],
+            "missing_evidence": [],
+            "claim_updates": [],
+            "next_action": "accept",
+            "reason": "complete",
+        })
+        observation = observe_tool_result(
+            "project value",
+            "query projects",
+            ClaimLedger([
+                ClaimRequirement(
+                    "claim_001",
+                    "project values",
+                    "project",
+                    ("project_name", "project_value"),
+                )
+            ]),
+            EvidenceRecord.from_tool(
+                "call-project",
+                "execute_query_tool",
+                {},
+                "project_name project_value\nโครงการจริง 100",
+            ),
+        )
+        self.assertEqual(observation.canonical_labels, ("โครงการจริง",))
+        self.assertEqual(len(observation.facts), 1)
+        self.assertIsNone(observation.facts[0].unit)
+
+    @patch("labs.lab6_todo.phase2_runtime.time.monotonic")
+    def test_whole_run_budget_and_call_budgets_are_enforced(self, monotonic):
+        monotonic.side_effect = [100.0, 101.0, 101.0, 106.0]
+        budget = Phase2Budget(max_seconds=5, max_agent_calls=1)
+        budget.consume_agent()
+        with self.assertRaises(RuntimeBudgetExhausted):
+            budget.consume_agent()
+        with self.assertRaises(RuntimeBudgetExhausted):
+            budget.check_time()
 
     def test_evidence_state_renders_structured_observation(self):
         state = EvidenceState()

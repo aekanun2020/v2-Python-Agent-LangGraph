@@ -215,6 +215,12 @@ python labs/lab6_todo/agent_todo.py --dynamic-observer off \
 - `artifacts/lab6_phase2a_phase2b_runs.json` contains the raw live outputs and timings
 - [Phase 2 failure-case rerun](../../artifacts/lab6_phase2_failure_rerun_report.md)
 - `artifacts/lab6_phase2a_phase2b_failure_rerun.json` contains the repeated raw runs
+- [Phase 2B completed architecture](../../artifacts/lab6_phase2b_architecture_complete.md)
+
+Phase 2B now makes Python—not the reviewer LLM—the authority for claim
+completion, structured `query_more`, tool termination, budgets, and bounded
+rewrite. This is architecture-complete but still requires a new live benchmark
+before it can be considered better than Phase 2A.
 
 ---
 

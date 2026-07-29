@@ -38,6 +38,46 @@ class ClaimLedger:
             if evidence_id not in claim.evidence_ids:
                 claim.evidence_ids.append(evidence_id)
 
+    def mark_proved_if_covered(
+        self,
+        claim_ids: list[str],
+        evidence_id: str,
+        grain: str,
+        fields: tuple[str, ...],
+    ) -> tuple[str, ...]:
+        """Accept an LLM proof proposal only when structural requirements match."""
+        available = set(fields)
+        accepted: list[str] = []
+        for claim in self.claims:
+            if (
+                claim.claim_id not in claim_ids
+                or claim.status is not ClaimStatus.REQUIRED
+            ):
+                continue
+            grain_matches = (
+                claim.required_grain in {"unknown", grain}
+                or grain == "mixed"
+            )
+            fields_match = set(claim.required_fields).issubset(available)
+            if not grain_matches or not fields_match:
+                continue
+            claim.status = ClaimStatus.PROVED
+            if evidence_id not in claim.evidence_ids:
+                claim.evidence_ids.append(evidence_id)
+            accepted.append(claim.claim_id)
+        return tuple(accepted)
+
+    @property
+    def unresolved(self) -> tuple[ClaimRequirement, ...]:
+        return tuple(
+            claim for claim in self.claims
+            if claim.status is ClaimStatus.REQUIRED
+        )
+
+    @property
+    def complete(self) -> bool:
+        return bool(self.claims) and not self.unresolved
+
     def mark_contradicted(
         self,
         contradictions: dict[str, str],

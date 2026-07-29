@@ -34,7 +34,15 @@ from labs.lab6_todo.dynamic_observer import (
     build_claim_ledger,
     observe_tool_result,
 )
-from labs.lab6_todo.semantic_observer import review_final_answer
+from labs.lab6_todo.semantic_observer import (
+    apply_bounded_rewrite,
+    enforce_claim_alignment,
+    review_final_answer,
+)
+from labs.lab6_todo.phase2_runtime import (
+    Phase2Budget,
+    RuntimeBudgetExhausted,
+)
 
 SYSTEM = (
     "คุณคือ agent ที่ทำงานเป็นขั้นตอน ตอบเป็นภาษาไทย\n"
@@ -141,6 +149,46 @@ def dispatch_with_retry(
     raise RuntimeError("unreachable MCP retry state")
 
 
+def resolve_rewrite(
+    question: str,
+    proposed: str,
+    observation,
+    evidence: EvidenceState,
+    ledger: ClaimLedger,
+    dynamic_observer: bool,
+    timeout: float,
+) -> str:
+    """Phase 2B is bounded; Phase 2A retains its historical LLM recheck."""
+    if dynamic_observer:
+        candidate = apply_bounded_rewrite(proposed, observation)
+        print(
+            "[FINAL REWRITE] applied once; MCP disabled; "
+            f"violations={len(observation.violations)}"
+        )
+        return candidate
+    candidate = observation.revised_answer or proposed
+
+    recheck = review_final_answer(
+        question,
+        candidate,
+        evidence,
+        ledger.render(),
+        timeout=timeout,
+    )
+    print(
+        f"[FINAL RECHECK] verdict={recheck.verdict.value} "
+        f"reason={recheck.reason}"
+    )
+    if recheck.verdict is SemanticVerdict.APPROVE:
+        return candidate
+    if recheck.verdict is SemanticVerdict.REFUSE_DECISION:
+        return recheck.revised_answer or candidate
+    return (
+        "ยังไม่สามารถให้คำตอบที่ผ่านการตรวจหลักฐานได้: "
+        + recheck.reason
+    )
+
+
 def run(
     question: str,
     registry: ToolRegistry,
@@ -150,27 +198,56 @@ def run(
     max_mcp_calls: int = 12,
     dynamic_observer: bool = True,
     max_dynamic_observations: int = 6,
+    max_run_seconds: float = 240,
 ):
     todo = TodoState()
     context = ContextState(original_goal=question, phase=AgentPhase.ACT)
     evidence = EvidenceState()
     ledger = ClaimLedger()
+    budget = Phase2Budget(
+        max_seconds=max_run_seconds,
+        max_agent_calls=max_steps + 1,
+        max_observer_calls=max_dynamic_observations + 1,
+        max_final_reviews=max_semantic_reviews,
+        max_mcp_calls=max_mcp_calls,
+    )
     if dynamic_observer:
         try:
-            ledger = build_claim_ledger(question)
+            budget.consume_observer()
+            ledger = build_claim_ledger(
+                question,
+                timeout=budget.call_timeout(45),
+            )
         except Exception as error:
             print(f"[CLAIM LEDGER ERROR] {type(error).__name__}: {error}")
     if dynamic_observer:
         print(f"[CLAIM LEDGER]\n{ledger.render()}")
-    semantic_reviews = 0
-    dynamic_observation_calls = 0
     tools = build_tools(registry)
     messages = [
         {"role": "system", "content": SYSTEM},
         {"role": "user", "content": question},
     ]
+    force_no_tools = False
     for step in range(1, max_steps + 1):
-        resp = llm.chat(messages=messages, tools=tools)
+        try:
+            budget.consume_agent()
+        except RuntimeBudgetExhausted as error:
+            print(f"[RUNTIME STOP] {error}; {budget.render()}")
+            break
+        try:
+            resp = llm.chat(
+                messages=messages,
+                tools=None if force_no_tools else tools,
+                timeout=budget.call_timeout(60),
+                client_max_retries=0,
+            )
+        except Exception as error:
+            context.observe_error(error)
+            print(
+                f"[AGENT LLM ERROR] {type(error).__name__}: {error}; "
+                f"{budget.render()}"
+            )
+            break
         msg = resp.choices[0].message
         if msg.tool_calls:
             dynamic_feedback: list[str] = []
@@ -199,7 +276,9 @@ def run(
                             context.complete_step(item["task"])
                         print(f"[step {step}] TODO_UPDATE -> {args}\n{result}")
                     else:
-                        if context.budgets.tool_calls >= max_mcp_calls:
+                        try:
+                            budget.consume_mcp()
+                        except RuntimeBudgetExhausted:
                             result = (
                                 "[runtime] MCP tool-call budget exhausted; "
                                 "use accepted evidence and answer now"
@@ -210,31 +289,56 @@ def run(
                                 f"(budget={max_mcp_calls})"
                             )
                         else:
-                            result = dispatch_with_retry(registry, name, args)
+                            try:
+                                result = dispatch_with_retry(
+                                    registry,
+                                    name,
+                                    args,
+                                )
+                            except Exception as tool_error:
+                                result = json.dumps({
+                                    "status": "error",
+                                    "error_type": type(tool_error).__name__,
+                                    "message": str(tool_error),
+                                }, ensure_ascii=False)
+                                context.observe_error(tool_error)
+                                print(
+                                    f"[MCP ERROR] tool={name} "
+                                    f"type={type(tool_error).__name__}"
+                                )
                             kind = ActionKind.TOOL
                             record = EvidenceRecord.from_tool(
                                 call.id, name, args, result
                             )
                             context.add_evidence_ref(call.id)
                             evidence.accept(record)
-                            if (
-                                dynamic_observer
-                                and dynamic_observation_calls
-                                < max_dynamic_observations
-                            ):
-                                dynamic_observation_calls += 1
+                            if dynamic_observer:
                                 try:
+                                    budget.consume_observer()
                                     observation = observe_tool_result(
                                         question,
                                         context.active_step,
                                         ledger,
                                         record,
+                                        timeout=budget.call_timeout(45),
                                     )
                                     evidence.add_observation(observation)
-                                    ledger.mark_proved(
-                                        list(observation.proved_claim_ids),
-                                        call.id,
-                                    )
+                                    accepted_proofs = ()
+                                    if (
+                                        observation.action_succeeded
+                                        and observation.supports_active_step
+                                        and observation.evidence_complete
+                                    ):
+                                        accepted_proofs = (
+                                            ledger.mark_proved_if_covered(
+                                                list(
+                                                    observation.proved_claim_ids
+                                                ),
+                                                call.id,
+                                                observation.grain,
+                                                observation.fields,
+                                            )
+                                        )
                                     ledger.mark_contradicted(
                                         dict(observation.contradictions),
                                         call.id,
@@ -249,9 +353,21 @@ def run(
                                         f"evidence={call.id} "
                                         f"supports={observation.supports_active_step} "
                                         f"complete={observation.evidence_complete} "
+                                        f"proved={list(accepted_proofs)} "
                                         f"next={observation.next_action.value} "
                                         f"reason={observation.reason}"
                                     )
+                                    if (
+                                        observation.next_action
+                                        is NextAction.ACCEPT
+                                        and observation.proved_claim_ids
+                                        and not accepted_proofs
+                                    ):
+                                        dynamic_feedback.append(
+                                            "query_more: runtime rejected "
+                                            "claim proof because required "
+                                            "grain/fields were not covered"
+                                        )
                                     if observation.next_action in {
                                         NextAction.QUERY_MORE,
                                         NextAction.REPLAN,
@@ -262,20 +378,27 @@ def run(
                                             f"{observation.reason}; "
                                             "missing="
                                             + ", ".join(
+                                                item.render()
+                                                for item in
                                                 observation.missing_evidence
                                             )
                                         )
+                                    if (
+                                        observation.next_action
+                                        is NextAction.STOP
+                                    ):
+                                        force_no_tools = True
+                                except RuntimeBudgetExhausted as observer_error:
+                                    print(
+                                        "[DYNAMIC OBSERVER SKIPPED] "
+                                        f"{observer_error}; {budget.render()}"
+                                    )
                                 except Exception as observer_error:
                                     print(
                                         "[DYNAMIC OBSERVER ERROR] "
                                         f"{type(observer_error).__name__}: "
                                         f"{observer_error}"
                                     )
-                            elif dynamic_observer:
-                                print(
-                                    "[DYNAMIC OBSERVER SKIPPED] "
-                                    f"budget={max_dynamic_observations}"
-                                )
                             print(f"[step {step}] TOOL {name}")
                 except Exception as error:
                     report = context.observe_error(error)
@@ -300,16 +423,42 @@ def run(
         context.set_phase(AgentPhase.ANSWER)
         proposed = msg.content or ""
         if semantic_observer:
-            semantic_reviews += 1
-            observation = review_final_answer(
-                question, proposed, evidence, ledger.render()
-            )
+            try:
+                budget.consume_final_review()
+            except RuntimeBudgetExhausted as error:
+                proposed = (
+                    "ไม่สามารถตรวจรับรองคำตอบได้ภายในงบการทำงาน: "
+                    f"{error}"
+                )
+                return _print_final(proposed, todo, context)
+            try:
+                observation = review_final_answer(
+                    question,
+                    proposed,
+                    evidence,
+                    ledger.render(),
+                    timeout=budget.call_timeout(60),
+                )
+            except Exception as error:
+                proposed = (
+                    "ไม่สามารถตรวจรับรองคำตอบภายใน runtime ได้: "
+                    f"{type(error).__name__}"
+                )
+                print(
+                    f"[FINAL OBSERVER ERROR] {type(error).__name__}: {error}"
+                )
+                return _print_final(proposed, todo, context)
+            if dynamic_observer:
+                observation = enforce_claim_alignment(
+                    observation,
+                    ledger,
+                )
             print(
                 f"[FINAL OBSERVATION] verdict={observation.verdict.value} "
                 f"reason={observation.reason}"
             )
             if observation.verdict is SemanticVerdict.QUERY_MORE:
-                if semantic_reviews < max_semantic_reviews:
+                if budget.final_reviews < max_semantic_reviews:
                     messages.append({"role": "assistant", "content": proposed})
                     messages.append({
                         "role": "user",
@@ -330,35 +479,58 @@ def run(
                 SemanticVerdict.REWRITE,
                 SemanticVerdict.REFUSE_DECISION,
             }:
-                candidate = observation.revised_answer or proposed
-                recheck = review_final_answer(
-                    question, candidate, evidence, ledger.render()
+                proposed = resolve_rewrite(
+                    question,
+                    proposed,
+                    observation,
+                    evidence,
+                    ledger,
+                    dynamic_observer,
+                    budget.call_timeout(60),
                 )
-                print(
-                    f"[FINAL RECHECK] verdict={recheck.verdict.value} "
-                    f"reason={recheck.reason}"
-                )
-                if recheck.verdict is SemanticVerdict.APPROVE:
-                    proposed = candidate
-                elif recheck.verdict is SemanticVerdict.REFUSE_DECISION:
-                    proposed = recheck.revised_answer or candidate
-                else:
-                    proposed = (
-                        "ยังไม่สามารถให้คำตอบที่ผ่านการตรวจหลักฐานได้: "
-                        + recheck.reason
-                    )
         return _print_final(proposed, todo, context)
 
     # ชนเพดาน max_steps — บังคับให้โมเดลสรุปปิดท้าย จะได้ไม่จบแบบเงียบๆ โดยไม่มีบทสรุป
     messages.append({"role": "user",
                      "content": "ถึงขีดจำกัดขั้นตอนแล้ว ห้ามเรียก tool เพิ่ม — สรุปข้อค้นพบเชิงธุรกิจจากข้อมูลที่ได้มาเป็นข้อความสุดท้าย"})
-    final = llm.chat(messages=messages)  # ไม่ส่ง tools — บังคับให้ตอบเป็นข้อความ
+    try:
+        budget.consume_agent()
+        final = llm.chat(
+            messages=messages,
+            timeout=budget.call_timeout(60),
+            client_max_retries=0,
+        )
+    except Exception as error:
+        content = (
+            "หยุดตามขีดจำกัด runtime โดยไม่สร้างข้อสรุปเกินหลักฐาน: "
+            f"{error}; unresolved claims="
+            + ", ".join(claim.claim_id for claim in ledger.unresolved)
+        )
+        context.set_phase(AgentPhase.ANSWER)
+        return _print_final(content, todo, context)
     context.set_phase(AgentPhase.ANSWER)
     content = final.choices[0].message.content or ""
     if semantic_observer:
-        observation = review_final_answer(
-            question, content, evidence, ledger.render()
-        )
+        try:
+            budget.consume_final_review()
+            observation = review_final_answer(
+                question,
+                content,
+                evidence,
+                ledger.render(),
+                timeout=budget.call_timeout(60),
+            )
+            if dynamic_observer:
+                observation = enforce_claim_alignment(
+                    observation,
+                    ledger,
+                )
+        except Exception as error:
+            content = (
+                "หยุดตามขีดจำกัด runtime โดยไม่รับรองคำตอบ: "
+                f"{error}"
+            )
+            return _print_final(content, todo, context)
         print(
             f"[FINAL OBSERVATION] verdict={observation.verdict.value} "
             f"reason={observation.reason}"
@@ -367,23 +539,15 @@ def run(
             SemanticVerdict.REWRITE,
             SemanticVerdict.REFUSE_DECISION,
         }:
-            candidate = observation.revised_answer or content
-            recheck = review_final_answer(
-                question, candidate, evidence, ledger.render()
+            content = resolve_rewrite(
+                question,
+                content,
+                observation,
+                evidence,
+                ledger,
+                dynamic_observer,
+                budget.call_timeout(60),
             )
-            print(
-                f"[FINAL RECHECK] verdict={recheck.verdict.value} "
-                f"reason={recheck.reason}"
-            )
-            if recheck.verdict is SemanticVerdict.APPROVE:
-                content = candidate
-            elif recheck.verdict is SemanticVerdict.REFUSE_DECISION:
-                content = recheck.revised_answer or candidate
-            else:
-                content = (
-                    "ยังไม่สามารถให้คำตอบที่ผ่านการตรวจหลักฐานได้: "
-                    + recheck.reason
-                )
         elif observation.verdict is SemanticVerdict.QUERY_MORE:
             content = (
                 "ถึงขีดจำกัดขั้นตอนและหลักฐานยังไม่พอสำหรับตอบ: "
@@ -406,6 +570,12 @@ def main():
         default="on",
         help="เปิด Phase 2B claim ledger และ post-tool observation (default: on)",
     )
+    parser.add_argument(
+        "--max-run-seconds",
+        type=float,
+        default=240,
+        help="whole-run deadline ของ Phase 2B (default: 240)",
+    )
     parser.add_argument("question", nargs="?")
     args = parser.parse_args()
     registry = ToolRegistry()
@@ -423,6 +593,7 @@ def main():
             registry,
             semantic_observer=args.semantic_observer == "on",
             dynamic_observer=args.dynamic_observer == "on",
+            max_run_seconds=args.max_run_seconds,
         )
     finally:
         registry.close()

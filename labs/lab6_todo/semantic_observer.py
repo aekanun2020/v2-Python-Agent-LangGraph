@@ -6,9 +6,11 @@ import re
 from typing import Any
 
 from labs.core import llm
+from labs.lab6_todo.claim_ledger import ClaimLedger
 from labs.lab6_todo.evidence_state import (
     EvidenceState,
     ObservationState,
+    SemanticViolation,
     SemanticVerdict,
 )
 
@@ -58,6 +60,10 @@ Return one JSON object only:
   "supported_claims": ["..."],
   "unsupported_claims": ["..."],
   "contradictions": ["..."],
+  "violations": [
+    {"kind":"label|unit|number|grain|unsupported_claim",
+     "text":"exact offending text","replacement":"grounded replacement or empty"}
+  ],
   "revised_answer": "complete grounded answer or null"
 }
 
@@ -97,8 +103,55 @@ def parse_observation(text: str) -> ObservationState:
         supported_claims=tuple(map(str, data.get("supported_claims", []))),
         unsupported_claims=tuple(map(str, data.get("unsupported_claims", []))),
         contradictions=tuple(map(str, data.get("contradictions", []))),
+        violations=tuple(
+            SemanticViolation(
+                kind=str(item.get("kind", "unsupported_claim")),
+                text=str(item.get("text", "")),
+                replacement=str(item.get("replacement", "")),
+            )
+            for item in data.get("violations", [])
+            if isinstance(item, dict) and str(item.get("text", ""))
+        ),
         revised_answer=revised,
     )
+
+
+def apply_bounded_rewrite(
+    proposed_answer: str,
+    observation: ObservationState,
+) -> str:
+    """Apply one observer rewrite and deterministic exact-span corrections."""
+    candidate = observation.revised_answer or proposed_answer
+    for violation in observation.violations:
+        if violation.text:
+            candidate = candidate.replace(
+                violation.text,
+                violation.replacement,
+            )
+    return candidate.strip()
+
+
+def enforce_claim_alignment(
+    observation: ObservationState,
+    ledger: ClaimLedger,
+) -> ObservationState:
+    """Python owns completion: unresolved claims cannot receive approval."""
+    if (
+        observation.verdict is SemanticVerdict.APPROVE
+        and ledger.unresolved
+    ):
+        unresolved = ", ".join(
+            claim.claim_id for claim in ledger.unresolved
+        )
+        return ObservationState(
+            verdict=SemanticVerdict.QUERY_MORE,
+            reason=f"unresolved claim requirements: {unresolved}",
+            supported_claims=observation.supported_claims,
+            unsupported_claims=observation.unsupported_claims,
+            contradictions=observation.contradictions,
+            violations=observation.violations,
+        )
+    return observation
 
 
 def review_final_answer(
@@ -106,6 +159,7 @@ def review_final_answer(
     proposed_answer: str,
     evidence: EvidenceState,
     claim_ledger: str = "[not provided]",
+    timeout: float = 60,
 ) -> ObservationState:
     payload = (
         f"USER QUESTION:\n{question}\n\n"
@@ -120,7 +174,7 @@ def review_final_answer(
             {"role": "user", "content": payload},
         ],
         temperature=0,
-        timeout=60,
+        timeout=timeout,
         client_max_retries=0,
     )
     content = response.choices[0].message.content or ""
