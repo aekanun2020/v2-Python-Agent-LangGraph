@@ -11,6 +11,7 @@ Lab 6 — เพิ่ม TodoWrite ให้ Agent และทดสอบก�
 
 รัน:  python labs/lab6_todo/agent_todo.py
 """
+import argparse
 import sys, os, json
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -21,6 +22,12 @@ from labs.lab6_todo.context_state import (
     AgentPhase,
     ContextState,
 )
+from labs.lab6_todo.evidence_state import (
+    EvidenceRecord,
+    EvidenceState,
+    SemanticVerdict,
+)
+from labs.lab6_todo.semantic_observer import review_final_answer
 
 SYSTEM = (
     "คุณคือ agent ที่ทำงานเป็นขั้นตอน ตอบเป็นภาษาไทย\n"
@@ -85,9 +92,27 @@ def build_tools(registry: ToolRegistry) -> list[dict]:
     return todo_tools + registry.openai_tools
 
 
-def run(question: str, registry: ToolRegistry, max_steps: int = 30):
+def _print_final(content: str, todo: TodoState, context: ContextState) -> str:
+    print("-" * 60)
+    print(f"[answer]\n{content}")
+    print("-" * 60)
+    print(f"[todo สุดท้าย]\n{todo.render()}")
+    print(f"[context budget] {context.budgets}")
+    return content
+
+
+def run(
+    question: str,
+    registry: ToolRegistry,
+    max_steps: int = 30,
+    semantic_observer: bool = True,
+    max_semantic_reviews: int = 2,
+    max_mcp_calls: int = 12,
+):
     todo = TodoState()
     context = ContextState(original_goal=question, phase=AgentPhase.ACT)
+    evidence = EvidenceState()
+    semantic_reviews = 0
     tools = build_tools(registry)
     messages = [
         {"role": "system", "content": SYSTEM},
@@ -122,10 +147,24 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 30):
                             context.complete_step(item["task"])
                         print(f"[step {step}] TODO_UPDATE -> {args}\n{result}")
                     else:
-                        result = registry.dispatch(name, args)
-                        kind = ActionKind.TOOL
-                        context.add_evidence_ref(call.id)
-                        print(f"[step {step}] TOOL {name}")
+                        if context.budgets.tool_calls >= max_mcp_calls:
+                            result = (
+                                "[runtime] MCP tool-call budget exhausted; "
+                                "use accepted evidence and answer now"
+                            )
+                            kind = ActionKind.STATE_UPDATE
+                            print(
+                                f"[step {step}] TOOL BLOCKED {name} "
+                                f"(budget={max_mcp_calls})"
+                            )
+                        else:
+                            result = registry.dispatch(name, args)
+                            kind = ActionKind.TOOL
+                            context.add_evidence_ref(call.id)
+                            evidence.accept(EvidenceRecord.from_tool(
+                                call.id, name, args, result
+                            ))
+                            print(f"[step {step}] TOOL {name}")
                 except Exception as error:
                     report = context.observe_error(error)
                     if report.alert:
@@ -138,39 +177,117 @@ def run(question: str, registry: ToolRegistry, max_steps: int = 30):
                 messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
             continue
         context.set_phase(AgentPhase.ANSWER)
-        print("-" * 60)
-        print(f"[answer]\n{msg.content}")
-        print("-" * 60)
-        print(f"[todo สุดท้าย]\n{todo.render()}")
-        print(f"[context budget] {context.budgets}")
-        return msg.content
+        proposed = msg.content or ""
+        if semantic_observer:
+            semantic_reviews += 1
+            observation = review_final_answer(question, proposed, evidence)
+            print(
+                f"[FINAL OBSERVATION] verdict={observation.verdict.value} "
+                f"reason={observation.reason}"
+            )
+            if observation.verdict is SemanticVerdict.QUERY_MORE:
+                if semantic_reviews < max_semantic_reviews:
+                    messages.append({"role": "assistant", "content": proposed})
+                    messages.append({
+                        "role": "user",
+                        "content": (
+                            "Final observer พบว่าหลักฐานยังไม่ครบ: "
+                            f"{observation.reason}\n"
+                            "เรียก MCP เฉพาะข้อมูลที่ขาด แล้วตอบใหม่ "
+                            "ห้ามทำซ้ำ query ที่มี evidence ครบแล้ว"
+                        ),
+                    })
+                    context.set_phase(AgentPhase.ACT)
+                    continue
+                proposed = (
+                    "ยังไม่สามารถตอบข้อสรุปที่ร้องขอได้จากหลักฐานที่มี: "
+                    + observation.reason
+                )
+            elif observation.verdict in {
+                SemanticVerdict.REWRITE,
+                SemanticVerdict.REFUSE_DECISION,
+            }:
+                candidate = observation.revised_answer or proposed
+                recheck = review_final_answer(question, candidate, evidence)
+                print(
+                    f"[FINAL RECHECK] verdict={recheck.verdict.value} "
+                    f"reason={recheck.reason}"
+                )
+                if recheck.verdict is SemanticVerdict.APPROVE:
+                    proposed = candidate
+                elif recheck.verdict is SemanticVerdict.REFUSE_DECISION:
+                    proposed = recheck.revised_answer or candidate
+                else:
+                    proposed = (
+                        "ยังไม่สามารถให้คำตอบที่ผ่านการตรวจหลักฐานได้: "
+                        + recheck.reason
+                    )
+        return _print_final(proposed, todo, context)
 
     # ชนเพดาน max_steps — บังคับให้โมเดลสรุปปิดท้าย จะได้ไม่จบแบบเงียบๆ โดยไม่มีบทสรุป
     messages.append({"role": "user",
                      "content": "ถึงขีดจำกัดขั้นตอนแล้ว ห้ามเรียก tool เพิ่ม — สรุปข้อค้นพบเชิงธุรกิจจากข้อมูลที่ได้มาเป็นข้อความสุดท้าย"})
     final = llm.chat(messages=messages)  # ไม่ส่ง tools — บังคับให้ตอบเป็นข้อความ
     context.set_phase(AgentPhase.ANSWER)
-    content = final.choices[0].message.content
-    print("-" * 60)
-    print(f"[answer]\n{content}")
-    print("-" * 60)
-    print(f"[todo สุดท้าย]\n{todo.render()}")
-    print(f"[context budget] {context.budgets}")
-    return content
+    content = final.choices[0].message.content or ""
+    if semantic_observer:
+        observation = review_final_answer(question, content, evidence)
+        print(
+            f"[FINAL OBSERVATION] verdict={observation.verdict.value} "
+            f"reason={observation.reason}"
+        )
+        if observation.verdict in {
+            SemanticVerdict.REWRITE,
+            SemanticVerdict.REFUSE_DECISION,
+        }:
+            candidate = observation.revised_answer or content
+            recheck = review_final_answer(question, candidate, evidence)
+            print(
+                f"[FINAL RECHECK] verdict={recheck.verdict.value} "
+                f"reason={recheck.reason}"
+            )
+            if recheck.verdict is SemanticVerdict.APPROVE:
+                content = candidate
+            elif recheck.verdict is SemanticVerdict.REFUSE_DECISION:
+                content = recheck.revised_answer or candidate
+            else:
+                content = (
+                    "ยังไม่สามารถให้คำตอบที่ผ่านการตรวจหลักฐานได้: "
+                    + recheck.reason
+                )
+        elif observation.verdict is SemanticVerdict.QUERY_MORE:
+            content = (
+                "ถึงขีดจำกัดขั้นตอนและหลักฐานยังไม่พอสำหรับตอบ: "
+                + observation.reason
+            )
+    return _print_final(content, todo, context)
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--semantic-observer",
+        choices=["on", "off"],
+        default="on",
+        help="เปิด Phase 2 final semantic observer (default: on)",
+    )
+    parser.add_argument("question", nargs="?")
+    args = parser.parse_args()
     registry = ToolRegistry()
     n = registry.add_server(config.MCP_SERVER_URL)
     print(f"[MCP] ค้นพบ {n} tools\n")
-    q = sys.argv[1] if len(sys.argv) > 1 else (
+    q = args.question or (
         "ช่วยทำรายงาน HR: 1) นับพนักงานที่ปฏิบัติงานแยกตามแผนก "
         "2) หาพนักงานที่มีมูลค่าโครงการรวมสูงสุด 3 อันดับแรก "
         "3) สรุปข้อค้นพบเชิงธุรกิจ"
     )
     print(f"[user] {q}")
     try:
-        run(q, registry)
+        run(
+            q,
+            registry,
+            semantic_observer=args.semantic_observer == "on",
+        )
     finally:
         registry.close()
 

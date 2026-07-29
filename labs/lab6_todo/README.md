@@ -131,6 +131,52 @@ rolling summary, semantic drift และ recovery policy
 - [Experiment report](../../artifacts/lab6_context_baseline_report.md)
 - `artifacts/lab6_context_baseline_runs.json` เก็บ raw outputs และ metrics
 
+## Evidence State + Final Semantic Observer (Phase 2)
+
+Phase 2 แยก state เป็นสองส่วน:
+
+```text
+ControlState                    EvidenceState
+├─ goal / phase / steps         ├─ evidence id
+├─ action/error signatures      ├─ tool + arguments
+└─ budgets                      ├─ raw result + stable hash
+                                └─ bounded evidence pack
+```
+
+เมื่อ Agent เสนอคำตอบ Final Observer จะตรวจ question + accepted evidence +
+proposed answer แล้วคืน structured verdict:
+
+```text
+approve | rewrite | query_more | refuse_decision
+```
+
+`rewrite` และ `refuse_decision` ถูกตรวจซ้ำอีกหนึ่งรอบก่อนแสดงผล หากยังไม่ผ่าน
+ระบบจะ fail closed แทนการปล่อยคำตอบที่ตรวจไม่ผ่าน ส่วน MCP มี hard budget 12 calls
+ต่อ task เพื่อไม่ให้ query วนโดยไม่มีขอบเขต
+
+รัน Phase 2 (default):
+
+```bash
+python labs/lab6_todo/agent_todo.py \
+  "นับพนักงานที่ยังปฏิบัติงานแยกตามแผนก"
+```
+
+รัน baseline โดยปิด Final Observer:
+
+```bash
+python labs/lab6_todo/agent_todo.py --semantic-observer off \
+  "นับพนักงานที่ยังปฏิบัติงานแยกตามแผนก"
+```
+
+ผลทดลองสด 20 runs:
+
+- [Phase 2 experiment report](../../artifacts/lab6_semantic_phase2_report.md)
+- `artifacts/lab6_semantic_phase2_runs.json` เก็บ raw outputs และ metrics
+
+Phase 2 เพิ่ม strict grounded answer จาก 0/10 เป็น 4/10 ใน sample นี้ แต่มี latency
+เพิ่มและยังมี failure ด้าน data grain จึงเป็น experimental branch ไม่ใช่
+production-ready implementation
+
 ---
 
 ## ผลลัพธ์ที่คาดหวัง
