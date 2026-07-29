@@ -64,6 +64,18 @@ class EvidenceState:
             return "[no structured observations]"
         blocks = []
         for observation in self.structured_observations:
+            if not hasattr(observation, "facts"):
+                blocks.append(json.dumps({
+                    "observer": "deterministic",
+                    "action_succeeded": observation.action_succeeded,
+                    "decision": observation.decision.value,
+                    "result_kind": observation.result_kind,
+                    "fields": observation.fields,
+                    "semantic_risk": observation.semantic_risk,
+                    "risk_reasons": observation.risk_reasons,
+                    "reason": observation.reason,
+                }, ensure_ascii=False, default=str))
+                continue
             facts = [
                 {
                     "subject": fact.subject,

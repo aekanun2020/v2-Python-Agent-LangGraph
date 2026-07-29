@@ -234,6 +234,23 @@ still prevents operational completion. Phase 2B remains experimental.
 The full rerun scored Phase 2A at 5/10 and Phase 2B at 0/10 under strict
 grounded grading. Phase 2B must not be merged in its current form.
 
+## Phase 2C: Python-first Observation
+
+Phase 2C replaces the rejected Phase 2B critical path:
+
+```text
+Agent calls tool
+→ Python checks error / empty / fields / numbers / risk
+→ LLM Observer only for semantic-risk
+→ answer
+```
+
+There is no mandatory Claim Planner, no LLM after every tool result, and no
+LLM post-rewrite recheck. Low-risk results and answers stay on the Python path.
+
+- [Phase 2C Python-first report and live smoke](../../artifacts/lab6_phase2c_python_first_report.md)
+- `artifacts/lab6_phase2c_python_first_smoke.json` contains the three raw runs
+
 ---
 
 ## ผลลัพธ์ที่คาดหวัง

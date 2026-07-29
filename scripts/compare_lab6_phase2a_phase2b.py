@@ -24,7 +24,7 @@ VARIANTS = {
         "semantic_observer": "on",
         "dynamic_observer": "off",
     },
-    "phase2b_dynamic_and_final": {
+    "phase2c_python_first": {
         "semantic_observer": "on",
         "dynamic_observer": "on",
     },
@@ -87,6 +87,12 @@ def run_one(
         "blocked_tool_calls": len(re.findall(r"\] TOOL BLOCKED", stdout)),
         "dynamic_observations": len(
             re.findall(r"\[DYNAMIC OBSERVATION\]", stdout)
+        ),
+        "python_observations": len(
+            re.findall(r"\[PYTHON OBSERVATION\]", stdout)
+        ),
+        "llm_observer_skips": len(
+            re.findall(r"\[LLM OBSERVER SKIPPED\]", stdout)
         ),
         "final_verdicts": re.findall(
             r"\[FINAL (?:OBSERVATION|RECHECK)\] verdict=([a-z_]+)",

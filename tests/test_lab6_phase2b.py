@@ -32,6 +32,11 @@ from labs.lab6_todo.semantic_observer import (
     apply_bounded_rewrite,
     enforce_claim_alignment,
 )
+from labs.lab6_todo.risk_router import (
+    DeterministicDecision,
+    final_semantic_risk,
+    observe_deterministically,
+)
 
 
 def fake_response(payload: dict):
@@ -327,6 +332,76 @@ class Phase2BTests(unittest.TestCase):
         with self.assertRaises(RuntimeBudgetExhausted):
             with hard_deadline(0.02):
                 time.sleep(0.2)
+
+    def test_python_observer_accepts_simple_result_without_llm_risk(self):
+        record = EvidenceRecord.from_tool(
+            "call-simple",
+            "execute_query_tool",
+            {"query": "SELECT department, COUNT(*) AS n FROM employees GROUP BY department"},
+            "department  n\nผลิต  3",
+        )
+        result = observe_deterministically("นับแยกแผนก", record)
+        self.assertEqual(result.decision, DeterministicDecision.ACCEPT)
+        self.assertFalse(result.semantic_risk)
+
+    def test_python_observer_routes_distinct_ratio_to_llm(self):
+        record = EvidenceRecord.from_tool(
+            "call-risk",
+            "execute_query_tool",
+            {
+                "query": (
+                    "SELECT COUNT(DISTINCT employee_id) * 100.0 / "
+                    "COUNT(*) AS coverage FROM reviews"
+                )
+            },
+            "coverage\n28.0",
+        )
+        result = observe_deterministically("คำนวณ coverage", record)
+        self.assertTrue(result.semantic_risk)
+        self.assertIn("distinct-grain", result.risk_reasons)
+        self.assertIn("derived-ratio", result.risk_reasons)
+
+    def test_python_observer_retries_error_payload(self):
+        record = EvidenceRecord.from_tool(
+            "call-error",
+            "execute_query_tool",
+            {},
+            '{"status": "error", "message": "syntax error"}',
+        )
+        result = observe_deterministically("query", record)
+        self.assertEqual(result.decision, DeterministicDecision.RETRY)
+        self.assertFalse(result.semantic_risk)
+
+    def test_final_router_detects_unsupported_number_and_decision(self):
+        evidence = EvidenceState()
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-final",
+            "execute_query_tool",
+            {},
+            "department n\nผลิต 3",
+        ))
+        risks = final_semantic_risk(
+            "แผนกใดควรเพิ่มคน",
+            "ผลิตมี 9 คน จึงควรเพิ่มคน",
+            evidence,
+        )
+        self.assertTrue(any(item.startswith("unsupported-numbers:") for item in risks))
+        self.assertIn("semantic-decision", risks)
+
+    def test_final_router_ignores_ordered_list_numbers(self):
+        evidence = EvidenceState()
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-list",
+            "execute_query_tool",
+            {},
+            "department n\nผลิต 3\nบัญชี 2",
+        ))
+        risks = final_semantic_risk(
+            "นับแยกแผนก",
+            "1. ผลิต 3 คน\n2. บัญชี 2 คน",
+            evidence,
+        )
+        self.assertEqual(risks, ())
 
     def test_evidence_state_renders_structured_observation(self):
         state = EvidenceState()

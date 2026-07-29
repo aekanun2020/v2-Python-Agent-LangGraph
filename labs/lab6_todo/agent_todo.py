@@ -34,6 +34,11 @@ from labs.lab6_todo.dynamic_observer import (
     build_claim_ledger,
     observe_tool_result,
 )
+from labs.lab6_todo.risk_router import (
+    DeterministicDecision,
+    final_semantic_risk,
+    observe_deterministically,
+)
 from labs.lab6_todo.semantic_observer import (
     apply_bounded_rewrite,
     enforce_claim_alignment,
@@ -167,36 +172,7 @@ def resolve_rewrite(
             "[FINAL REWRITE] applied once; MCP disabled; "
             f"violations={len(observation.violations)}"
         )
-        try:
-            budget.consume_final_review()
-            recheck = review_final_answer(
-                question,
-                candidate,
-                evidence,
-                ledger.render(),
-                timeout=budget.call_timeout(60),
-            )
-            recheck = enforce_claim_alignment(recheck, ledger)
-        except Exception as error:
-            return (
-                "ไม่สามารถรับรองคำตอบหลัง rewrite ได้: "
-                f"{type(error).__name__}"
-            )
-        print(
-            f"[FINAL REWRITE CHECK] verdict={recheck.verdict.value} "
-            f"reason={recheck.reason}"
-        )
-        if recheck.verdict is SemanticVerdict.APPROVE:
-            return candidate
-        if (
-            observation.verdict is SemanticVerdict.REFUSE_DECISION
-            and recheck.verdict is SemanticVerdict.QUERY_MORE
-        ):
-            return candidate
-        return (
-            "ไม่สามารถให้ข้อสรุปที่ผ่านหลักฐานได้: "
-            + recheck.reason
-        )
+        return candidate
     candidate = observation.revised_answer or proposed
 
     recheck = review_final_answer(
@@ -243,22 +219,14 @@ def _run_impl(
         max_mcp_calls=max_mcp_calls,
     )
     if dynamic_observer:
-        try:
-            budget.consume_observer()
-            ledger = build_claim_ledger(
-                question,
-                timeout=budget.call_timeout(45),
-            )
-        except Exception as error:
-            print(f"[CLAIM LEDGER ERROR] {type(error).__name__}: {error}")
-    if dynamic_observer:
-        print(f"[CLAIM LEDGER]\n{ledger.render()}")
+        print("[ROUTING] deterministic-first; claim planner disabled")
     tools = build_tools(registry)
     messages = [
         {"role": "system", "content": SYSTEM},
         {"role": "user", "content": question},
     ]
     force_no_tools = False
+    reviewed_risk_signatures: set[tuple[str, ...]] = set()
     for step in range(1, max_steps + 1):
         try:
             budget.consume_agent()
@@ -344,6 +312,61 @@ def _run_impl(
                             context.add_evidence_ref(call.id)
                             evidence.accept(record)
                             if dynamic_observer:
+                                deterministic = observe_deterministically(
+                                    question,
+                                    record,
+                                )
+                                evidence.add_observation(deterministic)
+                                print(
+                                    "[PYTHON OBSERVATION] "
+                                    f"evidence={call.id} "
+                                    f"decision={deterministic.decision.value} "
+                                    f"type={deterministic.result_kind} "
+                                    f"risk={deterministic.semantic_risk} "
+                                    f"reasons={list(deterministic.risk_reasons)}"
+                                )
+                                if deterministic.decision in {
+                                    DeterministicDecision.RETRY,
+                                    DeterministicDecision.QUERY_MORE,
+                                }:
+                                    dynamic_feedback.append(
+                                        f"{deterministic.decision.value}: "
+                                        f"{deterministic.reason}"
+                                    )
+                                risk_signature = (
+                                    deterministic.risk_reasons
+                                )
+                                needs_llm_observer = (
+                                    deterministic.semantic_risk
+                                    and risk_signature
+                                    not in reviewed_risk_signatures
+                                )
+                                if not needs_llm_observer:
+                                    print(
+                                        "[LLM OBSERVER SKIPPED] "
+                                        "low risk or risk already reviewed"
+                                    )
+                                    print(f"[step {step}] TOOL {name}")
+                                    report = context.observe_action(
+                                        name,
+                                        args,
+                                        result,
+                                        kind=kind,
+                                    )
+                                    if report.alert:
+                                        print(
+                                            "[CONTEXT ALERT] "
+                                            + "; ".join(report.reasons)
+                                        )
+                                    messages.append({
+                                        "role": "tool",
+                                        "tool_call_id": call.id,
+                                        "content": result,
+                                    })
+                                    continue
+                                reviewed_risk_signatures.add(
+                                    risk_signature
+                                )
                                 try:
                                     budget.consume_observer()
                                     observation = observe_tool_result(
@@ -454,6 +477,14 @@ def _run_impl(
         context.set_phase(AgentPhase.ANSWER)
         proposed = msg.content or ""
         if semantic_observer:
+            final_risks = (
+                final_semantic_risk(question, proposed, evidence)
+                if dynamic_observer
+                else ("phase2a-always-review",)
+            )
+            print(f"[FINAL ROUTING] risks={list(final_risks)}")
+            if not final_risks:
+                return _print_final(proposed, todo, context)
             try:
                 budget.consume_final_review()
             except RuntimeBudgetExhausted as error:
@@ -543,6 +574,14 @@ def _run_impl(
     context.set_phase(AgentPhase.ANSWER)
     content = final.choices[0].message.content or ""
     if semantic_observer:
+        final_risks = (
+            final_semantic_risk(question, content, evidence)
+            if dynamic_observer
+            else ("phase2a-always-review",)
+        )
+        print(f"[FINAL ROUTING] risks={list(final_risks)}")
+        if not final_risks:
+            return _print_final(content, todo, context)
         try:
             budget.consume_final_review()
             observation = review_final_answer(
