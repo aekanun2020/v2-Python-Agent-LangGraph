@@ -211,6 +211,8 @@ python labs/lab6_todo/agent_todo.py --dynamic-observer off \
 สถานะและผล live proof ระหว่างพัฒนา:
 
 - [Phase 2B progress report](../../artifacts/lab6_phase2b_progress_report.md)
+- [Phase 2A vs Phase 2B: first 10-question live run](../../artifacts/lab6_phase2a_phase2b_report.md)
+- `artifacts/lab6_phase2a_phase2b_runs.json` contains the raw live outputs and timings
 
 ---
 
