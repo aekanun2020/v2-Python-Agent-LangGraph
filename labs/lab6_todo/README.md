@@ -250,6 +250,12 @@ LLM post-rewrite recheck. Low-risk results and answers stay on the Python path.
 
 - [Phase 2C Python-first report and live smoke](../../artifacts/lab6_phase2c_python_first_report.md)
 - `artifacts/lab6_phase2c_python_first_smoke.json` contains the three raw runs
+- [Phase 2A vs Phase 2C full 10-question report](../../artifacts/lab6_phase2a_phase2c_full_10_report.md)
+- `artifacts/lab6_phase2a_phase2c_full_10.json` contains all 20 raw runs
+
+The first full run scored Phase 2A at 4/10 and Phase 2C at 5/10 under strict
+grounded grading. Phase 2C is a recovery from Phase 2B, not yet a merge-ready
+replacement.
 
 ---
 
