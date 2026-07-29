@@ -125,6 +125,12 @@ python -m unittest -v tests.test_lab6_context_state
 สิ่งที่ยังไม่ทำใน Phase 1: persistence, cold storage จริง, context compaction,
 rolling summary, semantic drift และ recovery policy
 
+ผล live baseline 10 คำถามแสดงว่า Phase 1 ยังไม่เพิ่ม semantic accuracy:
+
+- [Ground-truth contract](../../artifacts/lab6_context_baseline_ground_truth.md)
+- [Experiment report](../../artifacts/lab6_context_baseline_report.md)
+- `artifacts/lab6_context_baseline_runs.json` เก็บ raw outputs และ metrics
+
 ---
 
 ## ผลลัพธ์ที่คาดหวัง
