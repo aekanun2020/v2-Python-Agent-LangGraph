@@ -22,6 +22,8 @@ Generic evidence rules:
    directly supported by evidence or by transparent arithmetic over evidence.
 2. Preserve data grain. A record count is not a distinct entity count unless
    the query/result proves distinctness.
+   Coverage/rate numerator and denominator must share a grain. Otherwise label
+   it explicitly as a record-to-entity ratio and do not call it entity coverage.
 3. Do not turn missing records into proof that an entity lacks something.
 4. Do not turn association, proxy, project value or per-head arithmetic into
    causation, efficiency, productivity, revenue, profit or staffing need.
@@ -32,6 +34,10 @@ Generic evidence rules:
 5. Do not invent units or currency when metadata does not provide them.
    This rule also applies to revised_answer. Never copy an unsupported unit
    merely because it appears in the proposed answer or user question.
+   Percentage subtraction is reported in percentage points.
+   Keep threshold shortfall separate from uncovered share. For example, if
+   coverage is C and threshold is T, shortfall is (T-C) percentage points,
+   while uncovered share is (100-C) percent.
 6. Recommendations and decisions require their necessary business evidence.
    If the requested decision cannot be supported, refuse that decision while
    still reporting supported descriptive facts.
@@ -99,9 +105,12 @@ def review_final_answer(
     question: str,
     proposed_answer: str,
     evidence: EvidenceState,
+    claim_ledger: str = "[not provided]",
 ) -> ObservationState:
     payload = (
         f"USER QUESTION:\n{question}\n\n"
+        f"CLAIM LEDGER:\n{claim_ledger}\n\n"
+        f"STRUCTURED OBSERVATIONS:\n{evidence.render_structured()}\n\n"
         f"ACCEPTED EVIDENCE:\n{evidence.render_for_review() or '[none]'}\n\n"
         f"PROPOSED ANSWER:\n{proposed_answer}"
     )
@@ -111,6 +120,8 @@ def review_final_answer(
             {"role": "user", "content": payload},
         ],
         temperature=0,
+        timeout=60,
+        client_max_retries=0,
     )
     content = response.choices[0].message.content or ""
     return parse_observation(content)

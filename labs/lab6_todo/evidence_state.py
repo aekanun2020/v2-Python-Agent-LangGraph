@@ -43,10 +43,49 @@ class EvidenceState:
     """Append-only accepted tool evidence; no domain-specific interpretation."""
 
     records: list[EvidenceRecord] = field(default_factory=list)
+    structured_observations: list[Any] = field(default_factory=list)
 
     def accept(self, record: EvidenceRecord) -> None:
         if all(item.evidence_id != record.evidence_id for item in self.records):
             self.records.append(record)
+
+    def add_observation(self, observation: Any) -> None:
+        self.structured_observations.append(observation)
+
+    def render_structured(self) -> str:
+        if not self.structured_observations:
+            return "[no structured observations]"
+        blocks = []
+        for observation in self.structured_observations:
+            facts = [
+                {
+                    "subject": fact.subject,
+                    "predicate": fact.predicate,
+                    "value": fact.value,
+                    "unit": fact.unit,
+                    "grain": fact.grain,
+                    "evidence_id": fact.evidence_id,
+                    "derivation": fact.derivation,
+                }
+                for fact in observation.facts
+            ]
+            blocks.append(json.dumps({
+                "evidence_id": observation.evidence_id,
+                "action_succeeded": observation.action_succeeded,
+                "supports_active_step": observation.supports_active_step,
+                "evidence_complete": observation.evidence_complete,
+                "grain": observation.grain,
+                "fields": observation.fields,
+                "canonical_labels": observation.canonical_labels,
+                "facts": facts,
+                "proved_claim_ids": observation.proved_claim_ids,
+                "contradictions": observation.contradictions,
+                "missing_evidence": observation.missing_evidence,
+                "claim_updates": observation.claim_updates,
+                "next_action": observation.next_action.value,
+                "reason": observation.reason,
+            }, ensure_ascii=False, default=str))
+        return "\n".join(blocks)
 
     def render_for_review(
         self,
@@ -80,4 +119,3 @@ class ObservationState:
     unsupported_claims: tuple[str, ...] = ()
     contradictions: tuple[str, ...] = ()
     revised_answer: str | None = None
-

@@ -177,6 +177,41 @@ Phase 2 เพิ่ม strict grounded answer จาก 0/10 เป็น 4/10 
 เพิ่มและยังมี failure ด้าน data grain จึงเป็น experimental branch ไม่ใช่
 production-ready implementation
 
+## Claim Ledger + Dynamic Observation (Phase 2B)
+
+Phase 2B เพิ่มส่วนกลางหลัง MCP call:
+
+```text
+Tool Result
+   ↓
+EvidenceFact(subject, predicate, value, unit, grain, evidence_id)
+   ↓
+ClaimLedger(required → proved | contradicted)
+   ↓
+DynamicObservation
+  accept | query_more | replan | stop
+```
+
+Claim Planner สร้าง evidence requirements จากคำถามก่อนเริ่มทำงาน และตรวจว่า
+coverage/rate ใช้ numerator กับ denominator grain เดียวกัน หากมีเพียง record count
+แต่ต้องการ entity coverage จะขอ `COUNT(DISTINCT entity_id)` เพิ่ม
+
+Dynamic Observer มี timeout 45 วินาทีและ budget สูงสุด 6 LLM observations ต่อ task
+เพื่อป้องกัน latency แบบไร้ขอบเขต หาก reviewer ล้มเหลว raw evidence ยังคงถูกเก็บและ
+Agent ทำงานต่อได้ ส่วน Final Observer จะได้รับทั้ง Claim Ledger, structured facts และ
+raw evidence
+
+ปิดเฉพาะ Phase 2B เพื่อเปรียบเทียบกับ Phase 2A:
+
+```bash
+python labs/lab6_todo/agent_todo.py --dynamic-observer off \
+  "คำถาม"
+```
+
+สถานะและผล live proof ระหว่างพัฒนา:
+
+- [Phase 2B progress report](../../artifacts/lab6_phase2b_progress_report.md)
+
 ---
 
 ## ผลลัพธ์ที่คาดหวัง

@@ -12,7 +12,8 @@ Lab 6 — เพิ่ม TodoWrite ให้ Agent และทดสอบก�
 รัน:  python labs/lab6_todo/agent_todo.py
 """
 import argparse
-import sys, os, json
+import sys, os, json, time
+import httpx
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from labs.core import llm, config
@@ -26,6 +27,12 @@ from labs.lab6_todo.evidence_state import (
     EvidenceRecord,
     EvidenceState,
     SemanticVerdict,
+)
+from labs.lab6_todo.claim_ledger import ClaimLedger
+from labs.lab6_todo.dynamic_observer import (
+    NextAction,
+    build_claim_ledger,
+    observe_tool_result,
 )
 from labs.lab6_todo.semantic_observer import review_final_answer
 
@@ -101,6 +108,39 @@ def _print_final(content: str, todo: TodoState, context: ContextState) -> str:
     return content
 
 
+def dispatch_with_retry(
+    registry: ToolRegistry,
+    name: str,
+    arguments: dict,
+    max_transport_retries: int = 2,
+) -> str:
+    """Retry transient transport/status failures; never retry business payloads."""
+    for attempt in range(max_transport_retries + 1):
+        try:
+            return registry.dispatch(name, arguments)
+        except httpx.HTTPStatusError as error:
+            status = error.response.status_code
+            transient = status == 429 or 500 <= status <= 599
+            if not transient or attempt >= max_transport_retries:
+                raise
+            delay = 0.5 * (2 ** attempt)
+            print(
+                f"[MCP RETRY] tool={name} status={status} "
+                f"attempt={attempt + 1} delay={delay:.1f}s"
+            )
+            time.sleep(delay)
+        except (httpx.TimeoutException, httpx.TransportError) as error:
+            if attempt >= max_transport_retries:
+                raise
+            delay = 0.5 * (2 ** attempt)
+            print(
+                f"[MCP RETRY] tool={name} error={type(error).__name__} "
+                f"attempt={attempt + 1} delay={delay:.1f}s"
+            )
+            time.sleep(delay)
+    raise RuntimeError("unreachable MCP retry state")
+
+
 def run(
     question: str,
     registry: ToolRegistry,
@@ -108,11 +148,22 @@ def run(
     semantic_observer: bool = True,
     max_semantic_reviews: int = 2,
     max_mcp_calls: int = 12,
+    dynamic_observer: bool = True,
+    max_dynamic_observations: int = 6,
 ):
     todo = TodoState()
     context = ContextState(original_goal=question, phase=AgentPhase.ACT)
     evidence = EvidenceState()
+    ledger = ClaimLedger()
+    if dynamic_observer:
+        try:
+            ledger = build_claim_ledger(question)
+        except Exception as error:
+            print(f"[CLAIM LEDGER ERROR] {type(error).__name__}: {error}")
+    if dynamic_observer:
+        print(f"[CLAIM LEDGER]\n{ledger.render()}")
     semantic_reviews = 0
+    dynamic_observation_calls = 0
     tools = build_tools(registry)
     messages = [
         {"role": "system", "content": SYSTEM},
@@ -122,6 +173,7 @@ def run(
         resp = llm.chat(messages=messages, tools=tools)
         msg = resp.choices[0].message
         if msg.tool_calls:
+            dynamic_feedback: list[str] = []
             messages.append({"role": "assistant", "content": msg.content or "",
                              "tool_calls": [tc.model_dump() for tc in msg.tool_calls]})
             for call in msg.tool_calls:
@@ -158,12 +210,72 @@ def run(
                                 f"(budget={max_mcp_calls})"
                             )
                         else:
-                            result = registry.dispatch(name, args)
+                            result = dispatch_with_retry(registry, name, args)
                             kind = ActionKind.TOOL
-                            context.add_evidence_ref(call.id)
-                            evidence.accept(EvidenceRecord.from_tool(
+                            record = EvidenceRecord.from_tool(
                                 call.id, name, args, result
-                            ))
+                            )
+                            context.add_evidence_ref(call.id)
+                            evidence.accept(record)
+                            if (
+                                dynamic_observer
+                                and dynamic_observation_calls
+                                < max_dynamic_observations
+                            ):
+                                dynamic_observation_calls += 1
+                                try:
+                                    observation = observe_tool_result(
+                                        question,
+                                        context.active_step,
+                                        ledger,
+                                        record,
+                                    )
+                                    evidence.add_observation(observation)
+                                    ledger.mark_proved(
+                                        list(observation.proved_claim_ids),
+                                        call.id,
+                                    )
+                                    ledger.mark_contradicted(
+                                        dict(observation.contradictions),
+                                        call.id,
+                                    )
+                                    ledger.revise_requirements({
+                                        claim_id: (grain, fields)
+                                        for claim_id, grain, fields
+                                        in observation.claim_updates
+                                    })
+                                    print(
+                                        "[DYNAMIC OBSERVATION] "
+                                        f"evidence={call.id} "
+                                        f"supports={observation.supports_active_step} "
+                                        f"complete={observation.evidence_complete} "
+                                        f"next={observation.next_action.value} "
+                                        f"reason={observation.reason}"
+                                    )
+                                    if observation.next_action in {
+                                        NextAction.QUERY_MORE,
+                                        NextAction.REPLAN,
+                                        NextAction.STOP,
+                                    }:
+                                        dynamic_feedback.append(
+                                            f"{observation.next_action.value}: "
+                                            f"{observation.reason}; "
+                                            "missing="
+                                            + ", ".join(
+                                                observation.missing_evidence
+                                            )
+                                        )
+                                except Exception as observer_error:
+                                    print(
+                                        "[DYNAMIC OBSERVER ERROR] "
+                                        f"{type(observer_error).__name__}: "
+                                        f"{observer_error}"
+                                    )
+                            elif dynamic_observer:
+                                print(
+                                    "[DYNAMIC OBSERVER SKIPPED] "
+                                    f"budget={max_dynamic_observations}"
+                                )
                             print(f"[step {step}] TOOL {name}")
                 except Exception as error:
                     report = context.observe_error(error)
@@ -175,12 +287,23 @@ def run(
                 if report.alert:
                     print(f"[CONTEXT ALERT] {'; '.join(report.reasons)}")
                 messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
+            if dynamic_feedback:
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "Dynamic Observer feedback หลัง tool call:\n- "
+                        + "\n- ".join(dynamic_feedback)
+                        + "\nอัปเดตวิธีทำตาม feedback โดยอย่าทำ query เดิมซ้ำ"
+                    ),
+                })
             continue
         context.set_phase(AgentPhase.ANSWER)
         proposed = msg.content or ""
         if semantic_observer:
             semantic_reviews += 1
-            observation = review_final_answer(question, proposed, evidence)
+            observation = review_final_answer(
+                question, proposed, evidence, ledger.render()
+            )
             print(
                 f"[FINAL OBSERVATION] verdict={observation.verdict.value} "
                 f"reason={observation.reason}"
@@ -208,7 +331,9 @@ def run(
                 SemanticVerdict.REFUSE_DECISION,
             }:
                 candidate = observation.revised_answer or proposed
-                recheck = review_final_answer(question, candidate, evidence)
+                recheck = review_final_answer(
+                    question, candidate, evidence, ledger.render()
+                )
                 print(
                     f"[FINAL RECHECK] verdict={recheck.verdict.value} "
                     f"reason={recheck.reason}"
@@ -231,7 +356,9 @@ def run(
     context.set_phase(AgentPhase.ANSWER)
     content = final.choices[0].message.content or ""
     if semantic_observer:
-        observation = review_final_answer(question, content, evidence)
+        observation = review_final_answer(
+            question, content, evidence, ledger.render()
+        )
         print(
             f"[FINAL OBSERVATION] verdict={observation.verdict.value} "
             f"reason={observation.reason}"
@@ -241,7 +368,9 @@ def run(
             SemanticVerdict.REFUSE_DECISION,
         }:
             candidate = observation.revised_answer or content
-            recheck = review_final_answer(question, candidate, evidence)
+            recheck = review_final_answer(
+                question, candidate, evidence, ledger.render()
+            )
             print(
                 f"[FINAL RECHECK] verdict={recheck.verdict.value} "
                 f"reason={recheck.reason}"
@@ -271,6 +400,12 @@ def main():
         default="on",
         help="เปิด Phase 2 final semantic observer (default: on)",
     )
+    parser.add_argument(
+        "--dynamic-observer",
+        choices=["on", "off"],
+        default="on",
+        help="เปิด Phase 2B claim ledger และ post-tool observation (default: on)",
+    )
     parser.add_argument("question", nargs="?")
     args = parser.parse_args()
     registry = ToolRegistry()
@@ -287,6 +422,7 @@ def main():
             q,
             registry,
             semantic_observer=args.semantic_observer == "on",
+            dynamic_observer=args.dynamic_observer == "on",
         )
     finally:
         registry.close()

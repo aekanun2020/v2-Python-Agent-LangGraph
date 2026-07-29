@@ -8,21 +8,28 @@ from openai import OpenAI
 from . import config
 
 
-def build_client() -> OpenAI:
+def build_client(max_retries: int = 2) -> OpenAI:
     """สร้าง OpenAI client ที่ชี้ไป OpenRouter (thin client)."""
     return OpenAI(
         api_key=config.require_api_key(),
         base_url=config.OPENROUTER_BASE_URL,
+        max_retries=max_retries,
     )
 
 
-def chat(messages, model: str | None = None, tools=None, **kwargs):
+def chat(
+    messages,
+    model: str | None = None,
+    tools=None,
+    client_max_retries: int = 2,
+    **kwargs,
+):
     """เรียก chat completion ครั้งเดียว คืน message object ของ choice แรก.
 
     - messages : list ของ {"role","content",...}
     - tools    : (ตัวเลือก) OpenAI-format tools สำหรับ tool calling (Lab 3+)
     """
-    client = build_client()
+    client = build_client(max_retries=client_max_retries)
     params = {
         "model": model or config.OPENROUTER_MODEL,
         "messages": messages,
