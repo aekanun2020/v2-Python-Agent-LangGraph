@@ -1,0 +1,46 @@
+{
+  "generated_at": "2026-07-30T02:19:21.643108+00:00",
+  "model": "qwen/qwen3.5-35b-a3b",
+  "observer_model": "openai/gpt-oss-120b",
+  "mcp_server": "https://7ff8-184-22-21-43.ngrok-free.app/mcp",
+  "comparison": {
+    "phase2a_final_only": {
+      "semantic_observer": "on",
+      "dynamic_observer": "off"
+    },
+    "phase2c_python_first": {
+      "semantic_observer": "on",
+      "dynamic_observer": "on"
+    }
+  },
+  "questions": [
+    {
+      "id": "q04_review_coverage",
+      "level": 4,
+      "question": "มีพนักงานที่ปฏิบัติงาน 25 คน แต่มี performance review ปี 2023 จำนวน 7 รายการ ก่อนเปรียบเทียบผลงานระหว่างแผนก จงคำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ขั้นต่ำ 80% หรือไม่",
+      "semantic_risk": "records are not necessarily distinct employees"
+    }
+  ],
+  "runs": [
+    {
+      "question_id": "q04_review_coverage",
+      "level": 4,
+      "variant": "phase2c_python_first",
+      "elapsed_seconds": 68.501,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 4,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 1,
+      "python_observations": 4,
+      "llm_observer_skips": 3,
+      "final_verdicts": [
+        "rewrite"
+      ],
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- จำนวนพนักงานทั้งหมดคือ 25 คน\n- จำนวนพนักงานที่มี performance review ปี 2023 คือ 7 คน\n- Evidence Coverage คือ 7/25 = 28%\n- ไม่ผ่านเกณฑ์ขั้นต่ำ 80% (ต้องมีอย่างน้อย 20 คนเพื่อให้ครอบคลุม 80%)\n- ส่วนที่ไม่ได้ครอบคลุมคือ 100% - 28% = 72%",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] มีพนักงานที่ปฏิบัติงาน 25 คน แต่มี performance review ปี 2023 จำนวน 7 รายการ ก่อนเปรียบเทียบผลงานระหว่างแผนก จงคำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ขั้นต่ำ 80% หรือไม่\n[ROUTING] deterministic-first; claim planner disabled\n[PYTHON OBSERVATION] evidence=call_d3af2328ee52412eb2f76a05 decision=accept type=schema risk=False reasons=[]\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 1] TOOL get_database_context\n[step 2] TODO_WRITE\n[ ] 1. ตรวจสอบจำนวนพนักงานทั้งหมดจากตาราง employees\n[ ] 2. ตรวจสอบจำนวน performance review ปี 2023 จากตาราง performance_reviews\n[ ] 3. คำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ 80% หรือไม่\n[ ] 4. สรุปข้อค้นพบเชิงธุรกิจ\n[step 3] TODO_UPDATE -> {'index': 1, 'status': 'doing'}\n[~] 1. ตรวจสอบจำนวนพนักงานทั้งหมดจากตาราง employees\n[ ] 2. ตรวจสอบจำนวน performance review ปี 2023 จากตาราง performance_reviews\n[ ] 3. คำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ 80% หรือไม่\n[ ] 4. สรุปข้อค้นพบเชิงธุรกิจ\n[PYTHON OBSERVATION] evidence=call_b28441d03a9249768dec45af decision=accept type=query_result risk=False reasons=[]\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 4] TOOL execute_query_tool\n[step 5] TODO_UPDATE -> {'index': 1, 'status': 'done'}\n[x] 1. ตรวจสอบจำนวนพนักงานทั้งหมดจากตาราง employees\n[ ] 2. ตรวจสอบจำนวน performance review ปี 2023 จากตาราง performance_reviews\n[ ] 3. คำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ 80% หรือไม่\n[ ] 4. สรุปข้อค้นพบเชิงธุรกิจ\n[step 6] TODO_UPDATE -> {'index': 2, 'status': 'doing'}\n[x] 1. ตรวจสอบจำนวนพนักงานทั้งหมดจากตาราง employees\n[~] 2. ตรวจสอบจำนวน performance review ปี 2023 จากตาราง performance_reviews\n[ ] 3. คำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ 80% หรือไม่\n[ ] 4. สรุปข้อค้นพบเชิงธุรกิจ\n[PYTHON OBSERVATION] evidence=call_ec32046550e94057b5782664 decision=accept type=query_result risk=False reasons=[]\n[EVIDENCE CONTRACT] evidence=call_ec32046550e94057b5782664 decision=query_more reason=coverage numerator requires distinct entity grain\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 7] TOOL execute_query_tool\n[PYTHON OBSERVATION] evidence=call_5e671c3422924527a859fd4f decision=accept type=query_result risk=True reasons=['distinct-grain']\n[DYNAMIC OBSERVATION] evidence=call_5e671c3422924527a859fd4f supports=True complete=False proved=[] next=replan reason=query_more rejected because no structured missing-evidence request was supplied\n[step 8] TOOL execute_query_tool\n[step 9] TODO_UPDATE -> {'index': 2, 'status': 'done'}\n[x] 1. ตรวจสอบจำนวนพนักงานทั้งหมดจากตาราง employees\n[x] 2. ตรวจสอบจำนวน performance review ปี 2023 จากตาราง performance_reviews\n[ ] 3. คำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ 80% หรือไม่\n[ ] 4. สรุปข้อค้นพบเชิงธุรกิจ\n[step 10] TODO_UPDATE -> {'index': 3, 'status': 'doing'}\n[x] 1. ตรวจสอบจำนวนพนักงานทั้งหมดจากตาราง employees\n[x] 2. ตรวจสอบจำนวน performance review ปี 2023 จากตาราง performance_reviews\n[~] 3. คำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ 80% หรือไม่\n[ ] 4. สรุปข้อค้นพบเชิงธุรกิจ\n[step 11] TODO_UPDATE -> {'index': 3, 'status': 'done'}\n[x] 1. ตรวจสอบจำนวนพนักงานทั้งหมดจากตาราง employees\n[x] 2. ตรวจสอบจำนวน performance review ปี 2023 จากตาราง performance_reviews\n[x] 3. คำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ 80% หรือไม่\n[ ] 4. สรุปข้อค้นพบเชิงธุรกิจ\n[step 12] TODO_UPDATE -> {'index': 4, 'status': 'doing'}\n[x] 1. ตรวจสอบจำนวนพนักงานทั้งหมดจากตาราง employees\n[x] 2. ตรวจสอบจำนวน performance review ปี 2023 จากตาราง performance_reviews\n[x] 3. คำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ 80% หรือไม่\n[~] 4. สรุปข้อค้นพบเชิงธุรกิจ\n[step 13] TODO_UPDATE -> {'index': 4, 'status': 'done'}\n[x] 1. ตรวจสอบจำนวนพนักงานทั้งหมดจากตาราง employees\n[x] 2. ตรวจสอบจำนวน performance review ปี 2023 จากตาราง performance_reviews\n[x] 3. คำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ 80% หรือไม่\n[x] 4. สรุปข้อค้นพบเชิงธุรกิจ\n[FINAL ROUTING] risks=['unsupported-numbers:28%,72%', 'semantic-decision', 'risky-tool-semantics']\n[FINAL OBSERVATION] verdict=rewrite reason=Answer includes unsupported recommendations and speculative causes; only factual coverage calculation and threshold assessment are required.\n[FINAL CLAIM GATE] verify-then-emit; MCP disabled; observer_supported=5\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- จำนวนพนักงานทั้งหมดคือ 25 คน\n- จำนวนพนักงานที่มี performance review ปี 2023 คือ 7 คน\n- Evidence Coverage คือ 7/25 = 28%\n- ไม่ผ่านเกณฑ์ขั้นต่ำ 80% (ต้องมีอย่างน้อย 20 คนเพื่อให้ครอบคลุม 80%)\n- ส่วนที่ไม่ได้ครอบคลุมคือ 100% - 28% = 72%\n------------------------------------------------------------\n[todo สุดท้าย]\n[x] 1. ตรวจสอบจำนวนพนักงานทั้งหมดจากตาราง employees\n[x] 2. ตรวจสอบจำนวน performance review ปี 2023 จากตาราง performance_reviews\n[x] 3. คำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ 80% หรือไม่\n[x] 4. สรุปข้อค้นพบเชิงธุรกิจ\n[context budget] BudgetState(steps=13, tool_calls=4, errors=0)\n",
+      "stderr": ""
+    }
+  ]
+}

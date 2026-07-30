@@ -371,6 +371,13 @@ distinct-employee query.
 - `artifacts/lab6_phase2d_evidence_contract_smoke_atomic.json` contains the
   20-repeat deterministic grade
 
+Five subsequent Q1/Q4 live repeats were not stable (whole-question outcomes:
+1/2, 2/2, 0/2, 1/2, 1/2). See the
+[targeted stability audit](../../artifacts/lab6_phase2d_targeted_stability_report.md).
+The full suite was therefore not rerun. Parser hardening, claim-set grain
+preservation, and deterministic coverage derivation were added, but require
+another repeated live audit.
+
 ---
 
 ## ผลลัพธ์ที่คาดหวัง

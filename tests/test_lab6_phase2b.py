@@ -41,6 +41,7 @@ from labs.lab6_todo.phase2_runtime import (
 from labs.lab6_todo.semantic_observer import (
     apply_bounded_rewrite,
     enforce_claim_alignment,
+    parse_observation,
     review_final_answer,
 )
 from labs.lab6_todo.risk_router import (
@@ -283,6 +284,14 @@ class Phase2BTests(unittest.TestCase):
         )
         self.assertEqual(chat.call_args.kwargs["model"], config.OBSERVER_MODEL)
 
+    def test_semantic_observer_accepts_literal_control_character_in_json(self):
+        observation = parse_observation(
+            '{"verdict":"approve","reason":"line one\nline two",'
+            '"supported_claims":[],"unsupported_claims":[],'
+            '"contradictions":[],"violations":[],"revised_answer":null}'
+        )
+        self.assertEqual(observation.verdict, SemanticVerdict.APPROVE)
+
     def test_final_approval_is_downgraded_for_unresolved_claims(self):
         ledger = ClaimLedger([
             ClaimRequirement("claim_001", "needs evidence", "entity")
@@ -503,8 +512,8 @@ class Phase2BTests(unittest.TestCase):
             verdict=SemanticVerdict.REWRITE,
             reason="grounded arithmetic",
             supported_claims=(
-                "Coverage เท่ากับ 28%",
-                "ต่ำกว่าเกณฑ์ 80% อยู่ 52 percentage points",
+                "Coverage ของ distinct employees เท่ากับ 28%",
+                "Coverage ของ distinct employees ต่ำกว่าเกณฑ์ 80% อยู่ 52 percentage points",
             ),
             revised_answer="ignored",
         )
@@ -515,6 +524,49 @@ class Phase2BTests(unittest.TestCase):
         )
         self.assertIn("28%", emitted)
         self.assertIn("52 percentage points", emitted)
+
+    def test_coverage_is_composed_from_distinct_numerator_and_denominator(self):
+        evidence = EvidenceState()
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-distinct-coverage",
+            "execute_query_tool",
+            {
+                "query": (
+                    "SELECT COUNT(DISTINCT employee_id) "
+                    "FROM performance_reviews"
+                )
+            },
+            "distinct_reviewed\n7",
+        ))
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-active-total",
+            "execute_query_tool",
+            {
+                "query": (
+                    "SELECT COUNT(*) FROM employees "
+                    "WHERE status = N'ปฏิบัติงาน'"
+                )
+            },
+            "active_total\n25",
+        ))
+        observation = ObservationState(
+            verdict=SemanticVerdict.REWRITE,
+            reason="compose coverage",
+            supported_claims=(
+                "จำนวนพนักงานที่ปฏิบัติงานทั้งหมดคือ 25 คน",
+                "จำนวนพนักงานที่มี performance review คือ 7 คน",
+                "ขาด 52% จากเกณฑ์",
+            ),
+            revised_answer="ignored",
+        )
+        emitted = verify_then_emit(
+            "คำนวณ evidence coverage และตรวจเกณฑ์ 80%",
+            observation,
+            evidence,
+        )
+        self.assertIn("7 / 25 = 28%", emitted)
+        self.assertIn("52 percentage points", emitted)
+        self.assertNotIn("ขาด 52%", emitted)
 
     def test_final_router_ignores_ordered_list_numbers(self):
         evidence = EvidenceState()

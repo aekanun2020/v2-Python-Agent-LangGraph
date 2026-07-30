@@ -100,7 +100,11 @@ def _numbers_supported(
     )
 
 
-def _grain_supported(claim: str, evidence: EvidenceState) -> bool:
+def _grain_supported(
+    claim: str,
+    evidence: EvidenceState,
+    allowlist_preserves_grain: bool = False,
+) -> bool:
     lowered = claim.lower()
     if not any(term in lowered for term in ("coverage", "ความครอบคลุม")):
         return True
@@ -109,10 +113,77 @@ def _grain_supported(claim: str, evidence: EvidenceState) -> bool:
         for record in evidence.records
         if "performance_review" in str(record.arguments).lower()
     ]
-    return any(
+    evidence_proves_grain = any(
         "distinct" in query and "employee_id" in query
         for query in review_queries
     )
+    claim_preserves_grain = any(
+        term in lowered
+        for term in (
+            "distinct",
+            "พนักงานที่มี",
+            "employees with",
+            "employee with",
+        )
+    )
+    return evidence_proves_grain and (
+        claim_preserves_grain or allowlist_preserves_grain
+    )
+
+
+def _coverage_derivation(
+    question: str,
+    accepted_claims: list[str],
+    evidence: EvidenceState,
+) -> list[str]:
+    lowered_question = question.lower()
+    if not any(term in lowered_question for term in ("coverage", "ความครอบคลุม")):
+        return []
+    total_match = None
+    reviewed_match = None
+    for claim in accepted_claims:
+        lowered_claim = claim.lower()
+        if (
+            ("ทั้งหมด" in lowered_claim or "total" in lowered_claim)
+            and "review" not in lowered_claim
+        ):
+            total_match = re.search(r"(\d+)", claim)
+        if (
+            any(term in lowered_claim for term in ("พนักงานที่มี", "employees with", "employee with"))
+            and any(term in lowered_claim for term in ("review", "performance"))
+        ):
+            reviewed_match = re.search(r"(\d+)", claim)
+    threshold_match = re.search(r"(\d+(?:\.\d+)?)\s*%", question)
+    if not (total_match and reviewed_match and threshold_match):
+        return []
+    total = float(total_match.group(1))
+    reviewed = float(reviewed_match.group(1))
+    threshold = float(threshold_match.group(1))
+    if total <= 0 or reviewed < 0 or reviewed > total:
+        return []
+    if not _grain_supported(
+        "coverage of distinct employees",
+        evidence,
+        allowlist_preserves_grain=True,
+    ):
+        return []
+    coverage = reviewed / total * 100
+    shortfall = max(threshold - coverage, 0)
+    verdict = "ผ่าน" if coverage >= threshold else "ไม่ผ่าน"
+    return [
+        (
+            "Evidence coverage ของพนักงานที่มี review เท่ากับ "
+            f"{reviewed:g} / {total:g} = {coverage:g}%"
+        ),
+        (
+            f"{verdict}เกณฑ์ขั้นต่ำ {threshold:g}%"
+            + (
+                f" โดยต่ำกว่า {shortfall:g} percentage points"
+                if shortfall
+                else ""
+            )
+        ),
+    ]
 
 
 def verify_claims(
@@ -122,6 +193,18 @@ def verify_claims(
 ) -> tuple[GatedClaim, ...]:
     """Verify the Observer allowlist; never edit the Agent draft."""
     results = []
+    allowlist_preserves_grain = any(
+        any(
+            term in str(raw).lower()
+            for term in (
+                "distinct",
+                "พนักงานที่มี",
+                "employees with",
+                "employee with",
+            )
+        )
+        for raw in observation.supported_claims
+    )
     for raw in observation.supported_claims:
         claim = str(raw).strip()
         if not claim:
@@ -137,7 +220,19 @@ def verify_claims(
         ):
             accepted = False
             reason = "numeric post-condition failed"
-        elif not _grain_supported(claim, evidence):
+        elif (
+            any(term in question.lower() for term in ("coverage", "ความครอบคลุม"))
+            and any(term in claim.lower() for term in ("ขาด", "shortfall"))
+            and "%" in claim
+            and "point" not in claim.lower()
+        ):
+            accepted = False
+            reason = "percentage shortfall must use percentage points"
+        elif not _grain_supported(
+            claim,
+            evidence,
+            allowlist_preserves_grain=allowlist_preserves_grain,
+        ):
             accepted = False
             reason = "grain contract failed"
         results.append(GatedClaim(claim, claim_type, accepted, reason))
@@ -152,6 +247,16 @@ def verify_then_emit(
     """Compose only verified claims; fail closed for unsupported decisions."""
     claims = verify_claims(question, observation, evidence)
     accepted = [claim.text for claim in claims if claim.accepted]
+    derived = _coverage_derivation(question, accepted, evidence)
+    if derived:
+        accepted = [
+            claim for claim in accepted
+            if not any(
+                term in claim.lower()
+                for term in ("coverage", "ความครอบคลุม", "shortfall", "ขาด")
+            )
+        ]
+        accepted.extend(derived)
     decision_requested = any(
         term in question.lower() for term in RECOMMENDATION_TERMS
     )

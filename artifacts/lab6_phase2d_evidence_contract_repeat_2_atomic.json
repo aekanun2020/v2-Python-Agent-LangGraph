@@ -1,0 +1,115 @@
+{
+  "repeat": 20,
+  "deterministic": true,
+  "result": {
+    "fixture_id": "live-artifact:2026-07-30T02:08:01.372978+00:00",
+    "grader_version": "atomic-v1",
+    "result_sha256": "1e596467990fa4f547baeeba994f76b0a262af47b13143cfc94c47b325850922",
+    "variants": {
+      "phase2c_python_first": {
+        "atomic_passed": 17,
+        "atomic_total": 17,
+        "atomic_rate": 1.0,
+        "questions_passed": 2,
+        "questions_total": 2,
+        "questions": {
+          "q01_headcount": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q01.total",
+                "passed": true,
+                "detail": "active total must be 25"
+              },
+              {
+                "item_id": "q01.department.เทคโนโลยีสารสนเทศ",
+                "passed": true,
+                "detail": "เทคโนโลยีสารสนเทศ must retain canonical label and count 5"
+              },
+              {
+                "item_id": "q01.department.การเงิน",
+                "passed": true,
+                "detail": "การเงิน must retain canonical label and count 3"
+              },
+              {
+                "item_id": "q01.department.การตลาด",
+                "passed": true,
+                "detail": "การตลาด must retain canonical label and count 4"
+              },
+              {
+                "item_id": "q01.department.ทรัพยากรบุคคล",
+                "passed": true,
+                "detail": "ทรัพยากรบุคคล must retain canonical label and count 4"
+              },
+              {
+                "item_id": "q01.department.บริหารทั่วไป",
+                "passed": true,
+                "detail": "บริหารทั่วไป must retain canonical label and count 1"
+              },
+              {
+                "item_id": "q01.department.บัญชี",
+                "passed": true,
+                "detail": "บัญชี must retain canonical label and count 2"
+              },
+              {
+                "item_id": "q01.department.ผลิต",
+                "passed": true,
+                "detail": "ผลิต must retain canonical label and count 3"
+              },
+              {
+                "item_id": "q01.department.วิจัยและพัฒนา",
+                "passed": true,
+                "detail": "วิจัยและพัฒนา must retain canonical label and count 3"
+              },
+              {
+                "item_id": "q01.no_unsupported_interpretation",
+                "passed": true,
+                "detail": "no unsupported business interpretation"
+              }
+            ]
+          },
+          "q04_review_coverage": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q04.population",
+                "passed": true,
+                "detail": "population 25"
+              },
+              {
+                "item_id": "q04.reviewed",
+                "passed": true,
+                "detail": "reviewed employees 7"
+              },
+              {
+                "item_id": "q04.distinct_grain",
+                "passed": true,
+                "detail": "numerator must prove distinct employee grain"
+              },
+              {
+                "item_id": "q04.coverage",
+                "passed": true,
+                "detail": "coverage 28%"
+              },
+              {
+                "item_id": "q04.threshold",
+                "passed": true,
+                "detail": "user threshold 80%"
+              },
+              {
+                "item_id": "q04.threshold_verdict",
+                "passed": true,
+                "detail": "28% must be evaluated below/failing 80%"
+              },
+              {
+                "item_id": "q04.no_recommendation",
+                "passed": true,
+                "detail": "descriptive evaluation only"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

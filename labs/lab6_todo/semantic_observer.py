@@ -85,10 +85,21 @@ def _json_object(text: str) -> dict[str, Any]:
     try:
         value = json.loads(cleaned)
     except json.JSONDecodeError:
+        try:
+            # Some OpenRouter providers emit literal newlines/control chars
+            # inside otherwise valid JSON strings.
+            value = json.loads(cleaned, strict=False)
+            if not isinstance(value, dict):
+                raise ValueError(
+                    "semantic observer must return a JSON object"
+                )
+            return value
+        except (json.JSONDecodeError, ValueError):
+            pass
         match = re.search(r"\{.*\}", cleaned, flags=re.DOTALL)
         if not match:
             raise
-        value = json.loads(match.group(0))
+        value = json.loads(match.group(0), strict=False)
     if not isinstance(value, dict):
         raise ValueError("semantic observer must return a JSON object")
     return value

@@ -1,0 +1,60 @@
+{
+  "repeat": 20,
+  "deterministic": true,
+  "result": {
+    "fixture_id": "live-artifact:2026-07-30T02:19:21.643108+00:00",
+    "grader_version": "atomic-v1",
+    "result_sha256": "ea7e850e336bd97786b055a94818d59581aac93a0c5e70f1e87a2be44c602815",
+    "variants": {
+      "phase2c_python_first": {
+        "atomic_passed": 7,
+        "atomic_total": 7,
+        "atomic_rate": 1.0,
+        "questions_passed": 1,
+        "questions_total": 1,
+        "questions": {
+          "q04_review_coverage": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q04.population",
+                "passed": true,
+                "detail": "population 25"
+              },
+              {
+                "item_id": "q04.reviewed",
+                "passed": true,
+                "detail": "reviewed employees 7"
+              },
+              {
+                "item_id": "q04.distinct_grain",
+                "passed": true,
+                "detail": "numerator must prove distinct employee grain"
+              },
+              {
+                "item_id": "q04.coverage",
+                "passed": true,
+                "detail": "coverage 28%"
+              },
+              {
+                "item_id": "q04.threshold",
+                "passed": true,
+                "detail": "user threshold 80%"
+              },
+              {
+                "item_id": "q04.threshold_verdict",
+                "passed": true,
+                "detail": "28% must be evaluated below/failing 80%"
+              },
+              {
+                "item_id": "q04.no_recommendation",
+                "passed": true,
+                "detail": "descriptive evaluation only"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

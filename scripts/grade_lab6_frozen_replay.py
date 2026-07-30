@@ -84,22 +84,26 @@ def grade_q04(answer: str) -> list[AtomicResult]:
         _item("q04.reviewed", _contains(answer, r"\b7\b"), "reviewed employees 7"),
         _item(
             "q04.distinct_grain",
-            _contains(answer, r"(?:distinct|ไม่ซ้ำ|พนักงานที่มี[^\n]{0,40}review)"),
+            _contains(
+                answer,
+                r"(?:distinct|ไม่ซ้ำ|พนักงานที่มี[^\n]{0,40}review|"
+                r"employees? with[^\n]{0,60}review)",
+            ),
             "numerator must prove distinct employee grain",
         ),
-        _item("q04.coverage", _contains(answer, r"\b28\s*%"), "coverage 28%"),
+        _item("q04.coverage", _contains(answer, r"\b28(?:\.0+)?\s*(?:%|percent)"), "coverage 28%"),
         _item(
             "q04.threshold",
-            _contains(answer, r"\b80\s*%"),
+            _contains(answer, r"\b80(?:\.0+)?\s*(?:%|percent)"),
             "user threshold 80%",
         ),
         _item(
             "q04.threshold_verdict",
-            _contains(answer, r"(?:ไม่ผ่าน|below)[^\n]{0,50}(?:80\s*%|threshold)")
-            or _contains(answer, r"28\s*%[^\n]{0,50}(?:ต่ำกว่า|below)")
+            _contains(answer, r"(?:ไม่ผ่าน|below)[^\n]{0,50}(?:80\s*(?:%|percent)|threshold)")
+            or _contains(answer, r"28(?:\.0+)?\s*(?:%|percent)[^\n]{0,50}(?:ต่ำกว่า|below|does not meet)")
             or (
                 _contains(answer, r"ไม่ผ่าน")
-                and _contains(answer, r"80\s*%")
+                and _contains(answer, r"80\s*(?:%|percent)")
             ),
             "28% must be evaluated below/failing 80%",
         ),

@@ -1,0 +1,72 @@
+{
+  "generated_at": "2026-07-30T02:15:22.614535+00:00",
+  "model": "qwen/qwen3.5-35b-a3b",
+  "observer_model": "openai/gpt-oss-120b",
+  "mcp_server": "https://7ff8-184-22-21-43.ngrok-free.app/mcp",
+  "comparison": {
+    "phase2a_final_only": {
+      "semantic_observer": "on",
+      "dynamic_observer": "off"
+    },
+    "phase2c_python_first": {
+      "semantic_observer": "on",
+      "dynamic_observer": "on"
+    }
+  },
+  "questions": [
+    {
+      "id": "q01_headcount",
+      "level": 1,
+      "question": "พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมดกี่คน และแยกตามค่า `department` ในฐานข้อมูลอย่างไร",
+      "semantic_risk": "canonical labels and exact counts"
+    },
+    {
+      "id": "q04_review_coverage",
+      "level": 4,
+      "question": "มีพนักงานที่ปฏิบัติงาน 25 คน แต่มี performance review ปี 2023 จำนวน 7 รายการ ก่อนเปรียบเทียบผลงานระหว่างแผนก จงคำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ขั้นต่ำ 80% หรือไม่",
+      "semantic_risk": "records are not necessarily distinct employees"
+    }
+  ],
+  "runs": [
+    {
+      "question_id": "q01_headcount",
+      "level": 1,
+      "variant": "phase2c_python_first",
+      "elapsed_seconds": 37.653,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 2,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 2,
+      "llm_observer_skips": 2,
+      "final_verdicts": [
+        "rewrite"
+      ],
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- There are 25 employees with status 'ปฏิบัติงาน'.\n- Technology department (เทคโนโลยีสารสนเทศ) has 5 employees.\n- Finance department (การเงิน) has 3 employees.\n- Marketing department (การตลาด) has 4 employees.\n- Human Resources department (ทรัพยากรบุคคล) has 4 employees.\n- General Management department (บริหารทั่วไป) has 1 employee.\n- Accounting department (บัญชี) has 2 employees.\n- Production department (ผลิต) has 3 employees.\n- Research and Development department (วิจัยและพัฒนา) has 3 employees.",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมดกี่คน และแยกตามค่า `department` ในฐานข้อมูลอย่างไร\n[ROUTING] deterministic-first; claim planner disabled\n[step 1] TODO_WRITE\n[ ] 1. เรียก get_database_context เพื่อดูโครงสร้างฐานข้อมูล\n[ ] 2. เขียนและรัน T-SQL query หาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[ ] 3. สรุปข้อค้นพบเชิงธุรกิจ\n[PYTHON OBSERVATION] evidence=call_5f8833e18e444a1e92955a01 decision=accept type=schema risk=False reasons=[]\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 2] TOOL get_database_context\n[step 3] TODO_UPDATE -> {'index': 1, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อดูโครงสร้างฐานข้อมูล\n[ ] 2. เขียนและรัน T-SQL query หาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[ ] 3. สรุปข้อค้นพบเชิงธุรกิจ\n[PYTHON OBSERVATION] evidence=call_425fe10ed2b2432c8345d14b decision=accept type=query_result risk=False reasons=[]\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 4] TOOL execute_query_tool\n[step 5] TODO_UPDATE -> {'index': 2, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อดูโครงสร้างฐานข้อมูล\n[x] 2. เขียนและรัน T-SQL query หาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[ ] 3. สรุปข้อค้นพบเชิงธุรกิจ\n[step 6] TODO_UPDATE -> {'index': 3, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อดูโครงสร้างฐานข้อมูล\n[x] 2. เขียนและรัน T-SQL query หาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[x] 3. สรุปข้อค้นพบเชิงธุรกิจ\n[FINAL ROUTING] risks=['unsupported-numbers:25', 'qualitative-interpretation']\n[FINAL OBSERVATION] verdict=rewrite reason=Answer contains speculative observations not supported by evidence; only factual count and department breakdown are supported.\n[FINAL CLAIM GATE] verify-then-emit; MCP disabled; observer_supported=9\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- There are 25 employees with status 'ปฏิบัติงาน'.\n- Technology department (เทคโนโลยีสารสนเทศ) has 5 employees.\n- Finance department (การเงิน) has 3 employees.\n- Marketing department (การตลาด) has 4 employees.\n- Human Resources department (ทรัพยากรบุคคล) has 4 employees.\n- General Management department (บริหารทั่วไป) has 1 employee.\n- Accounting department (บัญชี) has 2 employees.\n- Production department (ผลิต) has 3 employees.\n- Research and Development department (วิจัยและพัฒนา) has 3 employees.\n------------------------------------------------------------\n[todo สุดท้าย]\n[x] 1. เรียก get_database_context เพื่อดูโครงสร้างฐานข้อมูล\n[x] 2. เขียนและรัน T-SQL query หาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[x] 3. สรุปข้อค้นพบเชิงธุรกิจ\n[context budget] BudgetState(steps=6, tool_calls=2, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q04_review_coverage",
+      "level": 4,
+      "variant": "phase2c_python_first",
+      "elapsed_seconds": 67.893,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 6,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 1,
+      "python_observations": 6,
+      "llm_observer_skips": 5,
+      "final_verdicts": [
+        "rewrite"
+      ],
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- จำนวนพนักงานที่ปฏิบัติงานคือ 25 คน\n- จำนวนพนักงานที่มี Performance Review ปี 2023 คือ 7 คน\n- ขาด 52% จากเกณฑ์ที่กำหนด\n- มีพนักงาน 18 คน (72%) ที่ยังไม่ได้รับการประเมินผลงานในปี 2023",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] มีพนักงานที่ปฏิบัติงาน 25 คน แต่มี performance review ปี 2023 จำนวน 7 รายการ ก่อนเปรียบเทียบผลงานระหว่างแผนก จงคำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ขั้นต่ำ 80% หรือไม่\n[ROUTING] deterministic-first; claim planner disabled\n[step 1] TODO_WRITE\n[ ] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[ ] 2. ตรวจสอบและดึงข้อมูลจำนวนพนักงานที่ปฏิบัติงาน\n[ ] 3. ตรวจสอบและดึงข้อมูลจำนวน performance review ปี 2023\n[ ] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[ ] 5. สรุปผลการวิเคราะห์เชิงธุรกิจ\n[step 2] TODO_UPDATE -> {'index': 1, 'status': 'doing'}\n[~] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[ ] 2. ตรวจสอบและดึงข้อมูลจำนวนพนักงานที่ปฏิบัติงาน\n[ ] 3. ตรวจสอบและดึงข้อมูลจำนวน performance review ปี 2023\n[ ] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[ ] 5. สรุปผลการวิเคราะห์เชิงธุรกิจ\n[PYTHON OBSERVATION] evidence=call_e793792de747407ea99a4ef8 decision=accept type=schema risk=False reasons=[]\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 2] TOOL get_database_context\n[step 3] TODO_UPDATE -> {'index': 1, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[ ] 2. ตรวจสอบและดึงข้อมูลจำนวนพนักงานที่ปฏิบัติงาน\n[ ] 3. ตรวจสอบและดึงข้อมูลจำนวน performance review ปี 2023\n[ ] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[ ] 5. สรุปผลการวิเคราะห์เชิงธุรกิจ\n[step 3] TODO_UPDATE -> {'index': 2, 'status': 'doing'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[~] 2. ตรวจสอบและดึงข้อมูลจำนวนพนักงานที่ปฏิบัติงาน\n[ ] 3. ตรวจสอบและดึงข้อมูลจำนวน performance review ปี 2023\n[ ] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[ ] 5. สรุปผลการวิเคราะห์เชิงธุรกิจ\n[PYTHON OBSERVATION] evidence=call_5a67e73fa34f407c9155e034 decision=accept type=query_result risk=False reasons=[]\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 3] TOOL execute_query_tool\n[PYTHON OBSERVATION] evidence=call_236a6c8fd47c47c5a6cc3f0a decision=accept type=query_result risk=False reasons=[]\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 4] TOOL execute_query_tool\n[PYTHON OBSERVATION] evidence=call_576c7029630d4336b0d8284a decision=accept type=query_result risk=False reasons=[]\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 5] TOOL execute_query_tool\n[step 6] TODO_UPDATE -> {'index': 2, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. ตรวจสอบและดึงข้อมูลจำนวนพนักงานที่ปฏิบัติงาน\n[ ] 3. ตรวจสอบและดึงข้อมูลจำนวน performance review ปี 2023\n[ ] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[ ] 5. สรุปผลการวิเคราะห์เชิงธุรกิจ\n[step 6] TODO_UPDATE -> {'index': 3, 'status': 'doing'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. ตรวจสอบและดึงข้อมูลจำนวนพนักงานที่ปฏิบัติงาน\n[~] 3. ตรวจสอบและดึงข้อมูลจำนวน performance review ปี 2023\n[ ] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[ ] 5. สรุปผลการวิเคราะห์เชิงธุรกิจ\n[PYTHON OBSERVATION] evidence=call_a32ee49b33f24e2486ec200e decision=accept type=query_result risk=False reasons=[]\n[EVIDENCE CONTRACT] evidence=call_a32ee49b33f24e2486ec200e decision=query_more reason=coverage numerator requires distinct entity grain\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 6] TOOL execute_query_tool\n[PYTHON OBSERVATION] evidence=call_ced1a6f0e0d64d42815eda9a decision=accept type=query_result risk=True reasons=['distinct-grain']\n[DYNAMIC OBSERVATION] evidence=call_ced1a6f0e0d64d42815eda9a supports=True complete=False proved=[] next=replan reason=query_more rejected because no structured missing-evidence request was supplied\n[step 7] TOOL execute_query_tool\n[step 8] TODO_UPDATE -> {'index': 3, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. ตรวจสอบและดึงข้อมูลจำนวนพนักงานที่ปฏิบัติงาน\n[x] 3. ตรวจสอบและดึงข้อมูลจำนวน performance review ปี 2023\n[ ] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[ ] 5. สรุปผลการวิเคราะห์เชิงธุรกิจ\n[step 8] TODO_UPDATE -> {'index': 4, 'status': 'doing'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. ตรวจสอบและดึงข้อมูลจำนวนพนักงานที่ปฏิบัติงาน\n[x] 3. ตรวจสอบและดึงข้อมูลจำนวน performance review ปี 2023\n[~] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[ ] 5. สรุปผลการวิเคราะห์เชิงธุรกิจ\n[step 9] TODO_UPDATE -> {'index': 4, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. ตรวจสอบและดึงข้อมูลจำนวนพนักงานที่ปฏิบัติงาน\n[x] 3. ตรวจสอบและดึงข้อมูลจำนวน performance review ปี 2023\n[x] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[ ] 5. สรุปผลการวิเคราะห์เชิงธุรกิจ\n[step 9] TODO_UPDATE -> {'index': 5, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. ตรวจสอบและดึงข้อมูลจำนวนพนักงานที่ปฏิบัติงาน\n[x] 3. ตรวจสอบและดึงข้อมูลจำนวน performance review ปี 2023\n[x] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[x] 5. สรุปผลการวิเคราะห์เชิงธุรกิจ\n[FINAL ROUTING] risks=['unsupported-numbers:100%,18,28%,52%,72%', 'semantic-decision', 'risky-tool-semantics']\n[FINAL OBSERVATION] verdict=rewrite reason=Answer contains unsupported prescriptive recommendations; only factual coverage calculation is needed.\n[FINAL CLAIM GATE] verify-then-emit; MCP disabled; observer_supported=6\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- จำนวนพนักงานที่ปฏิบัติงานคือ 25 คน\n- จำนวนพนักงานที่มี Performance Review ปี 2023 คือ 7 คน\n- ขาด 52% จากเกณฑ์ที่กำหนด\n- มีพนักงาน 18 คน (72%) ที่ยังไม่ได้รับการประเมินผลงานในปี 2023\n------------------------------------------------------------\n[todo สุดท้าย]\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. ตรวจสอบและดึงข้อมูลจำนวนพนักงานที่ปฏิบัติงาน\n[x] 3. ตรวจสอบและดึงข้อมูลจำนวน performance review ปี 2023\n[x] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[x] 5. สรุปผลการวิเคราะห์เชิงธุรกิจ\n[context budget] BudgetState(steps=16, tool_calls=6, errors=0)\n",
+      "stderr": ""
+    }
+  ]
+}
