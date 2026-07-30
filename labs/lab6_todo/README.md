@@ -333,6 +333,20 @@ This measures replay determinism and the local gate effect only. It does not
 establish live statistical superiority or diagnose the cause of prior
 generation variance.
 
+## Phase 2A vs Phase 2D live comparison
+
+A paired 10-question live run was performed with the same Agent, Observer, and
+MCP endpoint:
+
+- [Live comparison report](../../artifacts/lab6_phase2a_phase2d_live_10_report.md)
+- `artifacts/lab6_phase2a_phase2d_live_10.json` contains all 20 raw runs
+
+The result does not establish Phase 2D superiority. Phase 2D was faster on
+median and improved several semantic traps, but produced a critical Q1
+false-support (`0` instead of the ground-truth `25`) and hit its whole-run
+deadline on Q10. The frozen replay result must therefore not be generalized to
+live Agent behavior.
+
 ---
 
 ## ผลลัพธ์ที่คาดหวัง
