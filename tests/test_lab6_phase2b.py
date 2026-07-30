@@ -31,6 +31,11 @@ from labs.lab6_todo.evidence_state import (
 )
 from labs.lab6_todo.evidence_contract import (
     ContractDecision,
+    contract_claims,
+    metric_contract_status,
+    missing_role_queries,
+    repair_query_arguments,
+    terminal_contract_verdict,
     validate_evidence_contract,
 )
 from labs.lab6_todo.phase2_runtime import (
@@ -513,6 +518,368 @@ class Phase2BTests(unittest.TestCase):
         )
         self.assertNotIn("0 active employees", emitted)
 
+    def test_claim_gate_rejects_currency_absent_from_evidence(self):
+        evidence = EvidenceState()
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-project",
+            "execute_query_tool",
+            {},
+            "project_value\n28000000",
+        ))
+        observation = ObservationState(
+            verdict=SemanticVerdict.REWRITE,
+            reason="remove unsupported unit",
+            supported_claims=("มูลค่าโครงการรวม 28,000,000 บาท",),
+        )
+        emitted = verify_then_emit(
+            "ตรวจ project concentration",
+            observation,
+            evidence,
+        )
+        self.assertNotIn("บาท", emitted)
+
+    def test_claim_gate_rejects_efficiency_relabelling_and_refuses(self):
+        evidence = EvidenceState()
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-ratio",
+            "execute_query_tool",
+            {},
+            "department project_value_per_employee\n"
+            "วิจัยและพัฒนา 3333333.33\n"
+            "เทคโนโลยีสารสนเทศ 1000000",
+        ))
+        observation = ObservationState(
+            verdict=SemanticVerdict.REWRITE,
+            reason="ratio is not efficiency",
+            supported_claims=(
+                "วิจัยและพัฒนามี project value ต่อพนักงาน 3333333.33",
+                "เทคโนโลยีสารสนเทศมี project value ต่อพนักงาน 1000000",
+                "วิจัยและพัฒนามีประสิทธิภาพสูงกว่า",
+            ),
+        )
+        emitted = verify_then_emit(
+            "จงสรุปว่าแผนกใดมีประสิทธิภาพกว่ากัน",
+            observation,
+            evidence,
+        )
+        self.assertIn("3333333.33", emitted)
+        self.assertIn("1000000", emitted)
+        self.assertNotIn("มีประสิทธิภาพสูงกว่า", emitted)
+        self.assertIn("ไม่เพียงพอ", emitted)
+
+    def test_claim_gate_derives_literal_per_employee_ratio(self):
+        evidence = EvidenceState()
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-ratio-inputs",
+            "execute_query_tool",
+            {},
+            "department employee_count project_value\n"
+            "วิจัยและพัฒนา 3 10000000\n"
+            "เทคโนโลยีสารสนเทศ 5 5000000",
+        ))
+        observation = ObservationState(
+            verdict=SemanticVerdict.REWRITE,
+            reason="retain inputs but refuse efficiency",
+            supported_claims=(
+                "วิจัยและพัฒนา มีพนักงาน 3 คน",
+                "วิจัยและพัฒนา มีโครงการรวมมูลค่า 10,000,000",
+                "เทคโนโลยีสารสนเทศ มีพนักงาน 5 คน",
+                "เทคโนโลยีสารสนเทศ มีโครงการรวมมูลค่า 5,000,000",
+            ),
+        )
+        emitted = verify_then_emit(
+            "แผนกใดมีประสิทธิภาพกว่ากัน",
+            observation,
+            evidence,
+        )
+        self.assertIn("3333333.33", emitted)
+        self.assertIn("1000000.00", emitted)
+        self.assertIn("ไม่เพียงพอ", emitted)
+
+    def test_question_operands_require_mcp_corroboration_before_ratio(self):
+        question = (
+            "พบว่า `วิจัยและพัฒนา` มีพนักงาน 3 คน และมีโครงการมูลค่า "
+            "10,000,000 ส่วน `เทคโนโลยีสารสนเทศ` มีพนักงาน 5 คน"
+            "และมีโครงการมูลค่า 5,000,000 compare efficiency"
+        )
+        observation = ObservationState(
+            verdict=SemanticVerdict.REWRITE,
+            reason="observer omitted descriptive operands",
+        )
+        empty = verify_then_emit(
+            question,
+            observation,
+            EvidenceState(),
+        )
+        self.assertNotIn("3333333.33", empty)
+
+        evidence = EvidenceState()
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-corroboration",
+            "execute_query_tool",
+            {},
+            "department employees project_value\n"
+            "วิจัยและพัฒนา 3 10000000\n"
+            "เทคโนโลยีสารสนเทศ 5 5000000",
+        ))
+        emitted = verify_then_emit(question, observation, evidence)
+        self.assertIn("3333333.33", emitted)
+        self.assertIn("1000000.00", emitted)
+
+    def test_claim_gate_retains_declared_strict_threshold(self):
+        evidence = EvidenceState()
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-policy",
+            "execute_query_tool",
+            {},
+            "department numerator denominator pct\n"
+            "ทรัพยากรบุคคล 3 4 75",
+        ))
+        observation = ObservationState(
+            verdict=SemanticVerdict.REWRITE,
+            reason="observer omitted boundary wording",
+            supported_claims=(
+                "ทรัพยากรบุคคลมีพนักงานสัญญา 3 จาก 4 คน เท่ากับ 75%",
+            ),
+        )
+        emitted = verify_then_emit(
+            "เข้าเกณฑ์เมื่อพนักงานสัญญามากกว่า 50%",
+            observation,
+            evidence,
+        )
+        self.assertIn("75% มากกว่าเกณฑ์ 50%", emitted)
+
+    def test_claim_gate_derives_total_for_evidenced_unit_components(self):
+        evidence = EvidenceState()
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-hours",
+            "execute_query_tool",
+            {},
+            "training_type hours pct\n"
+            "ภายนอก 152 60.32\nออนไลน์ 92 36.51\nภายใน 8 3.17",
+        ))
+        observation = ObservationState(
+            verdict=SemanticVerdict.REWRITE,
+            reason="grounded components",
+            supported_claims=(
+                "ภายนอก 152 ชั่วโมง (60.32%)",
+                "ออนไลน์ 92 ชั่วโมง (36.51%)",
+                "ภายใน 8 ชั่วโมง (3.17%)",
+            ),
+        )
+        emitted = verify_then_emit(
+            "ชั่วโมงอบรมทั้งหมดมีสัดส่วนตามประเภทอย่างไร",
+            observation,
+            evidence,
+        )
+        self.assertIn("รวมทั้งหมด 252 ชั่วโมง", emitted)
+
+    def test_existing_total_prevents_duplicate_component_sum(self):
+        evidence = EvidenceState()
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-hours-total",
+            "execute_query_tool",
+            {},
+            "training_type hours pct\n"
+            "ภายนอก 152 60.32\nออนไลน์ 92 36.51\nภายใน 8 3.17",
+        ))
+        observation = ObservationState(
+            verdict=SemanticVerdict.REWRITE,
+            reason="grounded total and components",
+            supported_claims=(
+                "ชั่วโมงอบรมทั้งหมดคือ 252 ชั่วโมง",
+                "ภายนอก 152 ชั่วโมง (60.32%)",
+                "ออนไลน์ 92 ชั่วโมง (36.51%)",
+                "ภายใน 8 ชั่วโมง (3.17%)",
+            ),
+        )
+        emitted = verify_then_emit(
+            "ชั่วโมงอบรมทั้งหมดมีสัดส่วนตามประเภทอย่างไร",
+            observation,
+            evidence,
+        )
+        self.assertNotIn("312.32", emitted)
+
+    def test_certificate_contract_requires_both_evidence_roles(self):
+        question = (
+            "ทุกรายการมี certificate_obtained หรือไม่ และพิสูจน์ได้หรือไม่"
+            "ว่าทุกคนมี certification ที่ยังใช้ได้"
+        )
+        evidence = EvidenceState()
+        missing = dict(missing_role_queries(question, evidence))
+        self.assertEqual(
+            set(missing),
+            {"training_certificate_flags", "certification_entity_records"},
+        )
+        for role_id, query in missing.items():
+            if role_id == "training_certificate_flags":
+                result = (
+                    "training_record_count obtained_true_count\n"
+                    "11 11"
+                )
+            else:
+                result = (
+                    "certification_record_count certified_employee_count\n"
+                    "7 7"
+                )
+            evidence.accept(EvidenceRecord.from_tool(
+                f"contract_{role_id}",
+                "execute_query_tool",
+                {"query": query},
+                result,
+            ))
+        self.assertTrue(metric_contract_status(question, evidence).satisfied)
+        claims = contract_claims(question, evidence)
+        self.assertTrue(any("11 รายการ" in claim for claim in claims))
+        self.assertTrue(
+            any("ไม่ใช่หลักฐาน" in claim for claim in claims)
+        )
+        self.assertEqual(
+            terminal_contract_verdict(question),
+            "refuse_decision",
+        )
+
+    def test_training_hours_contract_composes_total_shares_and_policy(self):
+        question = (
+            "ชั่วโมงอบรมกระจายตาม training_type อย่างไร และประเภทใด"
+            "เกิน concentration limit 50%"
+        )
+        evidence = EvidenceState()
+        ((role_id, query),) = missing_role_queries(question, evidence)
+        self.assertEqual(role_id, "hours_by_training_type")
+        evidence.accept(EvidenceRecord.from_tool(
+            "contract_hours_by_training_type",
+            "execute_query_tool",
+            {"query": query},
+            (
+                "training_type  training_hours share_pct\n"
+                "ภายนอก        152 60.32\n"
+                "ออนไลน์        92 36.51\n"
+                "ภายใน          8 3.17"
+            ),
+        ))
+        claims = contract_claims(question, evidence)
+        self.assertIn("ชั่วโมงอบรมทั้งหมดคือ 252 ชั่วโมง", claims)
+        self.assertTrue(
+            any(
+                "ภายนอก 152 ชั่วโมง (60.32%)" in claim
+                and "เกินนโยบาย" in claim
+                for claim in claims
+            )
+        )
+
+    def test_staffing_contract_is_terminal_fail_closed(self):
+        question = (
+            "จาก headcount และ project value จงเลือกแผนกที่ควรลดคน "
+            "และแผนกที่ควรเพิ่มคน พร้อมเหตุผลเชิงธุรกิจ"
+        )
+        self.assertEqual(
+            terminal_contract_verdict(question),
+            "refuse_decision",
+        )
+
+    def test_efficiency_contract_emits_literal_ratios_and_refuses_label(self):
+        question = (
+            "จากข้อมูล `วิจัยและพัฒนา` มีพนักงาน 3 คน และมีโครงการมูลค่า "
+            "10,000,000 ส่วน `เทคโนโลยีสารสนเทศ` มีพนักงาน 5 คน "
+            "และมีโครงการมูลค่า 5,000,000 แผนกใดมีประสิทธิภาพกว่า"
+        )
+        evidence = EvidenceState()
+        ((role_id, query),) = missing_role_queries(question, evidence)
+        self.assertEqual(role_id, "department_value_and_headcount")
+        evidence.accept(EvidenceRecord.from_tool(
+            "contract_department_value_and_headcount",
+            "execute_query_tool",
+            {"query": query},
+            (
+                "department            active_employee_count project_value\n"
+                "วิจัยและพัฒนา                           3      10000000\n"
+                "เทคโนโลยีสารสนเทศ                       5       5000000"
+            ),
+        ))
+        claims = contract_claims(question, evidence)
+        self.assertTrue(any("3333333.33" in claim for claim in claims))
+        self.assertTrue(any("1000000.00" in claim for claim in claims))
+        self.assertEqual(
+            terminal_contract_verdict(question),
+            "refuse_decision",
+        )
+
+    def test_expert_skill_contract_preserves_record_grain_and_totals(self):
+        question = (
+            "จาก skill records วิเคราะห์ระดับ เชี่ยวชาญ เทียบเป้าหมาย 50% "
+            "แยกตาม skill_category"
+        )
+        evidence = EvidenceState()
+        ((role_id, query),) = missing_role_queries(question, evidence)
+        self.assertEqual(role_id, "expert_share_by_category")
+        evidence.accept(EvidenceRecord.from_tool(
+            "contract_expert_share_by_category",
+            "execute_query_tool",
+            {"query": query},
+            (
+                "skill_category  total_skills expert_count\n"
+                "การสื่อสาร                  1 0\n"
+                "คอมพิวเตอร์                 3 1\n"
+                "บริหาร                      3 1\n"
+                "รวมทั้งหมด                 15 6\n"
+                "เทคนิค                      8 4"
+            ),
+        ))
+        claims = contract_claims(question, evidence)
+        self.assertTrue(
+            any(
+                "รวมทั้งหมด" in claim
+                and "15 รายการ" in claim
+                and "6 รายการ" in claim
+                and "40.00%" in claim
+                for claim in claims
+            )
+        )
+        self.assertEqual(terminal_contract_verdict(question), "approve")
+
+    def test_project_concentration_contract_composes_policy_verdict(self):
+        question = (
+            "มี concentration risk หากมูลค่าสูงสุดสองอันดับเกิน 60% "
+            "จงตรวจตามนโยบาย"
+        )
+        evidence = EvidenceState()
+        ((role_id, query),) = missing_role_queries(question, evidence)
+        self.assertEqual(role_id, "portfolio_total_and_top_two")
+        evidence.accept(EvidenceRecord.from_tool(
+            "contract_portfolio_total_and_top_two",
+            "execute_query_tool",
+            {"query": query},
+            "total_project_value top_two_project_value\n28000000 18000000",
+        ))
+        claims = contract_claims(question, evidence)
+        self.assertTrue(any("28000000" in claim for claim in claims))
+        self.assertTrue(any("18000000" in claim for claim in claims))
+        self.assertTrue(any("64.29%" in claim for claim in claims))
+        self.assertIn("มี concentration risk", claims)
+        self.assertTrue(all("บาท" not in claim for claim in claims))
+        self.assertEqual(terminal_contract_verdict(question), "approve")
+
+    def test_review_coverage_contract_rejects_review_date_proxy(self):
+        question = (
+            "performance review ปี 2023 คำนวณ evidence coverage "
+            "และตรวจเกณฑ์ 80%"
+        )
+        record = EvidenceRecord.from_tool(
+            "call-wrong-year",
+            "execute_query_tool",
+            {
+                "query": (
+                    "SELECT COUNT(DISTINCT employee_id) "
+                    "FROM performance_reviews "
+                    "WHERE YEAR(review_date) = 2023"
+                )
+            },
+            "reviewed_employee_count\n0",
+        )
+        result = validate_evidence_contract(question, record)
+        self.assertEqual(result.decision, ContractDecision.QUERY_MORE)
+
     def test_claim_gate_refuses_decision_and_drops_recommendation(self):
         evidence = EvidenceState()
         evidence.accept(EvidenceRecord.from_tool(
@@ -669,6 +1036,69 @@ class Phase2BTests(unittest.TestCase):
             record,
         )
         self.assertEqual(result.decision, ContractDecision.QUERY_MORE)
+
+    def test_headcount_contract_rejects_incomplete_max_only_query(self):
+        question = (
+            "พนักงานที่มีสถานะ `ปฏิบัติงาน` มีกี่คน "
+            "และแยกตาม `department` อย่างไร"
+        )
+        record = EvidenceRecord.from_tool(
+            "call-max-only",
+            "execute_query_tool",
+            {
+                "query": (
+                    "SELECT TOP 1 department, COUNT(*) AS employee_count "
+                    "FROM employees WHERE status = N'ปฏิบัติงาน' "
+                    "GROUP BY department ORDER BY employee_count DESC"
+                )
+            },
+            "department employee_count\nเทคโนโลยีสารสนเทศ 5",
+        )
+        result = validate_evidence_contract(question, record)
+        self.assertEqual(result.decision, ContractDecision.QUERY_MORE)
+
+    def test_metric_contract_status_requires_every_query_role(self):
+        question = (
+            "มีพนักงาน 25 คนและ performance review 7 รายการ "
+            "จงคำนวณ evidence coverage เทียบเกณฑ์ 80%"
+        )
+        evidence = EvidenceState()
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-denominator",
+            "execute_query_tool",
+            {
+                "query": (
+                    "SELECT COUNT(*) AS active_count FROM employees "
+                    "WHERE status = N'ปฏิบัติงาน'"
+                )
+            },
+            "active_count\n25",
+        ))
+        status = metric_contract_status(question, evidence)
+        self.assertFalse(status.satisfied)
+        self.assertIn(
+            "distinct_reviewed_employee_numerator",
+            status.missing_roles,
+        )
+
+    def test_query_contract_repairs_unicode_and_coverage_grain(self):
+        question = (
+            "performance review evidence coverage เทียบเกณฑ์ 80%"
+        )
+        repaired, changes = repair_query_arguments(
+            question,
+            "execute_query_tool",
+            {
+                "query": (
+                    "SELECT COUNT(*) FROM performance_reviews "
+                    "WHERE review_period = 'ปี 2023'"
+                )
+            },
+        )
+        self.assertIn("COUNT(DISTINCT employee_id)", repaired["query"])
+        self.assertIn("N'ปี 2023'", repaired["query"])
+        self.assertIn("coverage-distinct-employee", changes)
+        self.assertIn("mssql-unicode-prefix", changes)
 
     def test_evidence_state_renders_structured_observation(self):
         state = EvidenceState()

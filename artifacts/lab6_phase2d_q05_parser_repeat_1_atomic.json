@@ -1,0 +1,50 @@
+{
+  "repeat": 20,
+  "deterministic": true,
+  "result": {
+    "fixture_id": "live-artifact:2026-07-30T04:21:58.180309+00:00",
+    "grader_version": "atomic-v1",
+    "result_sha256": "1574ec81e00ad8d110a9968739122b24deed6b4e953e652899cdd0fda5f04e42",
+    "variants": {
+      "phase2c_python_first": {
+        "atomic_passed": 5,
+        "atomic_total": 5,
+        "atomic_rate": 1.0,
+        "questions_passed": 1,
+        "questions_total": 1,
+        "questions": {
+          "q05_training_portfolio": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q05.total",
+                "passed": true,
+                "detail": "total 252 hours"
+              },
+              {
+                "item_id": "q05.external",
+                "passed": true,
+                "detail": "external 152/60.32%"
+              },
+              {
+                "item_id": "q05.online",
+                "passed": true,
+                "detail": "online 92/36.51%"
+              },
+              {
+                "item_id": "q05.internal",
+                "passed": true,
+                "detail": "internal 8/3.17%"
+              },
+              {
+                "item_id": "q05.policy",
+                "passed": true,
+                "detail": "external exceeds 50%"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

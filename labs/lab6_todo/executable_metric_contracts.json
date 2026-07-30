@@ -1,0 +1,176 @@
+{
+  "version": "executable-metric-contracts-v1",
+  "contracts": [
+    {
+      "id": "active_headcount_by_department",
+      "question_terms_all": ["ปฏิบัติงาน", "department"],
+      "question_terms_any": ["กี่คน", "แยกตาม"],
+      "terminal_verdict": "approve",
+      "roles": [
+        {
+          "id": "grouped_active_headcount",
+          "table_terms": ["employees"],
+          "query_terms_all": ["count(", "group by", "department", "n'ปฏิบัติงาน'"],
+          "query_terms_forbidden": [" top ", " limit "],
+          "result_fields_any": [],
+          "result_must_contain": ["department"],
+          "minimum_result_lines": 3
+          ,"query_template": "SELECT department, COUNT(*) AS employee_count FROM employees WHERE status = N'ปฏิบัติงาน' GROUP BY department ORDER BY department"
+        }
+      ]
+    },
+    {
+      "id": "performance_review_coverage",
+      "question_terms_all": ["performance review", "coverage"],
+      "question_terms_any": ["80%", "เกณฑ์"],
+      "terminal_verdict": "approve",
+      "roles": [
+        {
+          "id": "active_employee_denominator",
+          "table_terms": ["employees"],
+          "query_terms_all": ["count(", "n'ปฏิบัติงาน'"],
+          "query_terms_forbidden": [],
+          "result_fields_any": [],
+          "result_must_contain": [],
+          "minimum_result_lines": 2
+          ,"query_template": "SELECT COUNT(*) AS active_employee_count FROM employees WHERE status = N'ปฏิบัติงาน'"
+        },
+        {
+          "id": "distinct_reviewed_employee_numerator",
+          "table_terms": ["performance_review"],
+          "query_terms_all": ["count(", "distinct", "employee_id", "review_period", "2023"],
+          "query_terms_forbidden": ["review_date"],
+          "result_fields_any": [],
+          "result_must_contain": [],
+          "minimum_result_lines": 2
+          ,"query_template": "SELECT COUNT(DISTINCT employee_id) AS reviewed_employee_count FROM performance_reviews WHERE review_period = N'2023'"
+        }
+      ]
+    },
+    {
+      "id": "training_hours_portfolio",
+      "question_terms_all": ["training_type", "50%"],
+      "question_terms_any": ["ชั่วโมงอบรม", "concentration"],
+      "terminal_verdict": "approve",
+      "roles": [
+        {
+          "id": "hours_by_training_type",
+          "table_terms": ["training_records"],
+          "query_terms_all": ["sum(", "hours", "group by", "training_type", "as training_hours"],
+          "query_terms_forbidden": ["count("],
+          "result_fields_any": ["training_hours"],
+          "result_must_contain": [],
+          "minimum_result_lines": 3,
+          "query_template": "SELECT training_type, SUM(hours) AS training_hours FROM training_records GROUP BY training_type ORDER BY training_type"
+        }
+      ]
+    },
+    {
+      "id": "expert_skill_record_share",
+      "question_terms_all": ["เชี่ยวชาญ", "skill_category"],
+      "question_terms_any": ["50%", "สัดส่วน"],
+      "terminal_verdict": "approve",
+      "roles": [
+        {
+          "id": "expert_share_by_category",
+          "table_terms": ["skills"],
+          "query_terms_all": ["proficiency_level", "n'เชี่ยวชาญ'", "group by", "skill_category", "total_skills", "expert_count", "union all"],
+          "query_terms_forbidden": ["count(distinct employee_id)"],
+          "result_fields_any": ["total_skills", "expert_count"],
+          "result_must_contain": ["skill_category"],
+          "minimum_result_lines": 5,
+          "query_template": "WITH category AS (SELECT skill_category, COUNT(*) AS total_skills, SUM(CASE WHEN proficiency_level = N'เชี่ยวชาญ' THEN 1 ELSE 0 END) AS expert_count FROM skills GROUP BY skill_category) SELECT skill_category, total_skills, expert_count FROM category UNION ALL SELECT N'รวมทั้งหมด' AS skill_category, SUM(total_skills) AS total_skills, SUM(expert_count) AS expert_count FROM category ORDER BY skill_category"
+        }
+      ]
+    },
+    {
+      "id": "top_two_project_concentration",
+      "question_terms_all": ["concentration risk", "60%"],
+      "question_terms_any": ["สองอันดับ", "two"],
+      "terminal_verdict": "approve",
+      "roles": [
+        {
+          "id": "portfolio_total_and_top_two",
+          "table_terms": ["projects"],
+          "query_terms_all": ["row_number(", "project_value", "total_project_value", "top_two_project_value"],
+          "query_terms_forbidden": ["บาท", "currency"],
+          "result_fields_any": ["total_project_value", "top_two_project_value"],
+          "result_must_contain": [],
+          "minimum_result_lines": 2,
+          "query_template": "WITH ranked AS (SELECT project_value, ROW_NUMBER() OVER (ORDER BY project_value DESC) AS rn FROM projects) SELECT SUM(project_value) AS total_project_value, SUM(CASE WHEN rn <= 2 THEN project_value ELSE 0 END) AS top_two_project_value FROM ranked"
+        }
+      ]
+    },
+    {
+      "id": "training_certificate_semantic_separation",
+      "question_terms_all": ["certificate_obtained", "certification"],
+      "question_terms_any": ["พิสูจน์", "ใช้ได้", "valid"],
+      "terminal_verdict": "refuse_decision",
+      "roles": [
+        {
+          "id": "training_certificate_flags",
+          "table_terms": ["training_records"],
+          "query_terms_all": ["count(", "sum(", "certificate_obtained"],
+          "query_terms_forbidden": [],
+          "result_fields_any": ["training_record_count", "obtained_true_count"],
+          "result_must_contain": [],
+          "minimum_result_lines": 2,
+          "query_template": "SELECT COUNT(*) AS training_record_count, SUM(CASE WHEN certificate_obtained = 1 THEN 1 ELSE 0 END) AS obtained_true_count FROM training_records"
+        },
+        {
+          "id": "certification_entity_records",
+          "table_terms": ["certifications"],
+          "query_terms_all": ["count(", "distinct", "employee_id"],
+          "query_terms_forbidden": ["training_records"],
+          "result_fields_any": ["certification_record_count", "certified_employee_count"],
+          "result_must_contain": [],
+          "minimum_result_lines": 2,
+          "query_template": "SELECT COUNT(*) AS certification_record_count, COUNT(DISTINCT employee_id) AS certified_employee_count FROM certifications"
+        }
+      ]
+    },
+    {
+      "id": "project_value_per_active_employee",
+      "question_terms_all": ["ประสิทธิภาพ", "พนักงาน"],
+      "question_terms_any": ["โครงการมูลค่า", "project value"],
+      "terminal_verdict": "refuse_decision",
+      "roles": [
+        {
+          "id": "department_value_and_headcount",
+          "table_terms": ["projects", "employees"],
+          "query_terms_all": ["active_headcount", "project_totals", "project_value", "employee_count", "department"],
+          "query_terms_forbidden": ["บาท", "currency"],
+          "result_fields_any": ["active_employee_count", "project_value"],
+          "result_must_contain": ["department"],
+          "minimum_result_lines": 3,
+          "query_template": "WITH active_headcount AS (SELECT department, COUNT(*) AS active_employee_count FROM employees WHERE status = N'ปฏิบัติงาน' GROUP BY department), project_totals AS (SELECT e.department, SUM(p.project_value) AS project_value FROM projects p JOIN employees e ON e.employee_id = p.employee_id GROUP BY e.department) SELECT h.department, h.active_employee_count, p.project_value FROM active_headcount h JOIN project_totals p ON p.department = h.department ORDER BY h.department"
+        }
+      ]
+    },
+    {
+      "id": "staffing_decision_insufficient",
+      "question_terms_all": ["ลดคน", "เพิ่มคน"],
+      "question_terms_any": ["headcount", "project value", "เหตุผลเชิงธุรกิจ"],
+      "terminal_verdict": "refuse_decision",
+      "required_missing_inputs": [
+        "workload",
+        "capacity",
+        "demand forecast",
+        "service level",
+        "target cost"
+      ],
+      "roles": [
+        {
+          "id": "descriptive_active_headcount",
+          "table_terms": ["employees"],
+          "query_terms_all": ["count(", "group by", "department", "n'ปฏิบัติงาน'"],
+          "query_terms_forbidden": [" top ", " limit "],
+          "result_fields_any": [],
+          "result_must_contain": ["department"],
+          "minimum_result_lines": 3,
+          "query_template": "SELECT department, COUNT(*) AS employee_count FROM employees WHERE status = N'ปฏิบัติงาน' GROUP BY department ORDER BY department"
+        }
+      ]
+    }
+  ]
+}

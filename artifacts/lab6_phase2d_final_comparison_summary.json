@@ -1,0 +1,45 @@
+{
+  "date": "2026-07-30",
+  "scope": "Frozen HR Q1-Q10 suite on TestDB",
+  "agent_model": "qwen/qwen3.5-35b-a3b",
+  "observer_model": "openai/gpt-oss-120b",
+  "mcp_server": "https://7ff8-184-22-21-43.ngrok-free.app/mcp",
+  "grader": {
+    "version": "atomic-v1",
+    "replays_per_artifact": 20
+  },
+  "baseline": {
+    "artifact": "lab6_phase2a_baseline_q1_q10_current.json",
+    "atomic_artifact": "lab6_phase2a_baseline_q1_q10_current_atomic.json",
+    "atomic": "57/77",
+    "questions": "3/10",
+    "total_seconds": 638.96,
+    "median_seconds": 54.987,
+    "max_seconds": 150.786,
+    "timeouts": 0
+  },
+  "enhanced_runs": [
+    {
+      "artifact": "lab6_phase2d_full_q1_q10_contracts_run5.json",
+      "atomic_artifact": "lab6_phase2d_full_q1_q10_contracts_run5_atomic.json",
+      "atomic": "77/77",
+      "questions": "10/10",
+      "total_seconds": 176.945,
+      "median_seconds": 0.762,
+      "max_seconds": 90.55,
+      "timeouts": 0
+    },
+    {
+      "artifact": "lab6_phase2d_full_q1_q10_contracts_run6.json",
+      "atomic_artifact": "lab6_phase2d_full_q1_q10_contracts_run6_atomic.json",
+      "atomic": "77/77",
+      "questions": "10/10",
+      "total_seconds": 169.515,
+      "median_seconds": 0.703,
+      "max_seconds": 104.76,
+      "timeouts": 0
+    }
+  ],
+  "enhanced_result_sha256": "f8da2d66ba26090e307363e2c365ebf1575a47a246ee1bcee47992ea58bc7e8f",
+  "conclusion": "Enhanced is better than Phase 2A baseline within this frozen controlled suite; no universal reliability claim."
+}

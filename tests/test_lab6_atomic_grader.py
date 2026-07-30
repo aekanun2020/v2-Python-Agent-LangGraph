@@ -48,6 +48,37 @@ class AtomicGraderTests(unittest.TestCase):
         self.assertTrue(items["q10.no_staffing_recommendation"])
         self.assertTrue(items["q10.retain_descriptive_facts"])
 
+    def test_q07_accepts_equivalent_decimal_format(self):
+        answer = (
+            "15 รายการ; 6 รายการ; รวม 40%; เป้าหมาย 50%\n"
+            "เทคนิค 50.00%\nการสื่อสาร 0.00%\n"
+            "คอมพิวเตอร์ 33.33%\nบริหาร 33.33%"
+        )
+        self.assertTrue(all(item.passed for item in grader.grade_q07(answer)))
+
+    def test_q03_accepts_semantically_equivalent_strict_boundary(self):
+        answer = (
+            "ทรัพยากรบุคคลมีพนักงานสัญญา 3 จาก 4 คน คิดเป็น 75% "
+            "ซึ่งสูงกว่าเกณฑ์ 50%"
+        )
+        self.assertTrue(all(item.passed for item in grader.grade_q03(answer)))
+
+    def test_q07_accepts_typed_field_rendering(self):
+        answer = (
+            "รวมทั้งหมด total_skills 15, expert_count 6, 40%; เป้าหมาย 50%\n"
+            "เทคนิค 50.00%\nการสื่อสาร 0.00%\n"
+            "คอมพิวเตอร์ 33.33%\nบริหาร 33.33%"
+        )
+        self.assertTrue(all(item.passed for item in grader.grade_q07(answer)))
+
+    def test_q07_fraction_proves_total_denominator(self):
+        answer = (
+            "เชี่ยวชาญ 6 รายการ; สัดส่วน 40% (6/15); เป้าหมาย 50%\n"
+            "เทคนิค 50.00%\nการสื่อสาร 0.00%\n"
+            "คอมพิวเตอร์ 33.33%\nบริหาร 33.33%"
+        )
+        self.assertTrue(all(item.passed for item in grader.grade_q07(answer)))
+
     def test_metric_contracts_cover_all_ten_questions(self):
         contracts = json.loads(
             (ROOT / "labs/lab6_todo/hr_metric_contracts.json").read_text(

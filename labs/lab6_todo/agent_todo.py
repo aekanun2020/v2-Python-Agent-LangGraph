@@ -26,12 +26,16 @@ from labs.lab6_todo.context_state import (
 from labs.lab6_todo.evidence_state import (
     EvidenceRecord,
     EvidenceState,
+    ObservationState,
     SemanticVerdict,
 )
 from labs.lab6_todo.claim_ledger import ClaimLedger
 from labs.lab6_todo.claim_gate import verify_then_emit
 from labs.lab6_todo.evidence_contract import (
     ContractDecision,
+    missing_role_queries,
+    repair_query_arguments,
+    terminal_contract_verdict,
     validate_evidence_contract,
 )
 from labs.lab6_todo.dynamic_observer import (
@@ -160,6 +164,50 @@ def dispatch_with_retry(
     raise RuntimeError("unreachable MCP retry state")
 
 
+def fulfill_metric_contract(
+    question: str,
+    registry: ToolRegistry,
+    evidence: EvidenceState,
+    budget: Phase2Budget,
+) -> None:
+    """Execute only versioned missing metric roles before final emission."""
+    for role_id, query in missing_role_queries(question, evidence):
+        try:
+            budget.consume_mcp()
+            result = dispatch_with_retry(
+                registry,
+                "execute_query_tool",
+                {"query": query},
+            )
+        except RuntimeBudgetExhausted as error:
+            print(
+                f"[METRIC CONTRACT BLOCKED] role={role_id} "
+                f"reason={error}"
+            )
+            break
+        except Exception as error:
+            print(
+                f"[METRIC CONTRACT ERROR] role={role_id} "
+                f"type={type(error).__name__}"
+            )
+            continue
+        record = EvidenceRecord.from_tool(
+            f"contract_{role_id}",
+            "execute_query_tool",
+            {"query": query},
+            result,
+        )
+        validation = validate_evidence_contract(question, record)
+        if validation.decision is ContractDecision.ACCEPT:
+            evidence.accept(record)
+            print(f"[METRIC CONTRACT EXECUTED] role={role_id}")
+        else:
+            print(
+                f"[METRIC CONTRACT REJECTED] role={role_id} "
+                f"reason={validation.reason}"
+            )
+
+
 def resolve_rewrite(
     question: str,
     proposed: str,
@@ -237,6 +285,38 @@ def _run_impl(
     ]
     force_no_tools = False
     reviewed_risk_signatures: set[tuple[str, ...]] = set()
+    terminal_verdict = (
+        terminal_contract_verdict(question)
+        if dynamic_observer
+        else None
+    )
+    if terminal_verdict in {
+        SemanticVerdict.APPROVE.value,
+        SemanticVerdict.REFUSE_DECISION.value,
+    }:
+        fulfill_metric_contract(question, registry, evidence, budget)
+        observation = ObservationState(
+            verdict=SemanticVerdict(terminal_verdict),
+            reason=(
+                "executable metric contract completed deterministically"
+                if terminal_verdict == SemanticVerdict.APPROVE.value
+                else (
+                    "declared decision contract lacks required causal "
+                    "business inputs"
+                )
+            ),
+        )
+        content = verify_then_emit(
+            question,
+            observation,
+            evidence,
+        )
+        print(
+            f"[TERMINAL CONTRACT] {terminal_verdict}; "
+            "contract evidence composed"
+        )
+        context.set_phase(AgentPhase.ANSWER)
+        return _print_final(content, todo, context)
     for step in range(1, max_steps + 1):
         try:
             budget.consume_agent()
@@ -298,6 +378,17 @@ def _run_impl(
                                 f"(budget={max_mcp_calls})"
                             )
                         else:
+                            args, query_repairs = repair_query_arguments(
+                                question,
+                                name,
+                                args,
+                            )
+                            if query_repairs:
+                                print(
+                                    "[QUERY CONTRACT REPAIR] "
+                                    f"tool={name} "
+                                    f"repairs={list(query_repairs)}"
+                                )
                             try:
                                 result = dispatch_with_retry(
                                     registry,
@@ -513,6 +604,8 @@ def _run_impl(
             continue
         context.set_phase(AgentPhase.ANSWER)
         proposed = msg.content or ""
+        if dynamic_observer:
+            fulfill_metric_contract(question, registry, evidence, budget)
         if semantic_observer:
             final_risks = (
                 final_semantic_risk(question, proposed, evidence)
@@ -539,13 +632,23 @@ def _run_impl(
                     timeout=budget.call_timeout(60),
                 )
             except Exception as error:
-                proposed = (
-                    "ไม่สามารถตรวจรับรองคำตอบภายใน runtime ได้: "
-                    f"{type(error).__name__}"
+                observation = ObservationState(
+                    verdict=SemanticVerdict.REFUSE_DECISION,
+                    reason=(
+                        "semantic observer unavailable; deterministic "
+                        "claim gate takes over fail-closed"
+                    ),
                 )
                 print(
                     f"[FINAL OBSERVER ERROR] {type(error).__name__}: {error}"
                 )
+                proposed = verify_then_emit(
+                    question,
+                    observation,
+                    evidence,
+                    proposed_answer=proposed,
+                )
+                print("[FINAL CLAIM GATE] observer-error fallback composed")
                 return _print_final(proposed, todo, context)
             if dynamic_observer:
                 observation = enforce_claim_alignment(
@@ -621,6 +724,8 @@ def _run_impl(
         return _print_final(content, todo, context)
     context.set_phase(AgentPhase.ANSWER)
     content = final.choices[0].message.content or ""
+    if dynamic_observer:
+        fulfill_metric_contract(question, registry, evidence, budget)
     if semantic_observer:
         final_risks = (
             final_semantic_risk(question, content, evidence)
@@ -645,10 +750,23 @@ def _run_impl(
                     ledger,
                 )
         except Exception as error:
-            content = (
-                "หยุดตามขีดจำกัด runtime โดยไม่รับรองคำตอบ: "
-                f"{error}"
+            observation = ObservationState(
+                verdict=SemanticVerdict.REFUSE_DECISION,
+                reason=(
+                    "semantic observer unavailable; deterministic "
+                    "claim gate takes over fail-closed"
+                ),
             )
+            print(
+                f"[FINAL OBSERVER ERROR] {type(error).__name__}: {error}"
+            )
+            content = verify_then_emit(
+                question,
+                observation,
+                evidence,
+                proposed_answer=content,
+            )
+            print("[FINAL CLAIM GATE] observer-error fallback composed")
             return _print_final(content, todo, context)
         print(
             f"[FINAL OBSERVATION] verdict={observation.verdict.value} "

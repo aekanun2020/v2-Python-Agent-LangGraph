@@ -1,0 +1,230 @@
+{
+  "repeat": 20,
+  "deterministic": true,
+  "result": {
+    "fixture_id": "live-artifact:2026-07-30T04:36:35.864934+00:00",
+    "grader_version": "atomic-v1",
+    "result_sha256": "ffaeb2afe95b71dfb178085767e0bd54c56d3b7788966834a00c75d42f5228cd",
+    "variants": {
+      "phase2c_python_first": {
+        "atomic_passed": 35,
+        "atomic_total": 37,
+        "atomic_rate": 0.9459459459459459,
+        "questions_passed": 4,
+        "questions_total": 5,
+        "questions": {
+          "q01_headcount": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q01.total",
+                "passed": true,
+                "detail": "active total must be 25"
+              },
+              {
+                "item_id": "q01.department.เทคโนโลยีสารสนเทศ",
+                "passed": true,
+                "detail": "เทคโนโลยีสารสนเทศ must retain canonical label and count 5"
+              },
+              {
+                "item_id": "q01.department.การเงิน",
+                "passed": true,
+                "detail": "การเงิน must retain canonical label and count 3"
+              },
+              {
+                "item_id": "q01.department.การตลาด",
+                "passed": true,
+                "detail": "การตลาด must retain canonical label and count 4"
+              },
+              {
+                "item_id": "q01.department.ทรัพยากรบุคคล",
+                "passed": true,
+                "detail": "ทรัพยากรบุคคล must retain canonical label and count 4"
+              },
+              {
+                "item_id": "q01.department.บริหารทั่วไป",
+                "passed": true,
+                "detail": "บริหารทั่วไป must retain canonical label and count 1"
+              },
+              {
+                "item_id": "q01.department.บัญชี",
+                "passed": true,
+                "detail": "บัญชี must retain canonical label and count 2"
+              },
+              {
+                "item_id": "q01.department.ผลิต",
+                "passed": true,
+                "detail": "ผลิต must retain canonical label and count 3"
+              },
+              {
+                "item_id": "q01.department.วิจัยและพัฒนา",
+                "passed": true,
+                "detail": "วิจัยและพัฒนา must retain canonical label and count 3"
+              },
+              {
+                "item_id": "q01.no_unsupported_interpretation",
+                "passed": true,
+                "detail": "no unsupported business interpretation"
+              }
+            ]
+          },
+          "q04_review_coverage": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q04.population",
+                "passed": true,
+                "detail": "population 25"
+              },
+              {
+                "item_id": "q04.reviewed",
+                "passed": true,
+                "detail": "reviewed employees 7"
+              },
+              {
+                "item_id": "q04.distinct_grain",
+                "passed": true,
+                "detail": "numerator must prove distinct employee grain"
+              },
+              {
+                "item_id": "q04.coverage",
+                "passed": true,
+                "detail": "coverage 28%"
+              },
+              {
+                "item_id": "q04.threshold",
+                "passed": true,
+                "detail": "user threshold 80%"
+              },
+              {
+                "item_id": "q04.threshold_verdict",
+                "passed": true,
+                "detail": "28% must be evaluated below/failing 80%"
+              },
+              {
+                "item_id": "q04.no_recommendation",
+                "passed": true,
+                "detail": "descriptive evaluation only"
+              }
+            ]
+          },
+          "q05_training_portfolio": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q05.total",
+                "passed": true,
+                "detail": "total 252 hours"
+              },
+              {
+                "item_id": "q05.external",
+                "passed": true,
+                "detail": "external 152/60.32%"
+              },
+              {
+                "item_id": "q05.online",
+                "passed": true,
+                "detail": "online 92/36.51%"
+              },
+              {
+                "item_id": "q05.internal",
+                "passed": true,
+                "detail": "internal 8/3.17%"
+              },
+              {
+                "item_id": "q05.policy",
+                "passed": true,
+                "detail": "external exceeds 50%"
+              }
+            ]
+          },
+          "q07_expert_skill": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q07.total_records",
+                "passed": true,
+                "detail": "15 records"
+              },
+              {
+                "item_id": "q07.expert_records",
+                "passed": true,
+                "detail": "6 expert records"
+              },
+              {
+                "item_id": "q07.overall",
+                "passed": true,
+                "detail": "overall 40%"
+              },
+              {
+                "item_id": "q07.target",
+                "passed": true,
+                "detail": "target 50%"
+              },
+              {
+                "item_id": "q07.เทคนิค",
+                "passed": true,
+                "detail": "เทคนิค 50%"
+              },
+              {
+                "item_id": "q07.การสื่อสาร",
+                "passed": true,
+                "detail": "การสื่อสาร 0%"
+              },
+              {
+                "item_id": "q07.คอมพิวเตอร์",
+                "passed": true,
+                "detail": "คอมพิวเตอร์ 33.33%"
+              },
+              {
+                "item_id": "q07.บริหาร",
+                "passed": true,
+                "detail": "บริหาร 33.33%"
+              }
+            ]
+          },
+          "q08_project_concentration": {
+            "passed": false,
+            "items": [
+              {
+                "item_id": "q08.total",
+                "passed": false,
+                "detail": "total 28m"
+              },
+              {
+                "item_id": "q08.top_two",
+                "passed": false,
+                "detail": "top two 18m"
+              },
+              {
+                "item_id": "q08.ratio",
+                "passed": true,
+                "detail": "64.29%"
+              },
+              {
+                "item_id": "q08.threshold",
+                "passed": true,
+                "detail": "threshold 60%"
+              },
+              {
+                "item_id": "q08.policy",
+                "passed": true,
+                "detail": "declared policy verdict"
+              },
+              {
+                "item_id": "q08.no_high_risk",
+                "passed": true,
+                "detail": "must not invent high-risk tier"
+              },
+              {
+                "item_id": "q08.no_currency",
+                "passed": true,
+                "detail": "no unsupported currency"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

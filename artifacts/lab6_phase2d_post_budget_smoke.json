@@ -1,0 +1,44 @@
+{
+  "generated_at": "2026-07-30T04:58:43.822365+00:00",
+  "model": "qwen/qwen3.5-35b-a3b",
+  "observer_model": "openai/gpt-oss-120b",
+  "mcp_server": "https://7ff8-184-22-21-43.ngrok-free.app/mcp",
+  "comparison": {
+    "phase2a_final_only": {
+      "semantic_observer": "on",
+      "dynamic_observer": "off"
+    },
+    "phase2c_python_first": {
+      "semantic_observer": "on",
+      "dynamic_observer": "on"
+    }
+  },
+  "questions": [
+    {
+      "id": "q01_headcount",
+      "level": 1,
+      "question": "พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมดกี่คน และแยกตามค่า `department` ในฐานข้อมูลอย่างไร",
+      "semantic_risk": "canonical labels and exact counts"
+    }
+  ],
+  "runs": [
+    {
+      "question_id": "q01_headcount",
+      "level": 1,
+      "variant": "phase2c_python_first",
+      "elapsed_seconds": 0.932,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 0,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [],
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมด 25 คน\n- แผนกเทคโนโลยีสารสนเทศ มีพนักงาน 5 คน\n- แผนกการเงิน มีพนักงาน 3 คน\n- แผนกการตลาด มีพนักงาน 4 คน\n- แผนกทรัพยากรบุคคล มีพนักงาน 4 คน\n- แผนกบริหารทั่วไป มีพนักงาน 1 คน\n- แผนกบัญชี มีพนักงาน 2 คน\n- แผนกผลิต มีพนักงาน 3 คน\n- แผนกวิจัยและพัฒนา มีพนักงาน 3 คน",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมดกี่คน และแยกตามค่า `department` ในฐานข้อมูลอย่างไร\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=grouped_active_headcount\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมด 25 คน\n- แผนกเทคโนโลยีสารสนเทศ มีพนักงาน 5 คน\n- แผนกการเงิน มีพนักงาน 3 คน\n- แผนกการตลาด มีพนักงาน 4 คน\n- แผนกทรัพยากรบุคคล มีพนักงาน 4 คน\n- แผนกบริหารทั่วไป มีพนักงาน 1 คน\n- แผนกบัญชี มีพนักงาน 2 คน\n- แผนกผลิต มีพนักงาน 3 คน\n- แผนกวิจัยและพัฒนา มีพนักงาน 3 คน\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": ""
+    }
+  ]
+}

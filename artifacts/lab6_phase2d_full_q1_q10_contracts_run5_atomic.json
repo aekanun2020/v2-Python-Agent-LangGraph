@@ -1,0 +1,455 @@
+{
+  "repeat": 20,
+  "deterministic": true,
+  "result": {
+    "fixture_id": "live-artifact:2026-07-30T04:38:12.905238+00:00",
+    "grader_version": "atomic-v1",
+    "result_sha256": "f8da2d66ba26090e307363e2c365ebf1575a47a246ee1bcee47992ea58bc7e8f",
+    "variants": {
+      "phase2c_python_first": {
+        "atomic_passed": 77,
+        "atomic_total": 77,
+        "atomic_rate": 1.0,
+        "questions_passed": 10,
+        "questions_total": 10,
+        "questions": {
+          "q01_headcount": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q01.total",
+                "passed": true,
+                "detail": "active total must be 25"
+              },
+              {
+                "item_id": "q01.department.เทคโนโลยีสารสนเทศ",
+                "passed": true,
+                "detail": "เทคโนโลยีสารสนเทศ must retain canonical label and count 5"
+              },
+              {
+                "item_id": "q01.department.การเงิน",
+                "passed": true,
+                "detail": "การเงิน must retain canonical label and count 3"
+              },
+              {
+                "item_id": "q01.department.การตลาด",
+                "passed": true,
+                "detail": "การตลาด must retain canonical label and count 4"
+              },
+              {
+                "item_id": "q01.department.ทรัพยากรบุคคล",
+                "passed": true,
+                "detail": "ทรัพยากรบุคคล must retain canonical label and count 4"
+              },
+              {
+                "item_id": "q01.department.บริหารทั่วไป",
+                "passed": true,
+                "detail": "บริหารทั่วไป must retain canonical label and count 1"
+              },
+              {
+                "item_id": "q01.department.บัญชี",
+                "passed": true,
+                "detail": "บัญชี must retain canonical label and count 2"
+              },
+              {
+                "item_id": "q01.department.ผลิต",
+                "passed": true,
+                "detail": "ผลิต must retain canonical label and count 3"
+              },
+              {
+                "item_id": "q01.department.วิจัยและพัฒนา",
+                "passed": true,
+                "detail": "วิจัยและพัฒนา must retain canonical label and count 3"
+              },
+              {
+                "item_id": "q01.no_unsupported_interpretation",
+                "passed": true,
+                "detail": "no unsupported business interpretation"
+              }
+            ]
+          },
+          "q02_employment_mix": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q02.เทคโนโลยีสารสนเทศ.regular",
+                "passed": true,
+                "detail": "เทคโนโลยีสารสนเทศ regular=4"
+              },
+              {
+                "item_id": "q02.เทคโนโลยีสารสนเทศ.contract",
+                "passed": true,
+                "detail": "เทคโนโลยีสารสนเทศ contract=1"
+              },
+              {
+                "item_id": "q02.เทคโนโลยีสารสนเทศ.ratio",
+                "passed": true,
+                "detail": "เทคโนโลยีสารสนเทศ ratio=20%"
+              },
+              {
+                "item_id": "q02.การเงิน.regular",
+                "passed": true,
+                "detail": "การเงิน regular=3"
+              },
+              {
+                "item_id": "q02.การเงิน.contract",
+                "passed": true,
+                "detail": "การเงิน contract=0"
+              },
+              {
+                "item_id": "q02.การเงิน.ratio",
+                "passed": true,
+                "detail": "การเงิน ratio=0%"
+              },
+              {
+                "item_id": "q02.การตลาด.regular",
+                "passed": true,
+                "detail": "การตลาด regular=2"
+              },
+              {
+                "item_id": "q02.การตลาด.contract",
+                "passed": true,
+                "detail": "การตลาด contract=2"
+              },
+              {
+                "item_id": "q02.การตลาด.ratio",
+                "passed": true,
+                "detail": "การตลาด ratio=50%"
+              },
+              {
+                "item_id": "q02.ทรัพยากรบุคคล.regular",
+                "passed": true,
+                "detail": "ทรัพยากรบุคคล regular=1"
+              },
+              {
+                "item_id": "q02.ทรัพยากรบุคคล.contract",
+                "passed": true,
+                "detail": "ทรัพยากรบุคคล contract=3"
+              },
+              {
+                "item_id": "q02.ทรัพยากรบุคคล.ratio",
+                "passed": true,
+                "detail": "ทรัพยากรบุคคล ratio=75%"
+              },
+              {
+                "item_id": "q02.บริหารทั่วไป.regular",
+                "passed": true,
+                "detail": "บริหารทั่วไป regular=1"
+              },
+              {
+                "item_id": "q02.บริหารทั่วไป.contract",
+                "passed": true,
+                "detail": "บริหารทั่วไป contract=0"
+              },
+              {
+                "item_id": "q02.บริหารทั่วไป.ratio",
+                "passed": true,
+                "detail": "บริหารทั่วไป ratio=0%"
+              },
+              {
+                "item_id": "q02.บัญชี.regular",
+                "passed": true,
+                "detail": "บัญชี regular=2"
+              },
+              {
+                "item_id": "q02.บัญชี.contract",
+                "passed": true,
+                "detail": "บัญชี contract=0"
+              },
+              {
+                "item_id": "q02.บัญชี.ratio",
+                "passed": true,
+                "detail": "บัญชี ratio=0%"
+              },
+              {
+                "item_id": "q02.ผลิต.regular",
+                "passed": true,
+                "detail": "ผลิต regular=3"
+              },
+              {
+                "item_id": "q02.ผลิต.contract",
+                "passed": true,
+                "detail": "ผลิต contract=0"
+              },
+              {
+                "item_id": "q02.ผลิต.ratio",
+                "passed": true,
+                "detail": "ผลิต ratio=0%"
+              },
+              {
+                "item_id": "q02.วิจัยและพัฒนา.regular",
+                "passed": true,
+                "detail": "วิจัยและพัฒนา regular=3"
+              },
+              {
+                "item_id": "q02.วิจัยและพัฒนา.contract",
+                "passed": true,
+                "detail": "วิจัยและพัฒนา contract=0"
+              },
+              {
+                "item_id": "q02.วิจัยและพัฒนา.ratio",
+                "passed": true,
+                "detail": "วิจัยและพัฒนา ratio=0%"
+              }
+            ]
+          },
+          "q03_contract_policy": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q03.hr_numerator",
+                "passed": true,
+                "detail": "HR numerator 3"
+              },
+              {
+                "item_id": "q03.hr_denominator",
+                "passed": true,
+                "detail": "HR denominator 4"
+              },
+              {
+                "item_id": "q03.hr_percentage",
+                "passed": true,
+                "detail": "HR 75%"
+              },
+              {
+                "item_id": "q03.strict_boundary",
+                "passed": true,
+                "detail": "strict >50 boundary"
+              },
+              {
+                "item_id": "q03.only_hr",
+                "passed": true,
+                "detail": "Marketing 50% must not qualify"
+              }
+            ]
+          },
+          "q04_review_coverage": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q04.population",
+                "passed": true,
+                "detail": "population 25"
+              },
+              {
+                "item_id": "q04.reviewed",
+                "passed": true,
+                "detail": "reviewed employees 7"
+              },
+              {
+                "item_id": "q04.distinct_grain",
+                "passed": true,
+                "detail": "numerator must prove distinct employee grain"
+              },
+              {
+                "item_id": "q04.coverage",
+                "passed": true,
+                "detail": "coverage 28%"
+              },
+              {
+                "item_id": "q04.threshold",
+                "passed": true,
+                "detail": "user threshold 80%"
+              },
+              {
+                "item_id": "q04.threshold_verdict",
+                "passed": true,
+                "detail": "28% must be evaluated below/failing 80%"
+              },
+              {
+                "item_id": "q04.no_recommendation",
+                "passed": true,
+                "detail": "descriptive evaluation only"
+              }
+            ]
+          },
+          "q05_training_portfolio": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q05.total",
+                "passed": true,
+                "detail": "total 252 hours"
+              },
+              {
+                "item_id": "q05.external",
+                "passed": true,
+                "detail": "external 152/60.32%"
+              },
+              {
+                "item_id": "q05.online",
+                "passed": true,
+                "detail": "online 92/36.51%"
+              },
+              {
+                "item_id": "q05.internal",
+                "passed": true,
+                "detail": "internal 8/3.17%"
+              },
+              {
+                "item_id": "q05.policy",
+                "passed": true,
+                "detail": "external exceeds 50%"
+              }
+            ]
+          },
+          "q06_certificate_semantics": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q06.training_records",
+                "passed": true,
+                "detail": "11 training records"
+              },
+              {
+                "item_id": "q06.all_true",
+                "passed": true,
+                "detail": "all training flags true"
+              },
+              {
+                "item_id": "q06.not_proof",
+                "passed": true,
+                "detail": "does not prove current-valid certification for all"
+              },
+              {
+                "item_id": "q06.no_false_all_valid",
+                "passed": true,
+                "detail": "must not affirm all valid"
+              }
+            ]
+          },
+          "q07_expert_skill": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q07.total_records",
+                "passed": true,
+                "detail": "15 records"
+              },
+              {
+                "item_id": "q07.expert_records",
+                "passed": true,
+                "detail": "6 expert records"
+              },
+              {
+                "item_id": "q07.overall",
+                "passed": true,
+                "detail": "overall 40%"
+              },
+              {
+                "item_id": "q07.target",
+                "passed": true,
+                "detail": "target 50%"
+              },
+              {
+                "item_id": "q07.เทคนิค",
+                "passed": true,
+                "detail": "เทคนิค 50%"
+              },
+              {
+                "item_id": "q07.การสื่อสาร",
+                "passed": true,
+                "detail": "การสื่อสาร 0%"
+              },
+              {
+                "item_id": "q07.คอมพิวเตอร์",
+                "passed": true,
+                "detail": "คอมพิวเตอร์ 33.33%"
+              },
+              {
+                "item_id": "q07.บริหาร",
+                "passed": true,
+                "detail": "บริหาร 33.33%"
+              }
+            ]
+          },
+          "q08_project_concentration": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q08.total",
+                "passed": true,
+                "detail": "total 28m"
+              },
+              {
+                "item_id": "q08.top_two",
+                "passed": true,
+                "detail": "top two 18m"
+              },
+              {
+                "item_id": "q08.ratio",
+                "passed": true,
+                "detail": "64.29%"
+              },
+              {
+                "item_id": "q08.threshold",
+                "passed": true,
+                "detail": "threshold 60%"
+              },
+              {
+                "item_id": "q08.policy",
+                "passed": true,
+                "detail": "declared policy verdict"
+              },
+              {
+                "item_id": "q08.no_high_risk",
+                "passed": true,
+                "detail": "must not invent high-risk tier"
+              },
+              {
+                "item_id": "q08.no_currency",
+                "passed": true,
+                "detail": "no unsupported currency"
+              }
+            ]
+          },
+          "q09_efficiency_trap": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q09.rd_ratio",
+                "passed": true,
+                "detail": "R&D literal ratio"
+              },
+              {
+                "item_id": "q09.it_ratio",
+                "passed": true,
+                "detail": "IT literal ratio"
+              },
+              {
+                "item_id": "q09.refuse_efficiency",
+                "passed": true,
+                "detail": "must refuse efficiency conclusion"
+              },
+              {
+                "item_id": "q09.no_currency",
+                "passed": true,
+                "detail": "no unsupported currency"
+              }
+            ]
+          },
+          "q10_staffing_decision": {
+            "passed": true,
+            "items": [
+              {
+                "item_id": "q10.refuse_decision",
+                "passed": true,
+                "detail": "decision must fail closed"
+              },
+              {
+                "item_id": "q10.no_staffing_recommendation",
+                "passed": true,
+                "detail": "no add/reduce staffing recommendation may be emitted"
+              },
+              {
+                "item_id": "q10.retain_descriptive_facts",
+                "passed": true,
+                "detail": "supported descriptive facts should remain"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

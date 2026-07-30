@@ -1,5 +1,25 @@
 # v2-Python-Agent-LangGraph
 
+## Latest: Pure Python Dynamic Observation + typed claims
+
+The current Lab 6 implementation is a Pure Python Agent runtime. It uses
+deterministic MCP evidence admission, executable metric/grain contracts,
+semantic-risk routing, and fail-closed typed claim composition.
+
+Controlled Q1–Q10 HR results with the same Qwen Agent, GPT-OSS Observer, and
+MCP endpoint:
+
+| Runtime | Atomic score | Whole questions | Total time |
+|---|---:|---:|---:|
+| Phase 2A baseline | 57/77 | 3/10 | 638.960s |
+| Current enhanced run 5 | 77/77 | 10/10 | 176.945s |
+| Current enhanced run 6 | 77/77 | 10/10 | 169.515s |
+
+This supports superiority only within the frozen controlled suite—not a
+universal production claim. See the
+[Lab 6 run guide](labs/lab6_todo/README.md#current-phase-2d-executable-metric-contracts)
+and [final evidence report](artifacts/lab6_phase2d_executable_contract_final_report.md).
+
 ## v2 — PlannerState ที่แก้แผนจากหลักฐานจริง
 
 เวอร์ชันนี้เพิ่ม **Planner → Tool → Review → Replan → Answer Review** ให้ Lab 8

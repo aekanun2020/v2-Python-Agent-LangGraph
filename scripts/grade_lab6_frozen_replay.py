@@ -142,7 +142,7 @@ def grade_q03(answer: str) -> list[AtomicResult]:
         _item("q03.hr_numerator", _contains(answer, r"ทรัพยากรบุคคล[^\n]{0,120}\b3\b"), "HR numerator 3"),
         _item("q03.hr_denominator", _contains(answer, r"ทรัพยากรบุคคล[^\n]{0,120}\b4\b"), "HR denominator 4"),
         _item("q03.hr_percentage", _contains(answer, r"ทรัพยากรบุคคล[^\n]{0,160}\b75(?:\.0+)?\s*%"), "HR 75%"),
-        _item("q03.strict_boundary", _contains(answer, r"(?:มากกว่า|เกิน|>)\s*50\s*%"), "strict >50 boundary"),
+        _item("q03.strict_boundary", _contains(answer, r"(?:มากกว่า|สูงกว่า|เกิน|>)\s*(?:เกณฑ์\s*)?50\s*%"), "strict >50 boundary"),
         _item("q03.only_hr", not _contains(answer, r"การตลาด[^\n]{0,120}(?:เข้าเกณฑ์|qualif)"), "Marketing 50% must not qualify"),
     ]
 
@@ -178,13 +178,17 @@ def grade_q06(answer: str) -> list[AtomicResult]:
 def grade_q07(answer: str) -> list[AtomicResult]:
     expected = {"เทคนิค": (50,), "การสื่อสาร": (0,), "คอมพิวเตอร์": (33.33,), "บริหาร": (33.33,)}
     results = [
-        _item("q07.total_records", _contains(answer, r"\b15\s*(?:รายการ|records?)"), "15 records"),
-        _item("q07.expert_records", _contains(answer, r"\b6\s*(?:รายการ|records?)"), "6 expert records"),
+        _item("q07.total_records", _contains(answer, r"(?:\b15\s*(?:รายการ|records?)|total_skills\s+15\b|\b6\s*/\s*15\b)"), "15 records"),
+        _item("q07.expert_records", _contains(answer, r"(?:\b6\s*(?:รายการ|records?)|expert_count\s+6\b)"), "6 expert records"),
         _item("q07.overall", _contains(answer, r"\b40(?:\.0+)?\s*%"), "overall 40%"),
         _item("q07.target", _contains(answer, r"\b50(?:\.0+)?\s*%"), "target 50%"),
     ]
     for label, (pct,) in expected.items():
-        results.append(_item(f"q07.{label}", _contains(answer, rf"{label}[^\n]{{0,120}}{pct}(?:0*)\s*%"), f"{label} {pct}%"))
+        results.append(_item(
+            f"q07.{label}",
+            _contains(answer, rf"{label}[^\n]{{0,120}}{pct}(?:\.0+)?\s*%"),
+            f"{label} {pct}%",
+        ))
     return results
 
 

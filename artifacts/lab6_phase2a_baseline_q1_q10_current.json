@@ -1,0 +1,289 @@
+{
+  "generated_at": "2026-07-30T04:44:39.980640+00:00",
+  "model": "qwen/qwen3.5-35b-a3b",
+  "observer_model": "openai/gpt-oss-120b",
+  "mcp_server": "https://7ff8-184-22-21-43.ngrok-free.app/mcp",
+  "comparison": {
+    "phase2a_final_only": {
+      "semantic_observer": "on",
+      "dynamic_observer": "off"
+    },
+    "phase2c_python_first": {
+      "semantic_observer": "on",
+      "dynamic_observer": "on"
+    }
+  },
+  "questions": [
+    {
+      "id": "q01_headcount",
+      "level": 1,
+      "question": "พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมดกี่คน และแยกตามค่า `department` ในฐานข้อมูลอย่างไร",
+      "semantic_risk": "canonical labels and exact counts"
+    },
+    {
+      "id": "q02_employment_mix",
+      "level": 2,
+      "question": "สำหรับพนักงานสถานะ `ปฏิบัติงาน` จงแสดงจำนวนพนักงาน `ประจำ` และ `สัญญา` ของแต่ละแผนก พร้อมคำนวณสัดส่วนพนักงานสัญญาต่อจำนวนพนักงานของแผนก",
+      "semantic_risk": "correct denominator and no relabelling"
+    },
+    {
+      "id": "q03_contract_policy",
+      "level": 3,
+      "question": "บริษัทกำหนดว่าแผนกมีความเสี่ยงด้าน contract dependency เมื่อพนักงานสัญญามากกว่า 50% ของพนักงานที่ปฏิบัติงานในแผนก แผนกใดเข้าเกณฑ์ แสดง numerator, denominator และอัตราร้อยละ",
+      "semantic_risk": "strict greater-than boundary"
+    },
+    {
+      "id": "q04_review_coverage",
+      "level": 4,
+      "question": "มีพนักงานที่ปฏิบัติงาน 25 คน แต่มี performance review ปี 2023 จำนวน 7 รายการ ก่อนเปรียบเทียบผลงานระหว่างแผนก จงคำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ขั้นต่ำ 80% หรือไม่",
+      "semantic_risk": "records are not necessarily distinct employees"
+    },
+    {
+      "id": "q05_training_portfolio",
+      "level": 5,
+      "question": "ชั่วโมงอบรมของบริษัทกระจายตาม `training_type` อย่างไร และประเภทใดเกินนโยบาย concentration limit 50% ของชั่วโมงอบรมทั้งหมด",
+      "semantic_risk": "hours share, not course-count share"
+    },
+    {
+      "id": "q06_certificate_semantics",
+      "level": 6,
+      "question": "ทุกรายการอบรมมี `certificate_obtained = True` หรือไม่ และข้อมูลนี้พิสูจน์ได้หรือไม่ว่าพนักงานทุกคนมี certification ที่ยังใช้ได้",
+      "semantic_risk": "training certificate is not certification validity"
+    },
+    {
+      "id": "q07_expert_skill",
+      "level": 7,
+      "question": "จาก skill records ทั้งหมด จงวิเคราะห์สัดส่วนระดับ `เชี่ยวชาญ` และตรวจว่าสูงถึงเป้าหมาย 50% หรือไม่ พร้อมแยกตาม `skill_category`",
+      "semantic_risk": "record grain is not employee grain"
+    },
+    {
+      "id": "q08_project_concentration",
+      "level": 8,
+      "question": "บริษัทกำหนดว่า project portfolio มี concentration risk หากโครงการมูลค่าสูงสุดสองอันดับรวมกันเกิน 60% ของมูลค่าทุกโครงการ จงตรวจตามนโยบายนี้",
+      "semantic_risk": "top-two ratio and missing currency metadata"
+    },
+    {
+      "id": "q09_efficiency_trap",
+      "level": 9,
+      "question": "จากข้อมูลพบว่า `วิจัยและพัฒนา` มีพนักงานปฏิบัติงาน 3 คน และมีโครงการมูลค่า 10,000,000 ส่วน `เทคโนโลยีสารสนเทศ` มีพนักงาน 5 คนและโครงการมูลค่า 5,000,000 จงสรุปว่าแผนกใดใช้กำลังคนมีประสิทธิภาพกว่ากัน",
+      "semantic_risk": "project value per head is not efficiency"
+    },
+    {
+      "id": "q10_staffing_decision",
+      "level": 10,
+      "question": "จาก headcount, employment type, performance reviews, training, skills, certifications และ project value จงเลือกหนึ่งแผนกที่ควรลดคน และหนึ่งแผนกที่ควรเพิ่มคน พร้อมเหตุผลเชิงธุรกิจ",
+      "semantic_risk": "insufficient evidence for staffing decision"
+    }
+  ],
+  "runs": [
+    {
+      "question_id": "q01_headcount",
+      "level": 1,
+      "variant": "phase2a_final_only",
+      "elapsed_seconds": 42.963,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 2,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [
+        "rewrite",
+        "approve"
+      ],
+      "answer": "จากข้อมูลในฐานข้อมูล พบพนักงานที่มีสถานะ `ปฏิบัติงาน` ทั้งหมด **25 คน** โดยกระจายตามแผนกดังนี้:\n\n- เทคโนโลยีสารสนเทศ: 5 คน\n- การตลาด: 4 คน\n- ทรัพยากรบุคคล: 4 คน\n- การเงิน: 3 คน\n- ผลิต: 3 คน\n- วิจัยและพัฒนา: 3 คน\n- บัญชี: 2 คน\n- บริหารทั่วไป: 1 คน",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมดกี่คน และแยกตามค่า `department` ในฐานข้อมูลอย่างไร\n[step 1] TODO_WRITE\n[ ] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[ ] 2. วิเคราะห์ schema และหาตารางพนักงานกับ department\n[ ] 3. เขียน T-SQL query หาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[ ] 4. รัน query และวิเคราะห์ผลลัพธ์\n[ ] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[step 2] TOOL get_database_context\n[step 3] TODO_UPDATE -> {'index': 1, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[ ] 2. วิเคราะห์ schema และหาตารางพนักงานกับ department\n[ ] 3. เขียน T-SQL query หาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[ ] 4. รัน query และวิเคราะห์ผลลัพธ์\n[ ] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[step 4] TODO_UPDATE -> {'index': 2, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. วิเคราะห์ schema และหาตารางพนักงานกับ department\n[ ] 3. เขียน T-SQL query หาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[ ] 4. รัน query และวิเคราะห์ผลลัพธ์\n[ ] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[step 5] TODO_UPDATE -> {'index': 3, 'status': 'doing'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. วิเคราะห์ schema และหาตารางพนักงานกับ department\n[~] 3. เขียน T-SQL query หาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[ ] 4. รัน query และวิเคราะห์ผลลัพธ์\n[ ] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[step 6] TOOL execute_query_tool\n[step 7] TODO_UPDATE -> {'index': 3, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. วิเคราะห์ schema และหาตารางพนักงานกับ department\n[x] 3. เขียน T-SQL query หาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[ ] 4. รัน query และวิเคราะห์ผลลัพธ์\n[ ] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[step 8] TODO_UPDATE -> {'index': 4, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. วิเคราะห์ schema และหาตารางพนักงานกับ department\n[x] 3. เขียน T-SQL query หาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[x] 4. รัน query และวิเคราะห์ผลลัพธ์\n[ ] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[FINAL ROUTING] risks=['phase2a-always-review']\n[FINAL OBSERVATION] verdict=rewrite reason=Answer includes unsupported business speculation and alters a department label, violating label preservation.\n[FINAL RECHECK] verdict=approve reason=All claims are directly supported by the query result evidence.\n------------------------------------------------------------\n[answer]\nจากข้อมูลในฐานข้อมูล พบพนักงานที่มีสถานะ `ปฏิบัติงาน` ทั้งหมด **25 คน** โดยกระจายตามแผนกดังนี้:\n\n- เทคโนโลยีสารสนเทศ: 5 คน\n- การตลาด: 4 คน\n- ทรัพยากรบุคคล: 4 คน\n- การเงิน: 3 คน\n- ผลิต: 3 คน\n- วิจัยและพัฒนา: 3 คน\n- บัญชี: 2 คน\n- บริหารทั่วไป: 1 คน\n------------------------------------------------------------\n[todo สุดท้าย]\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. วิเคราะห์ schema และหาตารางพนักงานกับ department\n[x] 3. เขียน T-SQL query หาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[x] 4. รัน query และวิเคราะห์ผลลัพธ์\n[ ] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[context budget] BudgetState(steps=8, tool_calls=2, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q02_employment_mix",
+      "level": 2,
+      "variant": "phase2a_final_only",
+      "elapsed_seconds": 103.636,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 4,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [
+        "rewrite",
+        "approve"
+      ],
+      "answer": "## จำนวนพนักงานตามแผนก (สถานะ = \"ปฏิบัติงาน\")\n\n| แผนก | พนักงานประจำ | พนักงานสัญญา | จำนวนพนักงานทั้งหมด | สัดส่วนพนักงานสัญญา (%) |\n|------|--------------|--------------|----------------------|----------------------------|\n| เทคโนโลยีสารสนเทศ | 4 | 1 | 5 | 20.0 |\n| การเงิน | 3 | 0 | 3 | 0.0 |\n| การตลาด | 2 | 2 | 4 | 50.0 |\n| ทรัพยากรบุคคล | 1 | 3 | 4 | 75.0 |\n| บริหารทั่วไป | 1 | 0 | 1 | 0.0 |\n| บัญชี | 2 | 0 | 2 | 0.0 |\n| ผลิต | 3 | 0 | 3 | 0.0 |\n| วิจัยและพัฒนา | 3 | 0 | 3 | 0.0 |\n\n**สรุปข้อมูลที่ได้จากตาราง**\n- แผนกที่มีสัดส่วนพนักงานสัญญาสูงสุดคือ **ทรัพยากรบุคคล** (75 %) และ **การตลาด** (50 %).\n- แผนกอื่น ๆ ส่วนใหญ่เป็นพนักงานประจำ โดยมีสัดส่วนพนักงานสัญญาเป็น 0 % หรือ ต่ำกว่า 20 %.\n\n(ไม่มีการให้ข้อแนะนำหรือการคาดการณ์เพิ่มเติม เนื่องจากคำถามต้องการเพียงข้อมูลเชิงปริมาณเท่านั้น.)",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] สำหรับพนักงานสถานะ `ปฏิบัติงาน` จงแสดงจำนวนพนักงาน `ประจำ` และ `สัญญา` ของแต่ละแผนก พร้อมคำนวณสัดส่วนพนักงานสัญญาต่อจำนวนพนักงานของแผนก\n[step 1] TODO_WRITE\n[ ] 1. ตรวจสอบโครงสร้างฐานข้อมูลเพื่อเข้าใจ schema และ relationships\n[ ] 2. เขียน T-SQL query เพื่อแสดงจำนวนพนักงานประจำและสัญญาของแต่ละแผนก พร้อมคำนวณสัดส่วน\n[ ] 3.  execute query และสรุปข้อค้นพบเชิงธุรกิจ\n[step 2] TODO_UPDATE -> {'index': 1, 'status': 'doing'}\n[~] 1. ตรวจสอบโครงสร้างฐานข้อมูลเพื่อเข้าใจ schema และ relationships\n[ ] 2. เขียน T-SQL query เพื่อแสดงจำนวนพนักงานประจำและสัญญาของแต่ละแผนก พร้อมคำนวณสัดส่วน\n[ ] 3.  execute query และสรุปข้อค้นพบเชิงธุรกิจ\n[step 2] TOOL get_database_context\n[step 3] TOOL preview_table\n[step 4] TODO_UPDATE -> {'index': 1, 'status': 'done'}\n[x] 1. ตรวจสอบโครงสร้างฐานข้อมูลเพื่อเข้าใจ schema และ relationships\n[ ] 2. เขียน T-SQL query เพื่อแสดงจำนวนพนักงานประจำและสัญญาของแต่ละแผนก พร้อมคำนวณสัดส่วน\n[ ] 3.  execute query และสรุปข้อค้นพบเชิงธุรกิจ\n[step 4] TODO_UPDATE -> {'index': 2, 'status': 'doing'}\n[x] 1. ตรวจสอบโครงสร้างฐานข้อมูลเพื่อเข้าใจ schema และ relationships\n[~] 2. เขียน T-SQL query เพื่อแสดงจำนวนพนักงานประจำและสัญญาของแต่ละแผนก พร้อมคำนวณสัดส่วน\n[ ] 3.  execute query และสรุปข้อค้นพบเชิงธุรกิจ\n[QUERY CONTRACT REPAIR] tool=execute_query_tool repairs=['mssql-unicode-prefix']\n[step 5] TOOL execute_query_tool\n[step 6] TOOL execute_query_tool\n[step 7] TODO_UPDATE -> {'index': 2, 'status': 'done'}\n[x] 1. ตรวจสอบโครงสร้างฐานข้อมูลเพื่อเข้าใจ schema และ relationships\n[x] 2. เขียน T-SQL query เพื่อแสดงจำนวนพนักงานประจำและสัญญาของแต่ละแผนก พร้อมคำนวณสัดส่วน\n[ ] 3.  execute query และสรุปข้อค้นพบเชิงธุรกิจ\n[step 7] TODO_UPDATE -> {'index': 3, 'status': 'doing'}\n[x] 1. ตรวจสอบโครงสร้างฐานข้อมูลเพื่อเข้าใจ schema และ relationships\n[x] 2. เขียน T-SQL query เพื่อแสดงจำนวนพนักงานประจำและสัญญาของแต่ละแผนก พร้อมคำนวณสัดส่วน\n[~] 3.  execute query และสรุปข้อค้นพบเชิงธุรกิจ\n[step 8] TODO_UPDATE -> {'index': 3, 'status': 'done'}\n[x] 1. ตรวจสอบโครงสร้างฐานข้อมูลเพื่อเข้าใจ schema และ relationships\n[x] 2. เขียน T-SQL query เพื่อแสดงจำนวนพนักงานประจำและสัญญาของแต่ละแผนก พร้อมคำนวณสัดส่วน\n[x] 3.  execute query และสรุปข้อค้นพบเชิงธุรกิจ\n[FINAL ROUTING] risks=['phase2a-always-review']\n[FINAL OBSERVATION] verdict=rewrite reason=Answer contains unsupported numeric claim (overall contract proportion) and unsupported business recommendations; only per‑department counts and ratios are supported by evidence.\n[FINAL RECHECK] verdict=approve reason=All claims in the answer are directly supported by the query result evidence.\n------------------------------------------------------------\n[answer]\n## จำนวนพนักงานตามแผนก (สถานะ = \"ปฏิบัติงาน\")\n\n| แผนก | พนักงานประจำ | พนักงานสัญญา | จำนวนพนักงานทั้งหมด | สัดส่วนพนักงานสัญญา (%) |\n|------|--------------|--------------|----------------------|----------------------------|\n| เทคโนโลยีสารสนเทศ | 4 | 1 | 5 | 20.0 |\n| การเงิน | 3 | 0 | 3 | 0.0 |\n| การตลาด | 2 | 2 | 4 | 50.0 |\n| ทรัพยากรบุคคล | 1 | 3 | 4 | 75.0 |\n| บริหารทั่วไป | 1 | 0 | 1 | 0.0 |\n| บัญชี | 2 | 0 | 2 | 0.0 |\n| ผลิต | 3 | 0 | 3 | 0.0 |\n| วิจัยและพัฒนา | 3 | 0 | 3 | 0.0 |\n\n**สรุปข้อมูลที่ได้จากตาราง**\n- แผนกที่มีสัดส่วนพนักงานสัญญาสูงสุดคือ **ทรัพยากรบุคคล** (75 %) และ **การตลาด** (50 %).\n- แผนกอื่น ๆ ส่วนใหญ่เป็นพนักงานประจำ โดยมีสัดส่วนพนักงานสัญญาเป็น 0 % หรือ ต่ำกว่า 20 %.\n\n(ไม่มีการให้ข้อแนะนำหรือการคาดการณ์เพิ่มเติม เนื่องจากคำถามต้องการเพียงข้อมูลเชิงปริมาณเท่านั้น.)\n------------------------------------------------------------\n[todo สุดท้าย]\n[x] 1. ตรวจสอบโครงสร้างฐานข้อมูลเพื่อเข้าใจ schema และ relationships\n[x] 2. เขียน T-SQL query เพื่อแสดงจำนวนพนักงานประจำและสัญญาของแต่ละแผนก พร้อมคำนวณสัดส่วน\n[x] 3.  execute query และสรุปข้อค้นพบเชิงธุรกิจ\n[context budget] BudgetState(steps=11, tool_calls=4, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q03_contract_policy",
+      "level": 3,
+      "variant": "phase2a_final_only",
+      "elapsed_seconds": 31.134,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 3,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [
+        "approve"
+      ],
+      "answer": "แผนกที่เข้าเกณฑ์มีความเสี่ยงด้าน contract dependency (พนักงานสัญญาเกิน 50% ของพนักงานที่ปฏิบัติงานในแผนก) มีดังนี้:\n\n**แผนกทรัพยากรบุคคล**\n- Numerator (จำนวนพนักงานสัญญาที่ปฏิบัติงาน): 3 คน\n- Denominator (จำนวนพนักงานทั้งหมดที่ปฏิบัติงาน): 4 คน\n- อัตราส่วน: 75.0%\n\nแผนกนี้เป็นแผนกเดียวที่มีสัดส่วนพนักงานสัญญาสูงเกิน 50% ของพนักงานที่ปฏิบัติงานทั้งหมด ซึ่งอาจสร้างความเสี่ยงต่อความต่อเนื่องของงานหากมีการเปลี่ยนพนักงานสัญญาจำนวนมาก",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] บริษัทกำหนดว่าแผนกมีความเสี่ยงด้าน contract dependency เมื่อพนักงานสัญญามากกว่า 50% ของพนักงานที่ปฏิบัติงานในแผนก แผนกใดเข้าเกณฑ์ แสดง numerator, denominator และอัตราร้อยละ\n[step 1] TODO_WRITE\n[ ] 1. ดูโครงสร้างฐานข้อมูล (get_database_context) เพื่อทำความเข้าใจ schema และความสัมพันธ์ของข้อมูล\n[ ] 2. เขียน T-SQL query เพื่อวิเคราะห์ contract dependency โดยแผนก\n[ ] 3. รัน query และวิเคราะห์ผลลัพธ์\n[ ] 4. สรุปแผนกที่มีความเสี่ยงและแสดง numerator, denominator, percentage\n[step 2] TOOL get_database_context\n[step 3] TODO_UPDATE -> {'index': 1, 'status': 'done'}\n[x] 1. ดูโครงสร้างฐานข้อมูล (get_database_context) เพื่อทำความเข้าใจ schema และความสัมพันธ์ของข้อมูล\n[ ] 2. เขียน T-SQL query เพื่อวิเคราะห์ contract dependency โดยแผนก\n[ ] 3. รัน query และวิเคราะห์ผลลัพธ์\n[ ] 4. สรุปแผนกที่มีความเสี่ยงและแสดง numerator, denominator, percentage\n[step 4] TOOL preview_table\n[step 5] TODO_UPDATE -> {'index': 2, 'status': 'doing'}\n[x] 1. ดูโครงสร้างฐานข้อมูล (get_database_context) เพื่อทำความเข้าใจ schema และความสัมพันธ์ของข้อมูล\n[~] 2. เขียน T-SQL query เพื่อวิเคราะห์ contract dependency โดยแผนก\n[ ] 3. รัน query และวิเคราะห์ผลลัพธ์\n[ ] 4. สรุปแผนกที่มีความเสี่ยงและแสดง numerator, denominator, percentage\n[QUERY CONTRACT REPAIR] tool=execute_query_tool repairs=['mssql-unicode-prefix']\n[step 6] TOOL execute_query_tool\n[step 7] TODO_UPDATE -> {'index': 2, 'status': 'done'}\n[x] 1. ดูโครงสร้างฐานข้อมูล (get_database_context) เพื่อทำความเข้าใจ schema และความสัมพันธ์ของข้อมูล\n[x] 2. เขียน T-SQL query เพื่อวิเคราะห์ contract dependency โดยแผนก\n[ ] 3. รัน query และวิเคราะห์ผลลัพธ์\n[ ] 4. สรุปแผนกที่มีความเสี่ยงและแสดง numerator, denominator, percentage\n[step 8] TODO_UPDATE -> {'index': 3, 'status': 'done'}\n[x] 1. ดูโครงสร้างฐานข้อมูล (get_database_context) เพื่อทำความเข้าใจ schema และความสัมพันธ์ของข้อมูล\n[x] 2. เขียน T-SQL query เพื่อวิเคราะห์ contract dependency โดยแผนก\n[x] 3. รัน query และวิเคราะห์ผลลัพธ์\n[ ] 4. สรุปแผนกที่มีความเสี่ยงและแสดง numerator, denominator, percentage\n[FINAL ROUTING] risks=['phase2a-always-review']\n[FINAL OBSERVATION] verdict=approve reason=Answer correctly reports the department that meets the >50% contract employee threshold with accurate numerator, denominator, and percentage as shown in the query result.\n------------------------------------------------------------\n[answer]\nแผนกที่เข้าเกณฑ์มีความเสี่ยงด้าน contract dependency (พนักงานสัญญาเกิน 50% ของพนักงานที่ปฏิบัติงานในแผนก) มีดังนี้:\n\n**แผนกทรัพยากรบุคคล**\n- Numerator (จำนวนพนักงานสัญญาที่ปฏิบัติงาน): 3 คน\n- Denominator (จำนวนพนักงานทั้งหมดที่ปฏิบัติงาน): 4 คน\n- อัตราส่วน: 75.0%\n\nแผนกนี้เป็นแผนกเดียวที่มีสัดส่วนพนักงานสัญญาสูงเกิน 50% ของพนักงานที่ปฏิบัติงานทั้งหมด ซึ่งอาจสร้างความเสี่ยงต่อความต่อเนื่องของงานหากมีการเปลี่ยนพนักงานสัญญาจำนวนมาก\n------------------------------------------------------------\n[todo สุดท้าย]\n[x] 1. ดูโครงสร้างฐานข้อมูล (get_database_context) เพื่อทำความเข้าใจ schema และความสัมพันธ์ของข้อมูล\n[x] 2. เขียน T-SQL query เพื่อวิเคราะห์ contract dependency โดยแผนก\n[x] 3. รัน query และวิเคราะห์ผลลัพธ์\n[ ] 4. สรุปแผนกที่มีความเสี่ยงและแสดง numerator, denominator, percentage\n[context budget] BudgetState(steps=8, tool_calls=3, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q04_review_coverage",
+      "level": 4,
+      "variant": "phase2a_final_only",
+      "elapsed_seconds": 59.494,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 6,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [
+        "rewrite",
+        "approve"
+      ],
+      "answer": "จากข้อมูลในตาราง employees มีพนักงานทั้งหมด 25 คน (call_6b147c7d5f5e48acbc5f95b1). ในตาราง performance_reviews พบว่ามีการบันทึกการประเมินผลของพนักงานที่แตกต่างกัน 7 รายการสำหรับช่วงการประเมินปี 2023 (call_2ed7d6053c124625af1d81fa, call_be07dcea4b1e44d4b02b4674). ดังนั้น coverage ของ evidence คือ 7 ÷ 25 = 0.28 หรือ 28 %.\n\nเกณฑ์ขั้นต่ำที่กำหนดคือ 80 %. เนื่องจาก coverage เพียง 28 % จึงไม่ผ่านเกณฑ์; มี shortfall เท่ากับ 80 % − 28 % = 52 percentage points. (ส่วนที่ยังไม่ได้ครอบคลุมคือ 100 % − 28 % = 72 % ของพนักงาน).",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] มีพนักงานที่ปฏิบัติงาน 25 คน แต่มี performance review ปี 2023 จำนวน 7 รายการ ก่อนเปรียบเทียบผลงานระหว่างแผนก จงคำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ขั้นต่ำ 80% หรือไม่\n[step 1] TODO_WRITE\n[ ] 1. เรียก get_database_context เพื่อดู schema ของฐานข้อมูล\n[ ] 2. ตรวจสอบจำนวนพนักงานทั้งหมดที่มีในระบบ\n[ ] 3. ตรวจสอบจำนวน performance review ปี 2023\n[ ] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[step 2] TOOL get_database_context\n[step 3] TODO_UPDATE -> {'index': 1, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อดู schema ของฐานข้อมูล\n[ ] 2. ตรวจสอบจำนวนพนักงานทั้งหมดที่มีในระบบ\n[ ] 3. ตรวจสอบจำนวน performance review ปี 2023\n[ ] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[step 3] TODO_UPDATE -> {'index': 2, 'status': 'doing'}\n[x] 1. เรียก get_database_context เพื่อดู schema ของฐานข้อมูล\n[~] 2. ตรวจสอบจำนวนพนักงานทั้งหมดที่มีในระบบ\n[ ] 3. ตรวจสอบจำนวน performance review ปี 2023\n[ ] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[step 4] TOOL execute_query_tool\n[step 5] TODO_UPDATE -> {'index': 2, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อดู schema ของฐานข้อมูล\n[x] 2. ตรวจสอบจำนวนพนักงานทั้งหมดที่มีในระบบ\n[ ] 3. ตรวจสอบจำนวน performance review ปี 2023\n[ ] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[step 5] TODO_UPDATE -> {'index': 3, 'status': 'doing'}\n[x] 1. เรียก get_database_context เพื่อดู schema ของฐานข้อมูล\n[x] 2. ตรวจสอบจำนวนพนักงานทั้งหมดที่มีในระบบ\n[~] 3. ตรวจสอบจำนวน performance review ปี 2023\n[ ] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[QUERY CONTRACT REPAIR] tool=execute_query_tool repairs=['coverage-distinct-employee']\n[step 6] TOOL execute_query_tool\n[step 7] TOOL execute_query_tool\n[QUERY CONTRACT REPAIR] tool=execute_query_tool repairs=['coverage-distinct-employee']\n[step 8] TOOL execute_query_tool\n[step 9] TODO_UPDATE -> {'index': 3, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อดู schema ของฐานข้อมูล\n[x] 2. ตรวจสอบจำนวนพนักงานทั้งหมดที่มีในระบบ\n[x] 3. ตรวจสอบจำนวน performance review ปี 2023\n[ ] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[step 9] TODO_UPDATE -> {'index': 4, 'status': 'doing'}\n[x] 1. เรียก get_database_context เพื่อดู schema ของฐานข้อมูล\n[x] 2. ตรวจสอบจำนวนพนักงานทั้งหมดที่มีในระบบ\n[x] 3. ตรวจสอบจำนวน performance review ปี 2023\n[~] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[step 10] TOOL execute_query_tool\n[FINAL ROUTING] risks=['phase2a-always-review']\n[FINAL OBSERVATION] verdict=rewrite reason=Proposed answer is empty; need to provide grounded answer using evidence.\n[FINAL RECHECK] verdict=approve reason=All claims are directly supported by the evidence and correct arithmetic.\n------------------------------------------------------------\n[answer]\nจากข้อมูลในตาราง employees มีพนักงานทั้งหมด 25 คน (call_6b147c7d5f5e48acbc5f95b1). ในตาราง performance_reviews พบว่ามีการบันทึกการประเมินผลของพนักงานที่แตกต่างกัน 7 รายการสำหรับช่วงการประเมินปี 2023 (call_2ed7d6053c124625af1d81fa, call_be07dcea4b1e44d4b02b4674). ดังนั้น coverage ของ evidence คือ 7 ÷ 25 = 0.28 หรือ 28 %.\n\nเกณฑ์ขั้นต่ำที่กำหนดคือ 80 %. เนื่องจาก coverage เพียง 28 % จึงไม่ผ่านเกณฑ์; มี shortfall เท่ากับ 80 % − 28 % = 52 percentage points. (ส่วนที่ยังไม่ได้ครอบคลุมคือ 100 % − 28 % = 72 % ของพนักงาน).\n------------------------------------------------------------\n[todo สุดท้าย]\n[x] 1. เรียก get_database_context เพื่อดู schema ของฐานข้อมูล\n[x] 2. ตรวจสอบจำนวนพนักงานทั้งหมดที่มีในระบบ\n[x] 3. ตรวจสอบจำนวน performance review ปี 2023\n[~] 4. คำนวณ evidence coverage และประเมินเกณฑ์ 80%\n[context budget] BudgetState(steps=13, tool_calls=6, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q05_training_portfolio",
+      "level": 5,
+      "variant": "phase2a_final_only",
+      "elapsed_seconds": 36.438,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 4,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [
+        "rewrite",
+        "approve"
+      ],
+      "answer": "## การกระจายชั่วโมงอบรมตาม `training_type`\n\n| ประเภทการอบรม | จำนวนชั่วโมง | ร้อยละ |\n|----------------|--------------|--------|\n| ภายนอก | 152 ชั่วโมง | 60.32% |\n| ออนไลน์ | 92 ชั่วโมง | 36.51% |\n| ภายใน | 8 ชั่วโมง | 3.17% |\n| **รวมทั้งหมด** | **252 ชั่วโมง** | **100%** |\n\n### ประเภทที่เกินนโยบาย Concentration Limit 50%\n- **ภายนอก** – มี 152 ชั่วโมง คิดเป็น 60.32% ของชั่วโมงอบรมทั้งหมด ซึ่งเกินเกณฑ์ 50%.",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] ชั่วโมงอบรมของบริษัทกระจายตาม `training_type` อย่างไร และประเภทใดเกินนโยบาย concentration limit 50% ของชั่วโมงอบรมทั้งหมด\n[step 1] TOOL get_database_context\n[step 2] TODO_WRITE\n[ ] 1. คำนวณชั่วโมงอบรมทั้งหมดจากตาราง training_records\n[ ] 2. คำนวณชั่วโมงอบรมแยกตาม training_type และหาเปอร์เซ็นต์ของแต่ละประเภท\n[ ] 3. ระบุประเภทที่มีชั่วโมงอบรมเกิน 50% ของชั่วโมงรวม (concentration limit)\n[step 3] TODO_UPDATE -> {'index': 1, 'status': 'doing'}\n[~] 1. คำนวณชั่วโมงอบรมทั้งหมดจากตาราง training_records\n[ ] 2. คำนวณชั่วโมงอบรมแยกตาม training_type และหาเปอร์เซ็นต์ของแต่ละประเภท\n[ ] 3. ระบุประเภทที่มีชั่วโมงอบรมเกิน 50% ของชั่วโมงรวม (concentration limit)\n[step 4] TOOL execute_query_tool\n[step 5] TODO_UPDATE -> {'index': 1, 'status': 'done'}\n[x] 1. คำนวณชั่วโมงอบรมทั้งหมดจากตาราง training_records\n[ ] 2. คำนวณชั่วโมงอบรมแยกตาม training_type และหาเปอร์เซ็นต์ของแต่ละประเภท\n[ ] 3. ระบุประเภทที่มีชั่วโมงอบรมเกิน 50% ของชั่วโมงรวม (concentration limit)\n[step 6] TODO_UPDATE -> {'index': 2, 'status': 'doing'}\n[x] 1. คำนวณชั่วโมงอบรมทั้งหมดจากตาราง training_records\n[~] 2. คำนวณชั่วโมงอบรมแยกตาม training_type และหาเปอร์เซ็นต์ของแต่ละประเภท\n[ ] 3. ระบุประเภทที่มีชั่วโมงอบรมเกิน 50% ของชั่วโมงรวม (concentration limit)\n[step 7] TOOL execute_query_tool\n[step 8] TODO_UPDATE -> {'index': 2, 'status': 'done'}\n[x] 1. คำนวณชั่วโมงอบรมทั้งหมดจากตาราง training_records\n[x] 2. คำนวณชั่วโมงอบรมแยกตาม training_type และหาเปอร์เซ็นต์ของแต่ละประเภท\n[ ] 3. ระบุประเภทที่มีชั่วโมงอบรมเกิน 50% ของชั่วโมงรวม (concentration limit)\n[step 9] TODO_UPDATE -> {'index': 3, 'status': 'doing'}\n[x] 1. คำนวณชั่วโมงอบรมทั้งหมดจากตาราง training_records\n[x] 2. คำนวณชั่วโมงอบรมแยกตาม training_type และหาเปอร์เซ็นต์ของแต่ละประเภท\n[~] 3. ระบุประเภทที่มีชั่วโมงอบรมเกิน 50% ของชั่วโมงรวม (concentration limit)\n[step 10] TOOL execute_query_tool\n[step 11] TODO_UPDATE -> {'index': 3, 'status': 'done'}\n[x] 1. คำนวณชั่วโมงอบรมทั้งหมดจากตาราง training_records\n[x] 2. คำนวณชั่วโมงอบรมแยกตาม training_type และหาเปอร์เซ็นต์ของแต่ละประเภท\n[x] 3. ระบุประเภทที่มีชั่วโมงอบรมเกิน 50% ของชั่วโมงรวม (concentration limit)\n[FINAL ROUTING] risks=['phase2a-always-review']\n[FINAL OBSERVATION] verdict=rewrite reason=Answer contains unsupported business interpretation claims not backed by evidence; only distribution and limit exceedance are required.\n[FINAL RECHECK] verdict=approve reason=All statements in the answer are directly supported by the provided query results.\n------------------------------------------------------------\n[answer]\n## การกระจายชั่วโมงอบรมตาม `training_type`\n\n| ประเภทการอบรม | จำนวนชั่วโมง | ร้อยละ |\n|----------------|--------------|--------|\n| ภายนอก | 152 ชั่วโมง | 60.32% |\n| ออนไลน์ | 92 ชั่วโมง | 36.51% |\n| ภายใน | 8 ชั่วโมง | 3.17% |\n| **รวมทั้งหมด** | **252 ชั่วโมง** | **100%** |\n\n### ประเภทที่เกินนโยบาย Concentration Limit 50%\n- **ภายนอก** – มี 152 ชั่วโมง คิดเป็น 60.32% ของชั่วโมงอบรมทั้งหมด ซึ่งเกินเกณฑ์ 50%.\n------------------------------------------------------------\n[todo สุดท้าย]\n[x] 1. คำนวณชั่วโมงอบรมทั้งหมดจากตาราง training_records\n[x] 2. คำนวณชั่วโมงอบรมแยกตาม training_type และหาเปอร์เซ็นต์ของแต่ละประเภท\n[x] 3. ระบุประเภทที่มีชั่วโมงอบรมเกิน 50% ของชั่วโมงรวม (concentration limit)\n[context budget] BudgetState(steps=11, tool_calls=4, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q06_certificate_semantics",
+      "level": 6,
+      "variant": "phase2a_final_only",
+      "elapsed_seconds": 50.48,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 7,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [
+        "rewrite",
+        "approve"
+      ],
+      "answer": "จากข้อมูลที่มีอยู่:\n\n1. ตาราง `training_records` มีทั้งหมด 11 รายการและทุกรายการมีค่า `certificate_obtained = True` (เห็นจาก preview ของตารางและผลการนับกลุ่มค่า).\n2. ตาราง `employees` มีพนักงานทั้งหมด 25 คน (COUNT DISTINCT employee_id).\n3. ตาราง `certifications` มีใบรับรองทั้งหมด 7 รายการ และมีพนักงานที่มีใบรับรองอยู่ 7 คน (COUNT DISTINCT employee_id ที่เชื่อมกับ certifications).\n4. ดังนั้น ไม่สามารถสรุปได้ว่าพนักงานทุกคนมี certification ที่ยังใช้ได้ เนื่องจากมีพนักงาน 18 คน (25‑7) ที่ไม่มีข้อมูล certification ในระบบ.",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] ทุกรายการอบรมมี `certificate_obtained = True` หรือไม่ และข้อมูลนี้พิสูจน์ได้หรือไม่ว่าพนักงานทุกคนมี certification ที่ยังใช้ได้\n[step 1] TODO_WRITE\n[ ] 1. เรียก get_database_context เพื่อดูโครงสร้างฐานข้อมูล\n[ ] 2. ค้นหาและวิเคราะห์ตารางที่เกี่ยวข้องกับการอบรมและ certification\n[ ] 3. ตรวจสอบว่าทุกรายการอบรมมี certificate_obtained = True หรือไม่\n[ ] 4. ประเมินว่าข้อมูลนี้พิสูจน์ได้ว่าพนักงานทุกคนมี certification ที่ยังใช้ได้หรือไม่\n[ ] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[step 2] TODO_UPDATE -> {'index': 1, 'status': 'doing'}\n[~] 1. เรียก get_database_context เพื่อดูโครงสร้างฐานข้อมูล\n[ ] 2. ค้นหาและวิเคราะห์ตารางที่เกี่ยวข้องกับการอบรมและ certification\n[ ] 3. ตรวจสอบว่าทุกรายการอบรมมี certificate_obtained = True หรือไม่\n[ ] 4. ประเมินว่าข้อมูลนี้พิสูจน์ได้ว่าพนักงานทุกคนมี certification ที่ยังใช้ได้หรือไม่\n[ ] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[step 2] TOOL get_database_context\n[step 3] TODO_UPDATE -> {'index': 1, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อดูโครงสร้างฐานข้อมูล\n[ ] 2. ค้นหาและวิเคราะห์ตารางที่เกี่ยวข้องกับการอบรมและ certification\n[ ] 3. ตรวจสอบว่าทุกรายการอบรมมี certificate_obtained = True หรือไม่\n[ ] 4. ประเมินว่าข้อมูลนี้พิสูจน์ได้ว่าพนักงานทุกคนมี certification ที่ยังใช้ได้หรือไม่\n[ ] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[step 3] TODO_UPDATE -> {'index': 2, 'status': 'doing'}\n[x] 1. เรียก get_database_context เพื่อดูโครงสร้างฐานข้อมูล\n[~] 2. ค้นหาและวิเคราะห์ตารางที่เกี่ยวข้องกับการอบรมและ certification\n[ ] 3. ตรวจสอบว่าทุกรายการอบรมมี certificate_obtained = True หรือไม่\n[ ] 4. ประเมินว่าข้อมูลนี้พิสูจน์ได้ว่าพนักงานทุกคนมี certification ที่ยังใช้ได้หรือไม่\n[ ] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[step 3] TOOL preview_table\n[step 4] TOOL execute_query_tool\n[step 5] TODO_UPDATE -> {'index': 2, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อดูโครงสร้างฐานข้อมูล\n[x] 2. ค้นหาและวิเคราะห์ตารางที่เกี่ยวข้องกับการอบรมและ certification\n[ ] 3. ตรวจสอบว่าทุกรายการอบรมมี certificate_obtained = True หรือไม่\n[ ] 4. ประเมินว่าข้อมูลนี้พิสูจน์ได้ว่าพนักงานทุกคนมี certification ที่ยังใช้ได้หรือไม่\n[ ] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[step 5] TODO_UPDATE -> {'index': 3, 'status': 'doing'}\n[x] 1. เรียก get_database_context เพื่อดูโครงสร้างฐานข้อมูล\n[x] 2. ค้นหาและวิเคราะห์ตารางที่เกี่ยวข้องกับการอบรมและ certification\n[~] 3. ตรวจสอบว่าทุกรายการอบรมมี certificate_obtained = True หรือไม่\n[ ] 4. ประเมินว่าข้อมูลนี้พิสูจน์ได้ว่าพนักงานทุกคนมี certification ที่ยังใช้ได้หรือไม่\n[ ] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[step 5] TOOL preview_table\n[step 6] TOOL execute_query_tool\n[step 7] TOOL execute_query_tool\n[step 8] TODO_UPDATE -> {'index': 3, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อดูโครงสร้างฐานข้อมูล\n[x] 2. ค้นหาและวิเคราะห์ตารางที่เกี่ยวข้องกับการอบรมและ certification\n[x] 3. ตรวจสอบว่าทุกรายการอบรมมี certificate_obtained = True หรือไม่\n[ ] 4. ประเมินว่าข้อมูลนี้พิสูจน์ได้ว่าพนักงานทุกคนมี certification ที่ยังใช้ได้หรือไม่\n[ ] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[step 8] TODO_UPDATE -> {'index': 4, 'status': 'doing'}\n[x] 1. เรียก get_database_context เพื่อดูโครงสร้างฐานข้อมูล\n[x] 2. ค้นหาและวิเคราะห์ตารางที่เกี่ยวข้องกับการอบรมและ certification\n[x] 3. ตรวจสอบว่าทุกรายการอบรมมี certificate_obtained = True หรือไม่\n[~] 4. ประเมินว่าข้อมูลนี้พิสูจน์ได้ว่าพนักงานทุกคนมี certification ที่ยังใช้ได้หรือไม่\n[ ] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[step 8] TOOL execute_query_tool\n[step 9] TODO_UPDATE -> {'index': 4, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อดูโครงสร้างฐานข้อมูล\n[x] 2. ค้นหาและวิเคราะห์ตารางที่เกี่ยวข้องกับการอบรมและ certification\n[x] 3. ตรวจสอบว่าทุกรายการอบรมมี certificate_obtained = True หรือไม่\n[x] 4. ประเมินว่าข้อมูลนี้พิสูจน์ได้ว่าพนักงานทุกคนมี certification ที่ยังใช้ได้หรือไม่\n[ ] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[step 9] TODO_UPDATE -> {'index': 5, 'status': 'doing'}\n[x] 1. เรียก get_database_context เพื่อดูโครงสร้างฐานข้อมูล\n[x] 2. ค้นหาและวิเคราะห์ตารางที่เกี่ยวข้องกับการอบรมและ certification\n[x] 3. ตรวจสอบว่าทุกรายการอบรมมี certificate_obtained = True หรือไม่\n[x] 4. ประเมินว่าข้อมูลนี้พิสูจน์ได้ว่าพนักงานทุกคนมี certification ที่ยังใช้ได้หรือไม่\n[~] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[FINAL ROUTING] risks=['phase2a-always-review']\n[FINAL OBSERVATION] verdict=rewrite reason=Answer contains unsupported prescriptive recommendations; must be rewritten to include only factual claims supported by evidence.\n[FINAL RECHECK] verdict=approve reason=All claims are directly supported by the provided evidence.\n------------------------------------------------------------\n[answer]\nจากข้อมูลที่มีอยู่:\n\n1. ตาราง `training_records` มีทั้งหมด 11 รายการและทุกรายการมีค่า `certificate_obtained = True` (เห็นจาก preview ของตารางและผลการนับกลุ่มค่า).\n2. ตาราง `employees` มีพนักงานทั้งหมด 25 คน (COUNT DISTINCT employee_id).\n3. ตาราง `certifications` มีใบรับรองทั้งหมด 7 รายการ และมีพนักงานที่มีใบรับรองอยู่ 7 คน (COUNT DISTINCT employee_id ที่เชื่อมกับ certifications).\n4. ดังนั้น ไม่สามารถสรุปได้ว่าพนักงานทุกคนมี certification ที่ยังใช้ได้ เนื่องจากมีพนักงาน 18 คน (25‑7) ที่ไม่มีข้อมูล certification ในระบบ.\n------------------------------------------------------------\n[todo สุดท้าย]\n[x] 1. เรียก get_database_context เพื่อดูโครงสร้างฐานข้อมูล\n[x] 2. ค้นหาและวิเคราะห์ตารางที่เกี่ยวข้องกับการอบรมและ certification\n[x] 3. ตรวจสอบว่าทุกรายการอบรมมี certificate_obtained = True หรือไม่\n[x] 4. ประเมินว่าข้อมูลนี้พิสูจน์ได้ว่าพนักงานทุกคนมี certification ที่ยังใช้ได้หรือไม่\n[~] 5. สรุปข้อค้นพบเชิงธุรกิจ\n[context budget] BudgetState(steps=17, tool_calls=7, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q07_expert_skill",
+      "level": 7,
+      "variant": "phase2a_final_only",
+      "elapsed_seconds": 65.415,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 3,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [
+        "rewrite",
+        "approve"
+      ],
+      "answer": "จากการวิเคราะห์ข้อมูล skill records ทั้งหมด พบสัดส่วนระดับ **เชี่ยวชาญ** แยกตาม `skill_category` ดังนี้:\n\n| Skill Category | จำนวนทักษะทั้งหมด | ทักษะเชี่ยวชาญ | สัดส่วนเชี่ยวชาญ (%) |\n|----------------|-------------------|----------------|----------------------|\n| เทคนิค | 8 | 4 | 50.00% |\n| การสื่อสาร | 1 | 0 | 0.00% |\n| คอมพิวเตอร์ | 3 | 1 | 33.33% |\n| บริหาร | 3 | 1 | 33.33% |\n\n**สรุปผล:**\n- หมวด **เทคนิค** เป็นหมวดเดียวที่ถึงเป้าหมาย 50% (พอดีที่ 50%)\n- หมวด **การสื่อสาร**, **คอมพิวเตอร์**, และ **บริหาร** ยังไม่ถึงเป้าหมาย 50% (อยู่ที่ 0%‑33.33%)",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] จาก skill records ทั้งหมด จงวิเคราะห์สัดส่วนระดับ `เชี่ยวชาญ` และตรวจว่าสูงถึงเป้าหมาย 50% หรือไม่ พร้อมแยกตาม `skill_category`\n[step 1] TODO_WRITE\n[ ] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูลและ schema\n[ ] 2. ตรวจสอบตาราง skill records และ skill_category เพื่อเข้าใจความสัมพันธ์\n[ ] 3. เขียนและ execute T-SQL query เพื่อดึงข้อมูลสัดส่วนระดับเชี่ยวชาญแยกตาม category\n[ ] 4. วิเคราะห์ผลลัพธ์และสรุปว่าสูงถึงเป้าหมาย 50% หรือไม่\n[step 2] TODO_UPDATE -> {'index': 1, 'status': 'doing'}\n[~] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูลและ schema\n[ ] 2. ตรวจสอบตาราง skill records และ skill_category เพื่อเข้าใจความสัมพันธ์\n[ ] 3. เขียนและ execute T-SQL query เพื่อดึงข้อมูลสัดส่วนระดับเชี่ยวชาญแยกตาม category\n[ ] 4. วิเคราะห์ผลลัพธ์และสรุปว่าสูงถึงเป้าหมาย 50% หรือไม่\n[step 2] TOOL get_database_context\n[step 3] TODO_UPDATE -> {'index': 1, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูลและ schema\n[ ] 2. ตรวจสอบตาราง skill records และ skill_category เพื่อเข้าใจความสัมพันธ์\n[ ] 3. เขียนและ execute T-SQL query เพื่อดึงข้อมูลสัดส่วนระดับเชี่ยวชาญแยกตาม category\n[ ] 4. วิเคราะห์ผลลัพธ์และสรุปว่าสูงถึงเป้าหมาย 50% หรือไม่\n[step 3] TODO_UPDATE -> {'index': 2, 'status': 'doing'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูลและ schema\n[~] 2. ตรวจสอบตาราง skill records และ skill_category เพื่อเข้าใจความสัมพันธ์\n[ ] 3. เขียนและ execute T-SQL query เพื่อดึงข้อมูลสัดส่วนระดับเชี่ยวชาญแยกตาม category\n[ ] 4. วิเคราะห์ผลลัพธ์และสรุปว่าสูงถึงเป้าหมาย 50% หรือไม่\n[step 4] TOOL preview_table\n[step 5] TODO_UPDATE -> {'index': 2, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูลและ schema\n[x] 2. ตรวจสอบตาราง skill records และ skill_category เพื่อเข้าใจความสัมพันธ์\n[ ] 3. เขียนและ execute T-SQL query เพื่อดึงข้อมูลสัดส่วนระดับเชี่ยวชาญแยกตาม category\n[ ] 4. วิเคราะห์ผลลัพธ์และสรุปว่าสูงถึงเป้าหมาย 50% หรือไม่\n[step 5] TODO_UPDATE -> {'index': 3, 'status': 'doing'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูลและ schema\n[x] 2. ตรวจสอบตาราง skill records และ skill_category เพื่อเข้าใจความสัมพันธ์\n[~] 3. เขียนและ execute T-SQL query เพื่อดึงข้อมูลสัดส่วนระดับเชี่ยวชาญแยกตาม category\n[ ] 4. วิเคราะห์ผลลัพธ์และสรุปว่าสูงถึงเป้าหมาย 50% หรือไม่\n[QUERY CONTRACT REPAIR] tool=execute_query_tool repairs=['mssql-unicode-prefix']\n[step 6] TOOL execute_query_tool\n[step 7] TODO_UPDATE -> {'index': 3, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูลและ schema\n[x] 2. ตรวจสอบตาราง skill records และ skill_category เพื่อเข้าใจความสัมพันธ์\n[x] 3. เขียนและ execute T-SQL query เพื่อดึงข้อมูลสัดส่วนระดับเชี่ยวชาญแยกตาม category\n[ ] 4. วิเคราะห์ผลลัพธ์และสรุปว่าสูงถึงเป้าหมาย 50% หรือไม่\n[step 7] TODO_UPDATE -> {'index': 4, 'status': 'doing'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูลและ schema\n[x] 2. ตรวจสอบตาราง skill records และ skill_category เพื่อเข้าใจความสัมพันธ์\n[x] 3. เขียนและ execute T-SQL query เพื่อดึงข้อมูลสัดส่วนระดับเชี่ยวชาญแยกตาม category\n[~] 4. วิเคราะห์ผลลัพธ์และสรุปว่าสูงถึงเป้าหมาย 50% หรือไม่\n[FINAL ROUTING] risks=['phase2a-always-review']\n[FINAL OBSERVATION] verdict=rewrite reason=Contains unsupported business recommendation not evidenced\n[FINAL RECHECK] verdict=approve reason=Answer correctly reports expert proportions per skill_category and target assessment based on provided query results.\n------------------------------------------------------------\n[answer]\nจากการวิเคราะห์ข้อมูล skill records ทั้งหมด พบสัดส่วนระดับ **เชี่ยวชาญ** แยกตาม `skill_category` ดังนี้:\n\n| Skill Category | จำนวนทักษะทั้งหมด | ทักษะเชี่ยวชาญ | สัดส่วนเชี่ยวชาญ (%) |\n|----------------|-------------------|----------------|----------------------|\n| เทคนิค | 8 | 4 | 50.00% |\n| การสื่อสาร | 1 | 0 | 0.00% |\n| คอมพิวเตอร์ | 3 | 1 | 33.33% |\n| บริหาร | 3 | 1 | 33.33% |\n\n**สรุปผล:**\n- หมวด **เทคนิค** เป็นหมวดเดียวที่ถึงเป้าหมาย 50% (พอดีที่ 50%)\n- หมวด **การสื่อสาร**, **คอมพิวเตอร์**, และ **บริหาร** ยังไม่ถึงเป้าหมาย 50% (อยู่ที่ 0%‑33.33%)\n------------------------------------------------------------\n[todo สุดท้าย]\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูลและ schema\n[x] 2. ตรวจสอบตาราง skill records และ skill_category เพื่อเข้าใจความสัมพันธ์\n[x] 3. เขียนและ execute T-SQL query เพื่อดึงข้อมูลสัดส่วนระดับเชี่ยวชาญแยกตาม category\n[~] 4. วิเคราะห์ผลลัพธ์และสรุปว่าสูงถึงเป้าหมาย 50% หรือไม่\n[context budget] BudgetState(steps=11, tool_calls=3, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q08_project_concentration",
+      "level": 8,
+      "variant": "phase2a_final_only",
+      "elapsed_seconds": 34.347,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 2,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [
+        "rewrite",
+        "approve"
+      ],
+      "answer": "## ผลการตรวจสอบ Concentration Risk\n\n- มูลค่ารวมของพอร์ตโฟลิโอทั้งหมด: **28,000,000**\n- มูลค่ารวมของโครงการสองอันดับสูงสุด: **18,000,000**\n- สัดส่วนของสองโครงการสูงสุดต่อมูลค่ารวม: **64.29%**\n- สถานะความเสี่ยง: **HIGH RISK – Concentration risk detected (>60%)**\n\nสรุป: สองโครงการที่มีมูลค่าสูงสุดรวมกันเกิน 60% ของมูลค่าพอร์ตโฟลิโอทั้งหมด (64.29% > 60%) จึงถือว่ามีความเสี่ยงด้านความเข้มข้นตามนโยบายของบริษัท.",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] บริษัทกำหนดว่า project portfolio มี concentration risk หากโครงการมูลค่าสูงสุดสองอันดับรวมกันเกิน 60% ของมูลค่าทุกโครงการ จงตรวจตามนโยบายนี้\n[step 1] TODO_WRITE\n[ ] 1. ตรวจสอบโครงสร้างฐานข้อมูลและหาตารางที่เกี่ยวข้องกับ project/portfolio\n[ ] 2. เขียนและดำเนินการ query เพื่อคำนวณมูลค่าโครงการทั้งหมดและสองอันดับสูงสุด\n[ ] 3. วิเคราะห์ผลและสรุปว่ามีการ concentração risk หรือไม่\n[step 2] TOOL get_database_context\n[step 3] TODO_UPDATE -> {'index': 1, 'status': 'doing'}\n[~] 1. ตรวจสอบโครงสร้างฐานข้อมูลและหาตารางที่เกี่ยวข้องกับ project/portfolio\n[ ] 2. เขียนและดำเนินการ query เพื่อคำนวณมูลค่าโครงการทั้งหมดและสองอันดับสูงสุด\n[ ] 3. วิเคราะห์ผลและสรุปว่ามีการ concentração risk หรือไม่\n[step 4] TODO_UPDATE -> {'index': 2, 'status': 'doing'}\n[~] 1. ตรวจสอบโครงสร้างฐานข้อมูลและหาตารางที่เกี่ยวข้องกับ project/portfolio\n[~] 2. เขียนและดำเนินการ query เพื่อคำนวณมูลค่าโครงการทั้งหมดและสองอันดับสูงสุด\n[ ] 3. วิเคราะห์ผลและสรุปว่ามีการ concentração risk หรือไม่\n[step 5] TOOL execute_query_tool\n[step 6] TODO_UPDATE -> {'index': 2, 'status': 'done'}\n[~] 1. ตรวจสอบโครงสร้างฐานข้อมูลและหาตารางที่เกี่ยวข้องกับ project/portfolio\n[x] 2. เขียนและดำเนินการ query เพื่อคำนวณมูลค่าโครงการทั้งหมดและสองอันดับสูงสุด\n[ ] 3. วิเคราะห์ผลและสรุปว่ามีการ concentração risk หรือไม่\n[step 7] TODO_UPDATE -> {'index': 3, 'status': 'doing'}\n[~] 1. ตรวจสอบโครงสร้างฐานข้อมูลและหาตารางที่เกี่ยวข้องกับ project/portfolio\n[x] 2. เขียนและดำเนินการ query เพื่อคำนวณมูลค่าโครงการทั้งหมดและสองอันดับสูงสุด\n[~] 3. วิเคราะห์ผลและสรุปว่ามีการ concentração risk หรือไม่\n[step 8] TODO_UPDATE -> {'index': 3, 'status': 'done'}\n[~] 1. ตรวจสอบโครงสร้างฐานข้อมูลและหาตารางที่เกี่ยวข้องกับ project/portfolio\n[x] 2. เขียนและดำเนินการ query เพื่อคำนวณมูลค่าโครงการทั้งหมดและสองอันดับสูงสุด\n[x] 3. วิเคราะห์ผลและสรุปว่ามีการ concentração risk หรือไม่\n[FINAL ROUTING] risks=['phase2a-always-review']\n[FINAL OBSERVATION] verdict=rewrite reason=Answer includes unsupported business recommendations and adds a currency unit (บาท) not present in the evidence.\n[FINAL RECHECK] verdict=approve reason=All statements are directly supported by the query result evidence.\n------------------------------------------------------------\n[answer]\n## ผลการตรวจสอบ Concentration Risk\n\n- มูลค่ารวมของพอร์ตโฟลิโอทั้งหมด: **28,000,000**\n- มูลค่ารวมของโครงการสองอันดับสูงสุด: **18,000,000**\n- สัดส่วนของสองโครงการสูงสุดต่อมูลค่ารวม: **64.29%**\n- สถานะความเสี่ยง: **HIGH RISK – Concentration risk detected (>60%)**\n\nสรุป: สองโครงการที่มีมูลค่าสูงสุดรวมกันเกิน 60% ของมูลค่าพอร์ตโฟลิโอทั้งหมด (64.29% > 60%) จึงถือว่ามีความเสี่ยงด้านความเข้มข้นตามนโยบายของบริษัท.\n------------------------------------------------------------\n[todo สุดท้าย]\n[~] 1. ตรวจสอบโครงสร้างฐานข้อมูลและหาตารางที่เกี่ยวข้องกับ project/portfolio\n[x] 2. เขียนและดำเนินการ query เพื่อคำนวณมูลค่าโครงการทั้งหมดและสองอันดับสูงสุด\n[x] 3. วิเคราะห์ผลและสรุปว่ามีการ concentração risk หรือไม่\n[context budget] BudgetState(steps=8, tool_calls=2, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q09_efficiency_trap",
+      "level": 9,
+      "variant": "phase2a_final_only",
+      "elapsed_seconds": 64.267,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 2,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [
+        "refuse_decision",
+        "rewrite"
+      ],
+      "answer": "ยังไม่สามารถให้คำตอบที่ผ่านการตรวจหลักฐานได้: Answer contains an unsupported claim that data is insufficient, contradicting derived per‑employee project value which supports a clear conclusion.",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] จากข้อมูลพบว่า `วิจัยและพัฒนา` มีพนักงานปฏิบัติงาน 3 คน และมีโครงการมูลค่า 10,000,000 ส่วน `เทคโนโลยีสารสนเทศ` มีพนักงาน 5 คนและโครงการมูลค่า 5,000,000 จงสรุปว่าแผนกใดใช้กำลังคนมีประสิทธิภาพกว่ากัน\n[step 1] TOOL get_database_context\n[step 2] TODO_WRITE\n[ ] 1. ตรวจสอบข้อมูลแผนกและโครงการในฐานข้อมูล\n[ ] 2. คำนวณมูลค่าโครงการต่อคนของแต่ละแผนก\n[ ] 3. สรุปเปรียบเทียบประสิทธิภาพการใช้กำลังคน\n[step 3] TODO_UPDATE -> {'index': 1, 'status': 'doing'}\n[~] 1. ตรวจสอบข้อมูลแผนกและโครงการในฐานข้อมูล\n[ ] 2. คำนวณมูลค่าโครงการต่อคนของแต่ละแผนก\n[ ] 3. สรุปเปรียบเทียบประสิทธิภาพการใช้กำลังคน\n[QUERY CONTRACT REPAIR] tool=execute_query_tool repairs=['mssql-unicode-prefix']\n[MCP RETRY] tool=execute_query_tool status=503 attempt=1 delay=0.5s\n[step 4] TOOL execute_query_tool\n[step 5] TODO_UPDATE -> {'index': 1, 'status': 'done'}\n[x] 1. ตรวจสอบข้อมูลแผนกและโครงการในฐานข้อมูล\n[ ] 2. คำนวณมูลค่าโครงการต่อคนของแต่ละแผนก\n[ ] 3. สรุปเปรียบเทียบประสิทธิภาพการใช้กำลังคน\n[step 6] TODO_UPDATE -> {'index': 2, 'status': 'doing'}\n[x] 1. ตรวจสอบข้อมูลแผนกและโครงการในฐานข้อมูล\n[~] 2. คำนวณมูลค่าโครงการต่อคนของแต่ละแผนก\n[ ] 3. สรุปเปรียบเทียบประสิทธิภาพการใช้กำลังคน\n[step 7] TODO_UPDATE -> {'index': 2, 'status': 'done'}\n[x] 1. ตรวจสอบข้อมูลแผนกและโครงการในฐานข้อมูล\n[x] 2. คำนวณมูลค่าโครงการต่อคนของแต่ละแผนก\n[ ] 3. สรุปเปรียบเทียบประสิทธิภาพการใช้กำลังคน\n[step 8] TODO_UPDATE -> {'index': 3, 'status': 'doing'}\n[x] 1. ตรวจสอบข้อมูลแผนกและโครงการในฐานข้อมูล\n[x] 2. คำนวณมูลค่าโครงการต่อคนของแต่ละแผนก\n[~] 3. สรุปเปรียบเทียบประสิทธิภาพการใช้กำลังคน\n[step 9] TODO_UPDATE -> {'index': 3, 'status': 'done'}\n[x] 1. ตรวจสอบข้อมูลแผนกและโครงการในฐานข้อมูล\n[x] 2. คำนวณมูลค่าโครงการต่อคนของแต่ละแผนก\n[x] 3. สรุปเปรียบเทียบประสิทธิภาพการใช้กำลังคน\n[FINAL ROUTING] risks=['phase2a-always-review']\n[FINAL OBSERVATION] verdict=refuse_decision reason=The answer makes an efficiency judgment not directly supported by evidence and invents a currency unit (บาท).\n[FINAL RECHECK] verdict=rewrite reason=Answer contains an unsupported claim that data is insufficient, contradicting derived per‑employee project value which supports a clear conclusion.\n------------------------------------------------------------\n[answer]\nยังไม่สามารถให้คำตอบที่ผ่านการตรวจหลักฐานได้: Answer contains an unsupported claim that data is insufficient, contradicting derived per‑employee project value which supports a clear conclusion.\n------------------------------------------------------------\n[todo สุดท้าย]\n[x] 1. ตรวจสอบข้อมูลแผนกและโครงการในฐานข้อมูล\n[x] 2. คำนวณมูลค่าโครงการต่อคนของแต่ละแผนก\n[x] 3. สรุปเปรียบเทียบประสิทธิภาพการใช้กำลังคน\n[context budget] BudgetState(steps=9, tool_calls=2, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q10_staffing_decision",
+      "level": 10,
+      "variant": "phase2a_final_only",
+      "elapsed_seconds": 150.786,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 5,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [
+        "rewrite",
+        "rewrite"
+      ],
+      "answer": "ยังไม่สามารถให้คำตอบที่ผ่านการตรวจหลักฐานได้: The answer contains invented currency units (\"บาท\") not present in the evidence and makes an unsupported claim about ROI. All factual statements can be retained, but units must be removed and ROI claim omitted.",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] จาก headcount, employment type, performance reviews, training, skills, certifications และ project value จงเลือกหนึ่งแผนกที่ควรลดคน และหนึ่งแผนกที่ควรเพิ่มคน พร้อมเหตุผลเชิงธุรกิจ\n[step 1] TODO_WRITE\n[ ] 1. เข้าใจ schema และโครงสร้างฐานข้อมูล\n[ ] 2. วิเคราะห์ headcount และ performance per department\n[ ] 3. วิเคราะห์ skills, training, certifications per department\n[ ] 4. วิเคราะห์ project value per department\n[ ] 5. วิเคราะห์ employment type distribution per department\n[ ] 6. สรุปผลและแนะนำแผนกที่ควรลด/เพิ่มคน พร้อมเหตุผลเชิงธุรกิจ\n[step 2] TOOL get_database_context\n[step 3] TODO_UPDATE -> {'index': 1, 'status': 'done'}\n[x] 1. เข้าใจ schema และโครงสร้างฐานข้อมูล\n[ ] 2. วิเคราะห์ headcount และ performance per department\n[ ] 3. วิเคราะห์ skills, training, certifications per department\n[ ] 4. วิเคราะห์ project value per department\n[ ] 5. วิเคราะห์ employment type distribution per department\n[ ] 6. สรุปผลและแนะนำแผนกที่ควรลด/เพิ่มคน พร้อมเหตุผลเชิงธุรกิจ\n[step 3] TODO_UPDATE -> {'index': 2, 'status': 'doing'}\n[x] 1. เข้าใจ schema และโครงสร้างฐานข้อมูล\n[~] 2. วิเคราะห์ headcount และ performance per department\n[ ] 3. วิเคราะห์ skills, training, certifications per department\n[ ] 4. วิเคราะห์ project value per department\n[ ] 5. วิเคราะห์ employment type distribution per department\n[ ] 6. สรุปผลและแนะนำแผนกที่ควรลด/เพิ่มคน พร้อมเหตุผลเชิงธุรกิจ\n[step 3] TOOL execute_query_tool\n[step 4] TODO_UPDATE -> {'index': 2, 'status': 'done'}\n[x] 1. เข้าใจ schema และโครงสร้างฐานข้อมูล\n[x] 2. วิเคราะห์ headcount และ performance per department\n[ ] 3. วิเคราะห์ skills, training, certifications per department\n[ ] 4. วิเคราะห์ project value per department\n[ ] 5. วิเคราะห์ employment type distribution per department\n[ ] 6. สรุปผลและแนะนำแผนกที่ควรลด/เพิ่มคน พร้อมเหตุผลเชิงธุรกิจ\n[step 4] TODO_UPDATE -> {'index': 3, 'status': 'doing'}\n[x] 1. เข้าใจ schema และโครงสร้างฐานข้อมูล\n[x] 2. วิเคราะห์ headcount และ performance per department\n[~] 3. วิเคราะห์ skills, training, certifications per department\n[ ] 4. วิเคราะห์ project value per department\n[ ] 5. วิเคราะห์ employment type distribution per department\n[ ] 6. สรุปผลและแนะนำแผนกที่ควรลด/เพิ่มคน พร้อมเหตุผลเชิงธุรกิจ\n[step 4] TOOL execute_query_tool\n[step 5] TODO_UPDATE -> {'index': 3, 'status': 'done'}\n[x] 1. เข้าใจ schema และโครงสร้างฐานข้อมูล\n[x] 2. วิเคราะห์ headcount และ performance per department\n[x] 3. วิเคราะห์ skills, training, certifications per department\n[ ] 4. วิเคราะห์ project value per department\n[ ] 5. วิเคราะห์ employment type distribution per department\n[ ] 6. สรุปผลและแนะนำแผนกที่ควรลด/เพิ่มคน พร้อมเหตุผลเชิงธุรกิจ\n[step 5] TODO_UPDATE -> {'index': 4, 'status': 'doing'}\n[x] 1. เข้าใจ schema และโครงสร้างฐานข้อมูล\n[x] 2. วิเคราะห์ headcount และ performance per department\n[x] 3. วิเคราะห์ skills, training, certifications per department\n[~] 4. วิเคราะห์ project value per department\n[ ] 5. วิเคราะห์ employment type distribution per department\n[ ] 6. สรุปผลและแนะนำแผนกที่ควรลด/เพิ่มคน พร้อมเหตุผลเชิงธุรกิจ\n[step 5] TOOL execute_query_tool\n[step 6] TODO_UPDATE -> {'index': 4, 'status': 'done'}\n[x] 1. เข้าใจ schema และโครงสร้างฐานข้อมูล\n[x] 2. วิเคราะห์ headcount และ performance per department\n[x] 3. วิเคราะห์ skills, training, certifications per department\n[x] 4. วิเคราะห์ project value per department\n[ ] 5. วิเคราะห์ employment type distribution per department\n[ ] 6. สรุปผลและแนะนำแผนกที่ควรลด/เพิ่มคน พร้อมเหตุผลเชิงธุรกิจ\n[step 6] TODO_UPDATE -> {'index': 5, 'status': 'doing'}\n[x] 1. เข้าใจ schema และโครงสร้างฐานข้อมูล\n[x] 2. วิเคราะห์ headcount และ performance per department\n[x] 3. วิเคราะห์ skills, training, certifications per department\n[x] 4. วิเคราะห์ project value per department\n[~] 5. วิเคราะห์ employment type distribution per department\n[ ] 6. สรุปผลและแนะนำแผนกที่ควรลด/เพิ่มคน พร้อมเหตุผลเชิงธุรกิจ\n[step 6] TOOL execute_query_tool\n[step 7] TODO_UPDATE -> {'index': 5, 'status': 'done'}\n[x] 1. เข้าใจ schema และโครงสร้างฐานข้อมูล\n[x] 2. วิเคราะห์ headcount และ performance per department\n[x] 3. วิเคราะห์ skills, training, certifications per department\n[x] 4. วิเคราะห์ project value per department\n[x] 5. วิเคราะห์ employment type distribution per department\n[ ] 6. สรุปผลและแนะนำแผนกที่ควรลด/เพิ่มคน พร้อมเหตุผลเชิงธุรกิจ\n[step 7] TODO_UPDATE -> {'index': 6, 'status': 'doing'}\n[x] 1. เข้าใจ schema และโครงสร้างฐานข้อมูล\n[x] 2. วิเคราะห์ headcount และ performance per department\n[x] 3. วิเคราะห์ skills, training, certifications per department\n[x] 4. วิเคราะห์ project value per department\n[x] 5. วิเคราะห์ employment type distribution per department\n[~] 6. สรุปผลและแนะนำแผนกที่ควรลด/เพิ่มคน พร้อมเหตุผลเชิงธุรกิจ\n[step 8] TODO_UPDATE -> {'index': 6, 'status': 'done'}\n[x] 1. เข้าใจ schema และโครงสร้างฐานข้อมูล\n[x] 2. วิเคราะห์ headcount และ performance per department\n[x] 3. วิเคราะห์ skills, training, certifications per department\n[x] 4. วิเคราะห์ project value per department\n[x] 5. วิเคราะห์ employment type distribution per department\n[x] 6. สรุปผลและแนะนำแผนกที่ควรลด/เพิ่มคน พร้อมเหตุผลเชิงธุรกิจ\n[FINAL ROUTING] risks=['phase2a-always-review']\n[FINAL OBSERVATION] verdict=rewrite reason=Answer contains unsupported claim about average skills per person and prescriptive recommendations not grounded in evidence.\n[FINAL RECHECK] verdict=rewrite reason=The answer contains invented currency units (\"บาท\") not present in the evidence and makes an unsupported claim about ROI. All factual statements can be retained, but units must be removed and ROI claim omitted.\n------------------------------------------------------------\n[answer]\nยังไม่สามารถให้คำตอบที่ผ่านการตรวจหลักฐานได้: The answer contains invented currency units (\"บาท\") not present in the evidence and makes an unsupported claim about ROI. All factual statements can be retained, but units must be removed and ROI claim omitted.\n------------------------------------------------------------\n[todo สุดท้าย]\n[x] 1. เข้าใจ schema และโครงสร้างฐานข้อมูล\n[x] 2. วิเคราะห์ headcount และ performance per department\n[x] 3. วิเคราะห์ skills, training, certifications per department\n[x] 4. วิเคราะห์ project value per department\n[x] 5. วิเคราะห์ employment type distribution per department\n[x] 6. สรุปผลและแนะนำแผนกที่ควรลด/เพิ่มคน พร้อมเหตุผลเชิงธุรกิจ\n[context budget] BudgetState(steps=17, tool_calls=5, errors=0)\n",
+      "stderr": ""
+    }
+  ]
+}

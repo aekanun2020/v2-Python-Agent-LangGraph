@@ -12,6 +12,7 @@ from labs.lab6_todo.evidence_state import (
     ObservationState,
     SemanticVerdict,
 )
+from labs.lab6_todo.evidence_contract import contract_claims, metric_contract_status
 
 
 class ClaimType(str, Enum):
@@ -40,6 +41,11 @@ QUALITATIVE_TERMS = (
     "สมดุล", "มีประสิทธิภาพ", "ความเสี่ยง", "ดังนั้น", "เนื่องจาก",
     "สามารถนำไปใช้", "เหมาะสม", "สอดคล้อง", "แนวโน้ม", "ส่งผล",
     "ยุติธรรม", "กลยุทธ์", "strategic", "trend",
+)
+CURRENCY_TERMS = ("บาท", "ดอลลาร์", "$", "usd", "thb")
+SEMANTIC_TARGET_TERMS = (
+    "efficiency", "efficient", "productivity", "ประสิทธิภาพ",
+    "พิสูจน์ได้หรือไม่", "prove whether", "ยืนยันได้หรือไม่",
 )
 
 
@@ -167,6 +173,201 @@ def _grain_supported(
     )
 
 
+def _units_supported(claim: str, evidence: EvidenceState) -> bool:
+    """A unit is admissible only when accepted evidence names that unit."""
+    lowered = claim.lower()
+    used = tuple(term for term in CURRENCY_TERMS if term in lowered)
+    if not used:
+        return True
+    evidence_text = "\n".join(
+        (record.raw_result + "\n" + str(record.arguments)).lower()
+        for record in evidence.records
+    )
+    return all(term in evidence_text for term in used)
+
+
+def _qualitative_supported(claim: str, question: str) -> bool:
+    """Allow a declared threshold verdict, never an inferred latent metric."""
+    lowered_claim = claim.lower()
+    lowered_question = question.lower()
+    latent_metric = any(
+        term in lowered_claim
+        for term in (
+            "efficiency", "efficient", "productivity",
+            "ประสิทธิภาพ", "ผลิตภาพ",
+        )
+    )
+    if latent_metric:
+        return False
+    policy_declared = any(
+        term in lowered_question
+        for term in ("กำหนดว่า", "policy", "นโยบาย", "เกณฑ์")
+    )
+    threshold_verdict = (
+        policy_declared
+        and bool(_numbers(claim))
+        and any(
+            term in lowered_claim
+            for term in (
+                "ผ่าน", "ไม่ผ่าน", "เกิน", "ต่ำกว่า",
+                "risk", "ความเสี่ยง", "เข้าเกณฑ์",
+            )
+        )
+    )
+    return threshold_verdict
+
+
+def _unit_sum_derivations(
+    question: str,
+    accepted_claims: list[str],
+) -> list[str]:
+    """Derive a total from unique, evidenced group values with one unit."""
+    lowered_question = question.lower()
+    unit = next(
+        (
+            candidate
+            for candidate in ("ชั่วโมง", "hours", "hour")
+            if candidate in lowered_question
+        ),
+        None,
+    )
+    if not unit or not any(
+        term in lowered_question for term in ("ทั้งหมด", "total", "สัดส่วน")
+    ):
+        return []
+    if any(
+        unit in claim.lower()
+        and any(term in claim.lower() for term in ("ทั้งหมด", "total"))
+        and len(_numbers(claim)) == 1
+        for claim in accepted_claims
+    ):
+        return []
+    components = set()
+    for claim in accepted_claims:
+        lowered = claim.lower()
+        if unit not in lowered or "%" not in claim:
+            continue
+        match = re.search(
+            rf"(\d[\d,]*(?:\.\d+)?)\s*{re.escape(unit)}"
+            rf"[^\n%]*\(\s*(\d+(?:\.\d+)?)\s*%",
+            claim,
+            flags=re.IGNORECASE,
+        )
+        if match:
+            components.add(float(match.group(1).replace(",", "")))
+    if len(components) < 2:
+        return []
+    total = sum(components)
+    return [f"รวมทั้งหมด {total:g} {unit}"]
+
+
+def _per_entity_ratio_derivations(
+    question: str,
+    accepted_claims: list[str],
+) -> list[str]:
+    """Compute a literal value/entity ratio without relabelling it."""
+    if not any(
+        term in question.lower()
+        for term in ("ประสิทธิภาพ", "efficiency", "per employee", "ต่อพนักงาน")
+    ):
+        return []
+    headcounts: dict[str, float] = {}
+    values: dict[str, float] = {}
+    for claim in accepted_claims:
+        headcount = re.search(
+            r"^[-* ]*(.+?)\s+มีพนักงาน(?:ปฏิบัติงาน)?\s+"
+            r"(\d[\d,]*(?:\.\d+)?)\s*คน",
+            claim,
+            flags=re.IGNORECASE,
+        )
+        if headcount:
+            headcounts[headcount.group(1).strip()] = float(
+                headcount.group(2).replace(",", "")
+            )
+        value = re.search(
+            r"^[-* ]*(.+?)\s+มี[^\n]*?(?:project value|มูลค่า)"
+            r"\s+(\d[\d,]*(?:\.\d+)?)",
+            claim,
+            flags=re.IGNORECASE,
+        )
+        if value:
+            values[value.group(1).strip()] = float(
+                value.group(2).replace(",", "")
+            )
+    claims = []
+    for label in headcounts.keys() & values.keys():
+        count = headcounts[label]
+        value = values[label]
+        if count <= 0:
+            continue
+        ratio = value / count
+        claims.append(
+            f"project value ต่อพนักงานของ {label} = "
+            f"{value:g} / {count:g} = {ratio:.2f}"
+        )
+    return claims
+
+
+def _question_ratio_derivations(
+    question: str,
+    evidence: EvidenceState,
+) -> list[str]:
+    """Recover typed operands from the request only after MCP corroboration."""
+    pattern = re.compile(
+        r"`([^`]+)`\s*มีพนักงาน(?:ปฏิบัติงาน)?\s*"
+        r"(\d[\d,]*(?:\.\d+)?)\s*คน\s*"
+        r"และมีโครงการมูลค่า\s*(\d[\d,]*(?:\.\d+)?)",
+        flags=re.IGNORECASE,
+    )
+    evidence_numbers = []
+    for record in evidence.records:
+        evidence_numbers.extend(_numbers(record.raw_result))
+    claims = []
+    for label, count_text, value_text in pattern.findall(question):
+        count = float(count_text.replace(",", ""))
+        value = float(value_text.replace(",", ""))
+        corroborated = all(
+            any(
+                math.isclose(number, expected, rel_tol=1e-9, abs_tol=0.001)
+                for number in evidence_numbers
+            )
+            for expected in (count, value)
+        )
+        if count <= 0 or not corroborated:
+            continue
+        claims.append(
+            f"project value ต่อพนักงานของ {label} = "
+            f"{value:g} / {count:g} = {value / count:.2f}"
+        )
+    return claims
+
+
+def _strict_threshold_derivations(
+    question: str,
+    accepted_claims: list[str],
+) -> list[str]:
+    """Preserve a strict policy boundary when the request declares one."""
+    match = re.search(
+        r"(?:มากกว่า|สูงกว่า|เกิน|>)\s*(\d+(?:\.\d+)?)\s*%",
+        question,
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return []
+    threshold = float(match.group(1))
+    percentages = set()
+    for claim in accepted_claims:
+        for value in re.findall(r"(\d+(?:\.\d+)?)\s*%", claim):
+            percentage = float(value)
+            if not math.isclose(percentage, threshold, abs_tol=0.001):
+                percentages.add(percentage)
+    return [
+        f"อัตรา {value:g}% มากกว่าเกณฑ์ {threshold:g}%"
+        for value in sorted(percentages)
+        if value > threshold
+    ]
+
+
 def _coverage_derivation(
     question: str,
     accepted_claims: list[str],
@@ -262,6 +463,15 @@ def verify_claims(
         ):
             accepted = False
             reason = "numeric post-condition failed"
+        elif not _units_supported(claim, evidence):
+            accepted = False
+            reason = "unit is absent from accepted evidence"
+        elif (
+            claim_type is ClaimType.QUALITATIVE
+            and not _qualitative_supported(claim, question)
+        ):
+            accepted = False
+            reason = "qualitative claim lacks a declared metric or policy"
         elif (
             any(term in question.lower() for term in ("coverage", "ความครอบคลุม"))
             and any(term in claim.lower() for term in ("ขาด", "shortfall"))
@@ -288,13 +498,38 @@ def verify_then_emit(
     proposed_answer: str = "",
 ) -> str:
     """Compose only verified claims; fail closed for unsupported decisions."""
+    contract = metric_contract_status(question, evidence)
+    if not contract.satisfied:
+        return (
+            "หลักฐานยังไม่ครบตาม metric contract "
+            f"{contract.contract_id}: ขาด "
+            + ", ".join(contract.missing_roles)
+        )
     claims = verify_claims(
         question,
         observation,
         evidence,
         proposed_answer=proposed_answer,
     )
-    accepted = [claim.text for claim in claims if claim.accepted]
+    accepted = list(contract_claims(question, evidence))
+    accepted.extend(claim.text for claim in claims if claim.accepted)
+    accepted = list(dict.fromkeys(accepted))
+    accepted.extend(
+        claim for claim in _unit_sum_derivations(question, accepted)
+        if claim not in accepted
+    )
+    accepted.extend(
+        claim for claim in _per_entity_ratio_derivations(question, accepted)
+        if claim not in accepted
+    )
+    accepted.extend(
+        claim for claim in _question_ratio_derivations(question, evidence)
+        if claim not in accepted
+    )
+    accepted.extend(
+        claim for claim in _strict_threshold_derivations(question, accepted)
+        if claim not in accepted
+    )
     derived = _coverage_derivation(question, accepted, evidence)
     if derived:
         accepted = [
@@ -312,13 +547,22 @@ def verify_then_emit(
         decision_requested
         and observation.verdict is not SemanticVerdict.APPROVE
     )
+    semantic_conclusion_refused = (
+        any(term in question.lower() for term in SEMANTIC_TARGET_TERMS)
+        and observation.verdict is not SemanticVerdict.APPROVE
+    )
     lines = []
     if accepted:
         lines.append("ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:")
         lines.extend(f"- {claim}" for claim in accepted)
-    if decision_refused or observation.verdict is SemanticVerdict.REFUSE_DECISION:
+    if (
+        decision_refused
+        or semantic_conclusion_refused
+        or observation.verdict is SemanticVerdict.REFUSE_DECISION
+    ):
         lines.append(
-            "หลักฐานที่มีไม่เพียงพอสำหรับการตัดสินใจหรือคำแนะนำที่ร้องขอ"
+            "หลักฐานที่มีไม่เพียงพอและไม่สามารถพิสูจน์ข้อสรุป "
+            "การตัดสินใจ หรือคำแนะนำที่ร้องขอ"
         )
     if not lines:
         lines.append(

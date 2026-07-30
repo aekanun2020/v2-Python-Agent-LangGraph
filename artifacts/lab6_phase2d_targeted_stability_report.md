@@ -36,6 +36,11 @@ evidence. Full Q1-Q10 testing was intentionally deferred.
 
 Conclusion: the active goal remains unproven.
 
+> Historical status: this conclusion described the pre-executable-contract
+> runtime. It is superseded by
+> [the final controlled comparison](lab6_phase2d_executable_contract_final_report.md),
+> while remaining here as evidence of the failures that motivated the redesign.
+
 ## Deterministic draft recovery follow-up
 
 After adding direct-number verification and recovery of grounded numeric draft

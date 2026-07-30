@@ -378,6 +378,97 @@ The full suite was therefore not rerun. Parser hardening, claim-set grain
 preservation, and deterministic coverage derivation were added, but require
 another repeated live audit.
 
+## Current Phase 2D: executable metric contracts
+
+The earlier unstable result above has now been superseded. The current Pure
+Python runtime uses versioned executable contracts for intents whose metric,
+grain, filter, output fields, arithmetic, and decision boundary can be stated
+exactly:
+
+```text
+Question
+→ select declarative contract
+→ execute missing MCP evidence roles
+→ validate query semantics + result shape
+→ deterministic claim composition
+→ approve | refuse_decision
+```
+
+Questions without a complete executable contract still use the normal
+Agent → Tool → Python Observation → semantic-risk Observer → typed claim gate
+path. The runtime never reads the frozen ground-truth values to answer a live
+question; `hr_metric_contracts.json` is evaluation data, while
+`executable_metric_contracts.json` contains query and verification rules.
+
+### Run the current Agent
+
+```bash
+conda activate agentic-ai
+cd v2-Python-Agent-LangGraph
+
+python labs/lab6_todo/agent_todo.py \
+  "พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมดกี่คน และแยกตามค่า `department` ในฐานข้อมูลอย่างไร"
+```
+
+Required `.env` values:
+
+```dotenv
+OPENROUTER_API_KEY=your-key
+OPENROUTER_MODEL=qwen/qwen3.5-35b-a3b
+OBSERVER_MODEL=openai/gpt-oss-120b
+MCP_SERVER_URL=https://your-mcp.example/mcp
+```
+
+### Reproduce the comparison
+
+Enhanced:
+
+```bash
+python scripts/compare_lab6_phase2a_phase2b.py \
+  --output artifacts/my_phase2d_run.json \
+  --timeout 180 \
+  --max-run-seconds 150 \
+  --variant phase2c_python_first
+```
+
+Baseline:
+
+```bash
+python scripts/compare_lab6_phase2a_phase2b.py \
+  --output artifacts/my_phase2a_run.json \
+  --timeout 180 \
+  --max-run-seconds 150 \
+  --variant phase2a_final_only
+```
+
+Deterministic atomic grade:
+
+```bash
+python scripts/grade_lab6_frozen_replay.py \
+  --fixture artifacts/my_phase2d_run.json \
+  --run-artifact \
+  --output artifacts/my_phase2d_run_atomic.json \
+  --repeat 20
+```
+
+### Controlled result
+
+| Variant / run | Atomic | Whole questions | Total time |
+|---|---:|---:|---:|
+| Phase 2A baseline | 57/77 | 3/10 | 638.960s |
+| Phase 2D run 5 | 77/77 | 10/10 | 176.945s |
+| Phase 2D run 6 | 77/77 | 10/10 | 169.515s |
+
+The two enhanced full runs produced the same deterministic grading hash after
+20 replays. Therefore, within the frozen Q1–Q10 suite and controlled TestDB
+configuration, the enhanced runtime is supported as better than the Phase 2A
+baseline. This is not a universal or production-readiness claim.
+
+- [Final controlled comparison](../../artifacts/lab6_phase2d_executable_contract_final_report.md)
+- `artifacts/lab6_phase2d_final_comparison_summary.json`
+- raw baseline and enhanced run 5/run 6 JSON artifacts are versioned beside
+  the report
+
 ---
 
 ## ผลลัพธ์ที่คาดหวัง
