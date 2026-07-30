@@ -310,6 +310,29 @@ This is a safety improvement, not yet a statistical quality claim. The three
 smoke cases verify the intended failure modes, but a repeated, larger
 evaluation suite is still required.
 
+## Deterministic frozen replay
+
+Before expanding the architecture further, the Q1/Q4/Q10 before/after answers
+were frozen and graded with an atomic Python rubric:
+
+```bash
+python scripts/grade_lab6_frozen_replay.py \
+  --fixture tests/fixtures/lab6_claim_gate_frozen.json \
+  --output artifacts/lab6_claim_gate_frozen_replay.json \
+  --repeat 20
+```
+
+All 20 repetitions produced the same SHA-256 result. On this fixed fixture,
+gate-off passed 16/19 atomic items (1/3 whole questions), while gate-on passed
+19/19 atomic items (3/3 whole questions).
+
+- [Frozen replay report](../../artifacts/lab6_claim_gate_frozen_replay_report.md)
+- `artifacts/lab6_claim_gate_frozen_replay.json` contains every atomic result
+
+This measures replay determinism and the local gate effect only. It does not
+establish live statistical superiority or diagnose the cause of prior
+generation variance.
+
 ---
 
 ## ผลลัพธ์ที่คาดหวัง

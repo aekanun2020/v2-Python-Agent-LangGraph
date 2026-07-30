@@ -1,0 +1,28 @@
+{
+  "fixture_id": "lab6-q01-q04-q10-before-after-2026-07-30",
+  "sources": {
+    "gate_off": {
+      "commit": "549cead",
+      "artifact": "artifacts/lab6_phase2c_gptoss_observer_smoke.json"
+    },
+    "gate_on": {
+      "commit": "c113595",
+      "artifacts": [
+        "artifacts/lab6_phase2c_claim_gate_smoke.json",
+        "artifacts/lab6_phase2c_claim_gate_q1_rerun.json"
+      ]
+    }
+  },
+  "variants": {
+    "gate_off": {
+      "q01_headcount": "จากฐานข้อมูลพนักงาน พบว่ามีพนักงานที่มีสถานะ ปฏิบัติงาน ทั้งหมด 25 คน: เทคโนโลยีสารสนเทศ 5 คน, ทรัพยากรบุคคล 4 คน, การตลาด 4 คน, การเงิน 3 คน, ผลิต 3 คน, วิจัยและพัฒนา 3 คน, บัญชี 2 คน, บริหารทั่วไป 1 คน แผนกเทคโนโลยีสารสนเทศมีพนักงานมากที่สุด แสดงถึงความสำคัญของการลงทุนด้านไอที แผนกผลิตและวิจัยและพัฒนาบ่งชี้ถึงนวัตกรรมที่สมดุล และข้อมูลนี้สามารถนำไปใช้ในการวางแผนอัตรากำลังคน",
+      "q04_review_coverage": "จำนวนพนักงานทั้งหมด 25 คน จำนวน Performance Review ปี 2023 จำนวน 7 รายการ Evidence Coverage = 7 / 25 = 28% เกณฑ์ขั้นต่ำ 80% ดังนั้นไม่ผ่านเกณฑ์",
+      "q10_staffing_decision": "ควรลดจำนวนพนักงานในแผนกการตลาด เพราะมีพนักงาน 4 คนและพนักงานสัญญา 2 คน ควรเพิ่มบุคลากรในแผนกเทคโนโลยีสารสนเทศ เพราะมีพนักงาน 5 คน"
+    },
+    "gate_on": {
+      "q01_headcount": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน: There are 25 employees with status ปฏิบัติงาน. Department เทคโนโลยีสารสนเทศ has 5 employees. Department การเงิน has 3 employees. Department การตลาด has 4 employees. Department ทรัพยากรบุคคล has 4 employees. Department บริหารทั่วไป has 1 employee. Department บัญชี has 2 employees. Department ผลิต has 3 employees. Department วิจัยและพัฒนา has 3 employees.",
+      "q04_review_coverage": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน: There are 25 active employees. There are 7 distinct employees with a performance review for 2023. Evidence coverage is 7 / 25 = 28%. The coverage of 28% is below the minimum threshold of 80%.",
+      "q10_staffing_decision": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน: การตลาดมีพนักงานสัญญา 2 คนจาก 4 คน อัตรา 50% วิจัยและพัฒนามีพนักงานทำงานประจำ 3 คน หลักฐานที่มีไม่เพียงพอสำหรับการตัดสินใจหรือคำแนะนำที่ร้องขอ"
+    }
+  }
+}
