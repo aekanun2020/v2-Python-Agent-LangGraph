@@ -13,6 +13,9 @@ load_dotenv()
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 OPENROUTER_BASE_URL = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "anthropic/claude-sonnet-4.6")
+# Observer may use a different model to reduce correlated blind spots.
+# Falls back to the agent model for backward compatibility.
+OBSERVER_MODEL = os.environ.get("OBSERVER_MODEL", OPENROUTER_MODEL)
 
 # ---- MCP MSSQL Server จริงของหลักสูตรที่ 1 (Streamable HTTP) ----
 # ค่าเริ่มต้นชี้ localhost:9000 — ตั้งใน .env ให้เป็น URL ngrok ถ้า expose ออกมา

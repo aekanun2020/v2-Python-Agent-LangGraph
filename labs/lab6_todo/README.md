@@ -248,6 +248,18 @@ Agent calls tool
 There is no mandatory Claim Planner, no LLM after every tool result, and no
 LLM post-rewrite recheck. Low-risk results and answers stay on the Python path.
 
+The Agent and semantic Observer can use different OpenRouter models:
+
+```env
+OPENROUTER_MODEL=qwen/qwen3.5-35b-a3b
+OBSERVER_MODEL=openai/gpt-oss-120b
+```
+
+`OPENROUTER_MODEL` performs planning, tool selection, query construction, and
+answer drafting. `OBSERVER_MODEL` is called only for semantic-risk tool results
+and semantic-risk final answers. If `OBSERVER_MODEL` is omitted, it falls back
+to `OPENROUTER_MODEL` for backward compatibility.
+
 - [Phase 2C Python-first report and live smoke](../../artifacts/lab6_phase2c_python_first_report.md)
 - `artifacts/lab6_phase2c_python_first_smoke.json` contains the three raw runs
 - [Phase 2A vs Phase 2C full 10-question report](../../artifacts/lab6_phase2a_phase2c_full_10_report.md)
@@ -263,6 +275,14 @@ replacement.
 Phase 2C scored 5/10 in both full runs, but only Q1 passed in both. Eight of ten
 questions changed pass/fail status, so the stable aggregate score must not be
 interpreted as deterministic behavior.
+
+- [Qwen Agent + GPT-OSS Observer live smoke](../../artifacts/lab6_phase2c_gptoss_observer_smoke_report.md)
+- `artifacts/lab6_phase2c_gptoss_observer_smoke.json` contains the raw runs
+
+The split-model wiring was verified live, but this smoke did not pass the
+quality gate: Q4 passed while Q1 and Q10 retained unsupported business
+interpretation after final routing/rewrite. A full 10-question run was
+intentionally not performed.
 
 ---
 

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-from labs.core import llm
+from labs.core import config, llm
 from labs.lab6_todo.claim_ledger import ClaimLedger, ClaimRequirement
 from labs.lab6_todo.evidence_state import EvidenceRecord
 
@@ -123,6 +123,7 @@ def build_claim_ledger(question: str, timeout: float = 45) -> ClaimLedger:
             {"role": "user", "content": question},
         ],
         temperature=0,
+        model=config.OBSERVER_MODEL,
         timeout=timeout,
         client_max_retries=0,
     )
@@ -210,6 +211,7 @@ def observe_tool_result(
             {"role": "user", "content": payload},
         ],
         temperature=0,
+        model=config.OBSERVER_MODEL,
         timeout=timeout,
         client_max_retries=0,
     )

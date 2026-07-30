@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 import httpx
 
+from labs.core import config
 from labs.lab6_todo.agent_todo import dispatch_with_retry
 from labs.lab6_todo.claim_ledger import (
     ClaimLedger,
@@ -31,6 +32,7 @@ from labs.lab6_todo.phase2_runtime import (
 from labs.lab6_todo.semantic_observer import (
     apply_bounded_rewrite,
     enforce_claim_alignment,
+    review_final_answer,
 )
 from labs.lab6_todo.risk_router import (
     DeterministicDecision,
@@ -172,6 +174,7 @@ class Phase2BTests(unittest.TestCase):
         self.assertEqual(observation.proved_claim_ids, ("claim_001",))
         self.assertEqual(observation.facts[0].evidence_id, "call-1")
         self.assertEqual(observation.canonical_labels, ("ผลิต",))
+        self.assertEqual(chat.call_args.kwargs["model"], config.OBSERVER_MODEL)
 
     @patch("labs.lab6_todo.dynamic_observer.llm.chat")
     def test_query_more_names_specific_missing_evidence(self, chat):
@@ -252,6 +255,24 @@ class Phase2BTests(unittest.TestCase):
         )
         result = apply_bounded_rewrite("ignored", observation)
         self.assertEqual(result, "มูลค่ารวม 28,000,000")
+
+    @patch("labs.lab6_todo.semantic_observer.llm.chat")
+    def test_final_observer_uses_configured_observer_model(self, chat):
+        chat.return_value = fake_response({
+            "verdict": "approve",
+            "reason": "grounded",
+            "supported_claims": [],
+            "unsupported_claims": [],
+            "contradictions": [],
+            "violations": [],
+            "revised_answer": None,
+        })
+        review_final_answer(
+            "นับพนักงาน",
+            "มี 25 คน",
+            EvidenceState(),
+        )
+        self.assertEqual(chat.call_args.kwargs["model"], config.OBSERVER_MODEL)
 
     def test_final_approval_is_downgraded_for_unresolved_claims(self):
         ledger = ClaimLedger([

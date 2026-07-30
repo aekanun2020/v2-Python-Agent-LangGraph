@@ -136,6 +136,10 @@ def main() -> None:
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "model": os.environ.get("OPENROUTER_MODEL", ""),
+        "observer_model": os.environ.get(
+            "OBSERVER_MODEL",
+            os.environ.get("OPENROUTER_MODEL", ""),
+        ),
         "mcp_server": os.environ.get("MCP_SERVER_URL", ""),
         "comparison": VARIANTS,
         "questions": questions,
