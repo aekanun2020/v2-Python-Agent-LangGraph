@@ -44,14 +44,18 @@ completed substantive answer. It must not be counted as task success.
 | Q9 | fail | fail | Phase 2A invented currency; Phase 2D omitted the supported literal per-head arithmetic |
 | Q10 | pass | **fail** | Phase 2A refused the decision; Phase 2D hit the 150-second deadline |
 
-Provisional strict score:
+Deterministic atomic score (77 versioned items, replayed 20 times):
 
-- Phase 2A: **5/10**
-- Phase 2D: **6/10**
+- Phase 2A: **45/77 atomic items; 4/10 whole questions**
+- Phase 2D: **61/77 atomic items; 5/10 whole questions**
 
-This manual strict score is included for incident analysis, not statistical
-inference. The atomic deterministic grader currently covers only Q1/Q4/Q10;
-the remaining rubric still needs independent versioned annotations.
+All 20 grader repetitions produced:
+
+`53dbb6aa852a2fe36c322c0c62497b88e02641ed4069960276f17caac42c384e`
+
+The contracts and grader now cover Q1–Q10, but the annotations were authored
+from the known ground truth and still require independent review before they
+can support population-level inference.
 
 ## Main finding
 

@@ -1,0 +1,60 @@
+{
+  "version": "hr-metrics-v1",
+  "closed_world_scope": "TestDB frozen ground truth for the Q1-Q10 evaluation suite",
+  "contracts": {
+    "q01_headcount": {
+      "grain": "active employee grouped by canonical department",
+      "filter": "employees.status = N'ปฏิบัติงาน'",
+      "metric": "COUNT(employee)",
+      "ground_truth": {"total": 25, "by_department": {"เทคโนโลยีสารสนเทศ": 5, "การเงิน": 3, "การตลาด": 4, "ทรัพยากรบุคคล": 4, "บริหารทั่วไป": 1, "บัญชี": 2, "ผลิต": 3, "วิจัยและพัฒนา": 3}}
+    },
+    "q02_employment_mix": {
+      "grain": "active employee grouped by department and employment_type",
+      "filter": "employees.status = N'ปฏิบัติงาน'",
+      "metric": "count and contract_count / department_count",
+      "ground_truth": {"เทคโนโลยีสารสนเทศ": [4, 1, 20.0], "การเงิน": [3, 0, 0.0], "การตลาด": [2, 2, 50.0], "ทรัพยากรบุคคล": [1, 3, 75.0], "บริหารทั่วไป": [1, 0, 0.0], "บัญชี": [2, 0, 0.0], "ผลิต": [3, 0, 0.0], "วิจัยและพัฒนา": [3, 0, 0.0]}
+    },
+    "q03_contract_policy": {
+      "grain": "active employee grouped by department",
+      "metric": "contract_count / active_department_count",
+      "policy": "strictly greater than 50%",
+      "ground_truth": {"qualifying": ["ทรัพยากรบุคคล"], "numerator": 3, "denominator": 4, "percentage": 75.0, "boundary_nonqualifying": {"การตลาด": 50.0}}
+    },
+    "q04_review_coverage": {
+      "grain": "distinct reviewed active employee / active employee",
+      "metric": "COUNT(DISTINCT reviewed employee_id) / COUNT(active employee_id)",
+      "ground_truth": {"active": 25, "distinct_reviewed": 7, "coverage_pct": 28.0, "threshold_pct": 80.0, "shortfall_percentage_points": 52.0}
+    },
+    "q05_training_portfolio": {
+      "grain": "training hours grouped by canonical training_type",
+      "metric": "SUM(hours) / total SUM(hours)",
+      "ground_truth": {"total_hours": 252, "ภายนอก": [152, 60.32], "ออนไลน์": [92, 36.51], "ภายใน": [8, 3.17], "over_50": ["ภายนอก"]}
+    },
+    "q06_certificate_semantics": {
+      "grain": "training record versus distinct employee certification record",
+      "metric": "separate training certificate flag from time-valid certification",
+      "ground_truth": {"training_records": 11, "all_certificate_obtained": true, "distinct_trained_employees": 10, "certification_records": 7, "distinct_certified_employees": 7, "status_usable_records": 7, "status_usable_nonexpired_records": 0, "null_expiry_semantics": "unknown"}
+    },
+    "q07_expert_skill": {
+      "grain": "skill record",
+      "metric": "expert skill records / all skill records",
+      "ground_truth": {"total": [15, 6, 40.0], "เทคนิค": [8, 4, 50.0], "การสื่อสาร": [1, 0, 0.0], "คอมพิวเตอร์": [3, 1, 33.33], "บริหาร": [3, 1, 33.33]}
+    },
+    "q08_project_concentration": {
+      "grain": "project",
+      "metric": "top-two project value / total project value",
+      "ground_truth": {"total": 28000000, "top_two": 18000000, "percentage": 64.29, "threshold": 60.0, "policy_verdict": "concentration risk", "currency": null}
+    },
+    "q09_efficiency_trap": {
+      "grain": "department project value per active employee",
+      "metric": "literal ratio only; not efficiency",
+      "ground_truth": {"วิจัยและพัฒนา": [10000000, 3, 3333333.33], "เทคโนโลยีสารสนเทศ": [5000000, 5, 1000000.0], "efficiency_decision": "insufficient"}
+    },
+    "q10_staffing_decision": {
+      "grain": "decision",
+      "metric": "not defined",
+      "required_missing_inputs": ["workload", "capacity", "demand forecast", "service level", "target cost"],
+      "ground_truth": {"decision": "refuse_decision", "retain_supported_descriptive_facts": true}
+    }
+  }
+}

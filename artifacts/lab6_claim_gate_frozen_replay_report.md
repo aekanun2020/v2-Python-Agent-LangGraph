@@ -46,12 +46,12 @@ The grader was replayed 20 times.
 
 | Variant | Atomic items | Whole questions |
 |---|---:|---:|
-| Gate off | 16/19 | 1/3 |
-| Gate on | 19/19 | 3/3 |
+| Gate off | 16/20 | 0/3 |
+| Gate on | 20/20 | 3/3 |
 
 Every repetition produced the same result hash:
 
-`c2f2a897691ab8ab4cb705fc3f18a4cc92b4b82ecad77a029e93deed0c042f70`
+`1c50402c1abcc7a8f5a9585703dd18da8889909a49ba0c7ff543f0b5f16c2ba7`
 
 Replay determinism: **20/20 identical**.
 

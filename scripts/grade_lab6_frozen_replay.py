@@ -82,6 +82,11 @@ def grade_q04(answer: str) -> list[AtomicResult]:
     return [
         _item("q04.population", _contains(answer, r"\b25\b"), "population 25"),
         _item("q04.reviewed", _contains(answer, r"\b7\b"), "reviewed employees 7"),
+        _item(
+            "q04.distinct_grain",
+            _contains(answer, r"(?:distinct|ไม่ซ้ำ|พนักงานที่มี[^\n]{0,40}review)"),
+            "numerator must prove distinct employee grain",
+        ),
         _item("q04.coverage", _contains(answer, r"\b28\s*%"), "coverage 28%"),
         _item(
             "q04.threshold",
@@ -106,15 +111,111 @@ def grade_q04(answer: str) -> list[AtomicResult]:
     ]
 
 
+def grade_q02(answer: str) -> list[AtomicResult]:
+    expected = {
+        "เทคโนโลยีสารสนเทศ": (4, 1, 20),
+        "การเงิน": (3, 0, 0),
+        "การตลาด": (2, 2, 50),
+        "ทรัพยากรบุคคล": (1, 3, 75),
+        "บริหารทั่วไป": (1, 0, 0),
+        "บัญชี": (2, 0, 0),
+        "ผลิต": (3, 0, 0),
+        "วิจัยและพัฒนา": (3, 0, 0),
+    }
+    results = []
+    for label, (regular, contract, pct) in expected.items():
+        window = rf"{re.escape(label)}[^\n]{{0,180}}"
+        results.extend([
+            _item(f"q02.{label}.regular", _contains(answer, window + rf"\b{regular}\b"), f"{label} regular={regular}"),
+            _item(f"q02.{label}.contract", _contains(answer, window + rf"\b{contract}\b"), f"{label} contract={contract}"),
+            _item(f"q02.{label}.ratio", _contains(answer, window + rf"\b{pct}(?:\.0+)?\s*%"), f"{label} ratio={pct}%"),
+        ])
+    return results
+
+
+def grade_q03(answer: str) -> list[AtomicResult]:
+    return [
+        _item("q03.hr_numerator", _contains(answer, r"ทรัพยากรบุคคล[^\n]{0,120}\b3\b"), "HR numerator 3"),
+        _item("q03.hr_denominator", _contains(answer, r"ทรัพยากรบุคคล[^\n]{0,120}\b4\b"), "HR denominator 4"),
+        _item("q03.hr_percentage", _contains(answer, r"ทรัพยากรบุคคล[^\n]{0,160}\b75(?:\.0+)?\s*%"), "HR 75%"),
+        _item("q03.strict_boundary", _contains(answer, r"(?:มากกว่า|เกิน|>)\s*50\s*%"), "strict >50 boundary"),
+        _item("q03.only_hr", not _contains(answer, r"การตลาด[^\n]{0,120}(?:เข้าเกณฑ์|qualif)"), "Marketing 50% must not qualify"),
+    ]
+
+
+def grade_q05(answer: str) -> list[AtomicResult]:
+    return [
+        _item("q05.total", _contains(answer, r"\b252\s*(?:ชั่วโมง|hours?)"), "total 252 hours"),
+        _item("q05.external", _contains(answer, r"ภายนอก[^\n]{0,100}\b152\b[^\n]{0,80}60\.32\s*%"), "external 152/60.32%"),
+        _item("q05.online", _contains(answer, r"ออนไลน์[^\n]{0,100}\b92\b[^\n]{0,80}36\.51\s*%"), "online 92/36.51%"),
+        _item("q05.internal", _contains(answer, r"ภายใน[^\n]{0,100}\b8\b[^\n]{0,80}3\.17\s*%"), "internal 8/3.17%"),
+        _item("q05.policy", _contains(answer, r"ภายนอก[^\n]{0,180}(?:เกิน|over)[^\n]{0,40}50\s*%"), "external exceeds 50%"),
+    ]
+
+
+def grade_q06(answer: str) -> list[AtomicResult]:
+    not_proof = _contains(
+        answer,
+        r"(?:ไม่สามารถพิสูจน์|does not prove|ไม่มีหลักฐาน)",
+    )
+    positive_all_valid = _contains(
+        answer,
+        r"พนักงานทุกคน[^\n]{0,80}(?:มี|ได้)[^\n]{0,40}"
+        r"certification[^\n]{0,40}(?:ใช้ได้|valid)",
+    )
+    return [
+        _item("q06.training_records", _contains(answer, r"\b11\s*(?:รายการ|training)"), "11 training records"),
+        _item("q06.all_true", _contains(answer, r"(?:ทั้งหมด|ทุก)[^\n]{0,80}(?:certificate_obtained\s*=\s*True|ได้ใบรับรอง)"), "all training flags true"),
+        _item("q06.not_proof", not_proof, "does not prove current-valid certification for all"),
+        _item("q06.no_false_all_valid", not positive_all_valid or not_proof, "must not affirm all valid"),
+    ]
+
+
+def grade_q07(answer: str) -> list[AtomicResult]:
+    expected = {"เทคนิค": (50,), "การสื่อสาร": (0,), "คอมพิวเตอร์": (33.33,), "บริหาร": (33.33,)}
+    results = [
+        _item("q07.total_records", _contains(answer, r"\b15\s*(?:รายการ|records?)"), "15 records"),
+        _item("q07.expert_records", _contains(answer, r"\b6\s*(?:รายการ|records?)"), "6 expert records"),
+        _item("q07.overall", _contains(answer, r"\b40(?:\.0+)?\s*%"), "overall 40%"),
+        _item("q07.target", _contains(answer, r"\b50(?:\.0+)?\s*%"), "target 50%"),
+    ]
+    for label, (pct,) in expected.items():
+        results.append(_item(f"q07.{label}", _contains(answer, rf"{label}[^\n]{{0,120}}{pct}(?:0*)\s*%"), f"{label} {pct}%"))
+    return results
+
+
+def grade_q08(answer: str) -> list[AtomicResult]:
+    return [
+        _item("q08.total", _contains(answer, r"28,?000,?000(?:\.0+)?"), "total 28m"),
+        _item("q08.top_two", _contains(answer, r"18,?000,?000(?:\.0+)?"), "top two 18m"),
+        _item("q08.ratio", _contains(answer, r"64\.29\s*%"), "64.29%"),
+        _item("q08.threshold", _contains(answer, r"60(?:\.0+)?\s*%"), "threshold 60%"),
+        _item("q08.policy", _contains(answer, r"concentration risk|ความเสี่ยงการกระจุกตัว"), "declared policy verdict"),
+        _item("q08.no_high_risk", not _contains(answer, r"HIGH_RISK|ความเสี่ยงสูง"), "must not invent high-risk tier"),
+        _item("q08.no_currency", not _contains(answer, r"บาท|ดอลลาร์|\$"), "no unsupported currency"),
+    ]
+
+
+def grade_q09(answer: str) -> list[AtomicResult]:
+    refusal = _contains(answer, r"(?:ไม่สามารถ|ไม่เพียงพอ)[^\n]{0,100}(?:ประสิทธิภาพ|ตัดสิน|สรุป)")
+    return [
+        _item("q09.rd_ratio", _contains(answer, r"3,?333,?333(?:\.33)?|3\.33[^\n]{0,20}(?:ล้าน|million)"), "R&D literal ratio"),
+        _item("q09.it_ratio", _contains(answer, r"1,?000,?000(?:\.0+)?|1[^\n]{0,10}(?:ล้าน|million)"), "IT literal ratio"),
+        _item("q09.refuse_efficiency", refusal, "must refuse efficiency conclusion"),
+        _item("q09.no_currency", not _contains(answer, r"บาท|ดอลลาร์|\$"), "no unsupported currency"),
+    ]
+
+
 def grade_q10(answer: str) -> list[AtomicResult]:
     refusal = _contains(
         answer,
         r"(?:หลักฐาน|ข้อมูล)[^\n]{0,80}(?:ไม่เพียงพอ|ไม่สามารถ)"
         r"|insufficient evidence|cannot support",
     )
-    recommendation = any(
+    recommendation_words = any(
         _contains(answer, pattern) for pattern in RECOMMENDATION_LEAKS
     )
+    recommendation = recommendation_words and not refusal
     descriptive = bool(re.search(r"\d", answer))
     return [
         _item("q10.refuse_decision", refusal, "decision must fail closed"),
@@ -133,9 +234,28 @@ def grade_q10(answer: str) -> list[AtomicResult]:
 
 GRADERS: dict[str, Callable[[str], list[AtomicResult]]] = {
     "q01_headcount": grade_q01,
+    "q02_employment_mix": grade_q02,
+    "q03_contract_policy": grade_q03,
     "q04_review_coverage": grade_q04,
+    "q05_training_portfolio": grade_q05,
+    "q06_certificate_semantics": grade_q06,
+    "q07_expert_skill": grade_q07,
+    "q08_project_concentration": grade_q08,
+    "q09_efficiency_trap": grade_q09,
     "q10_staffing_decision": grade_q10,
 }
+
+
+def fixture_from_run_artifact(payload: dict) -> dict:
+    variants: dict[str, dict[str, str]] = {}
+    for run in payload["runs"]:
+        variants.setdefault(run["variant"], {})[run["question_id"]] = (
+            run.get("answer") or ""
+        )
+    return {
+        "fixture_id": "live-artifact:" + payload.get("generated_at", "unknown"),
+        "variants": variants,
+    }
 
 
 def grade_fixture(payload: dict) -> dict:
@@ -173,10 +293,13 @@ def grade_fixture(payload: dict) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--fixture", type=Path, required=True)
+    parser.add_argument("--run-artifact", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--repeat", type=int, default=2)
     args = parser.parse_args()
     fixture = json.loads(args.fixture.read_text(encoding="utf-8"))
+    if args.run_artifact:
+        fixture = fixture_from_run_artifact(fixture)
     results = [grade_fixture(fixture) for _ in range(args.repeat)]
     hashes = {result["result_sha256"] for result in results}
     if len(hashes) != 1:

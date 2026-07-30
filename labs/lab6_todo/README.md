@@ -322,9 +322,9 @@ python scripts/grade_lab6_frozen_replay.py \
   --repeat 20
 ```
 
-All 20 repetitions produced the same SHA-256 result. On this fixed fixture,
-gate-off passed 16/19 atomic items (1/3 whole questions), while gate-on passed
-19/19 atomic items (3/3 whole questions).
+All 20 repetitions produced the same SHA-256 result. With the distinct-grain
+item added, gate-off passed 16/20 atomic items (0/3 whole questions), while
+gate-on passed 20/20 atomic items (3/3 whole questions).
 
 - [Frozen replay report](../../artifacts/lab6_claim_gate_frozen_replay_report.md)
 - `artifacts/lab6_claim_gate_frozen_replay.json` contains every atomic result
@@ -346,6 +346,12 @@ median and improved several semantic traps, but produced a critical Q1
 false-support (`0` instead of the ground-truth `25`) and hit its whole-run
 deadline on Q10. The frozen replay result must therefore not be generalized to
 live Agent behavior.
+
+The versioned Q1–Q10 metric/grain contracts are in
+`labs/lab6_todo/hr_metric_contracts.json`. A 20-repeat deterministic replay of
+the live artifact scored Phase 2A at 45/77 atomic items (4/10 questions) and
+Phase 2D at 61/77 atomic items (5/10 questions). See
+`artifacts/lab6_phase2a_phase2d_live_10_atomic.json`.
 
 ---
 
