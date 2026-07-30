@@ -29,6 +29,10 @@ from labs.lab6_todo.evidence_state import (
     SemanticVerdict,
     SemanticViolation,
 )
+from labs.lab6_todo.evidence_contract import (
+    ContractDecision,
+    validate_evidence_contract,
+)
 from labs.lab6_todo.phase2_runtime import (
     Phase2Budget,
     RuntimeBudgetExhausted,
@@ -487,7 +491,12 @@ class Phase2BTests(unittest.TestCase):
         evidence.accept(EvidenceRecord.from_tool(
             "call-coverage",
             "execute_query_tool",
-            {},
+            {
+                "query": (
+                    "SELECT COUNT(DISTINCT employee_id) "
+                    "FROM performance_reviews"
+                )
+            },
             "employees reviews\n25 7",
         ))
         observation = ObservationState(
@@ -527,6 +536,39 @@ class Phase2BTests(unittest.TestCase):
             final_semantic_risk("นับพนักงาน", " \n", EvidenceState()),
             ("empty-answer",),
         )
+
+    def test_evidence_contract_rejects_unsafe_mssql_unicode_filter(self):
+        record = EvidenceRecord.from_tool(
+            "call-unicode",
+            "execute_query_tool",
+            {"query": "SELECT COUNT(*) FROM employees WHERE status = 'ปฏิบัติงาน'"},
+            "employee_count\n0",
+        )
+        result = validate_evidence_contract("นับพนักงาน", record)
+        self.assertEqual(result.decision, ContractDecision.REJECT)
+
+    def test_evidence_contract_accepts_mssql_unicode_filter_with_n_prefix(self):
+        record = EvidenceRecord.from_tool(
+            "call-unicode-safe",
+            "execute_query_tool",
+            {"query": "SELECT COUNT(*) FROM employees WHERE status = N'ปฏิบัติงาน'"},
+            "employee_count\n25",
+        )
+        result = validate_evidence_contract("นับพนักงาน", record)
+        self.assertEqual(result.decision, ContractDecision.ACCEPT)
+
+    def test_evidence_contract_requires_distinct_entity_for_coverage(self):
+        record = EvidenceRecord.from_tool(
+            "call-coverage-grain",
+            "execute_query_tool",
+            {"query": "SELECT COUNT(*) FROM performance_reviews WHERE review_period = '2023'"},
+            "review_count\n7",
+        )
+        result = validate_evidence_contract(
+            "คำนวณ evidence coverage",
+            record,
+        )
+        self.assertEqual(result.decision, ContractDecision.QUERY_MORE)
 
     def test_evidence_state_renders_structured_observation(self):
         state = EvidenceState()

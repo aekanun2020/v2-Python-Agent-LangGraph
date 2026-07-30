@@ -353,6 +353,24 @@ the live artifact scored Phase 2A at 45/77 atomic items (4/10 questions) and
 Phase 2D at 61/77 atomic items (5/10 questions). See
 `artifacts/lab6_phase2a_phase2d_live_10_atomic.json`.
 
+## Evidence admission contracts
+
+Phase 2D now validates tool evidence before adding it to accepted evidence:
+
+- MSSQL Unicode string filters must use `N'…'`;
+- coverage counts must prove distinct entity grain;
+- retry/query-more/error payloads are not admitted merely because the tool
+  call returned successfully.
+
+A targeted Q1/Q4 live rerun passed 17/17 deterministic atomic items and 2/2
+whole questions. Q4 logged a rejected non-distinct query and recovered with a
+distinct-employee query.
+
+- [Evidence-contract smoke report](../../artifacts/lab6_phase2d_evidence_contract_smoke_report.md)
+- `artifacts/lab6_phase2d_evidence_contract_smoke.json` contains raw live runs
+- `artifacts/lab6_phase2d_evidence_contract_smoke_atomic.json` contains the
+  20-repeat deterministic grade
+
 ---
 
 ## ผลลัพธ์ที่คาดหวัง

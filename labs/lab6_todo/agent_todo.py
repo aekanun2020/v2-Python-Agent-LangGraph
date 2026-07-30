@@ -30,6 +30,10 @@ from labs.lab6_todo.evidence_state import (
 )
 from labs.lab6_todo.claim_ledger import ClaimLedger
 from labs.lab6_todo.claim_gate import verify_then_emit
+from labs.lab6_todo.evidence_contract import (
+    ContractDecision,
+    validate_evidence_contract,
+)
 from labs.lab6_todo.dynamic_observer import (
     NextAction,
     build_claim_ledger,
@@ -311,12 +315,27 @@ def _run_impl(
                                 call.id, name, args, result
                             )
                             context.add_evidence_ref(call.id)
-                            evidence.accept(record)
+                            if not dynamic_observer:
+                                evidence.accept(record)
                             if dynamic_observer:
                                 deterministic = observe_deterministically(
                                     question,
                                     record,
                                 )
+                                contract = validate_evidence_contract(
+                                    question,
+                                    record,
+                                )
+                                contract_accepts = (
+                                    contract.decision
+                                    is ContractDecision.ACCEPT
+                                )
+                                if (
+                                    deterministic.decision
+                                    is DeterministicDecision.ACCEPT
+                                    and contract_accepts
+                                ):
+                                    evidence.accept(record)
                                 evidence.add_observation(deterministic)
                                 print(
                                     "[PYTHON OBSERVATION] "
@@ -326,6 +345,17 @@ def _run_impl(
                                     f"risk={deterministic.semantic_risk} "
                                     f"reasons={list(deterministic.risk_reasons)}"
                                 )
+                                if not contract_accepts:
+                                    print(
+                                        "[EVIDENCE CONTRACT] "
+                                        f"evidence={call.id} "
+                                        f"decision={contract.decision.value} "
+                                        f"reason={contract.reason}"
+                                    )
+                                    dynamic_feedback.append(
+                                        f"{contract.decision.value}: "
+                                        f"{contract.reason}"
+                                    )
                                 if deterministic.decision in {
                                     DeterministicDecision.RETRY,
                                     DeterministicDecision.QUERY_MORE,
@@ -365,6 +395,7 @@ def _run_impl(
                                         "content": result,
                                     })
                                     continue
+                            if dynamic_observer:
                                 reviewed_risk_signatures.add(
                                     risk_signature
                                 )

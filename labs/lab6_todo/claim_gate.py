@@ -100,6 +100,21 @@ def _numbers_supported(
     )
 
 
+def _grain_supported(claim: str, evidence: EvidenceState) -> bool:
+    lowered = claim.lower()
+    if not any(term in lowered for term in ("coverage", "ความครอบคลุม")):
+        return True
+    review_queries = [
+        str(record.arguments).lower()
+        for record in evidence.records
+        if "performance_review" in str(record.arguments).lower()
+    ]
+    return any(
+        "distinct" in query and "employee_id" in query
+        for query in review_queries
+    )
+
+
 def verify_claims(
     question: str,
     observation: ObservationState,
@@ -122,6 +137,9 @@ def verify_claims(
         ):
             accepted = False
             reason = "numeric post-condition failed"
+        elif not _grain_supported(claim, evidence):
+            accepted = False
+            reason = "grain contract failed"
         results.append(GatedClaim(claim, claim_type, accepted, reason))
     return tuple(results)
 
