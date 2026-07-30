@@ -13,6 +13,11 @@ from labs.lab6_todo.claim_ledger import (
     ClaimRequirement,
     ClaimStatus,
 )
+from labs.lab6_todo.claim_gate import (
+    ClaimType,
+    classify_claim,
+    verify_then_emit,
+)
 from labs.lab6_todo.dynamic_observer import (
     NextAction,
     observe_tool_result,
@@ -409,6 +414,99 @@ class Phase2BTests(unittest.TestCase):
         self.assertTrue(any(item.startswith("unsupported-numbers:") for item in risks))
         self.assertIn("semantic-decision", risks)
 
+    def test_final_router_detects_unsupported_qualitative_interpretation(self):
+        evidence = EvidenceState()
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-qualitative",
+            "execute_query_tool",
+            {},
+            "department n\nเทคโนโลยีสารสนเทศ 5",
+        ))
+        risks = final_semantic_risk(
+            "นับพนักงานแยกแผนก",
+            "มี 5 คน สะท้อนถึงความสำคัญของการลงทุนด้านไอที",
+            evidence,
+        )
+        self.assertIn("qualitative-interpretation", risks)
+
+    def test_claim_gate_emits_allowlist_not_revised_draft(self):
+        evidence = EvidenceState()
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-count",
+            "execute_query_tool",
+            {},
+            "active_count\n25",
+        ))
+        observation = ObservationState(
+            verdict=SemanticVerdict.REWRITE,
+            reason="remove unsupported interpretation",
+            supported_claims=("พนักงานที่ปฏิบัติงานมี 25 คน",),
+            unsupported_claims=("องค์กรให้ความสำคัญกับไอที",),
+            revised_answer="องค์กรควรลงทุนด้านไอที",
+        )
+        emitted = verify_then_emit(
+            "นับพนักงานที่ปฏิบัติงาน",
+            observation,
+            evidence,
+        )
+        self.assertIn("25", emitted)
+        self.assertNotIn("ลงทุน", emitted)
+
+    def test_claim_gate_refuses_decision_and_drops_recommendation(self):
+        evidence = EvidenceState()
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-staff",
+            "execute_query_tool",
+            {},
+            "department headcount\nการตลาด 4",
+        ))
+        observation = ObservationState(
+            verdict=SemanticVerdict.REFUSE_DECISION,
+            reason="missing workload and demand evidence",
+            supported_claims=(
+                "การตลาดมีพนักงาน 4 คน",
+                "ควรลดพนักงานการตลาด",
+            ),
+            revised_answer="ควรลดพนักงานการตลาด",
+        )
+        emitted = verify_then_emit(
+            "ควรเพิ่มหรือลดคนในแผนกใด",
+            observation,
+            evidence,
+        )
+        self.assertIn("การตลาดมีพนักงาน 4 คน", emitted)
+        self.assertIn("ไม่เพียงพอ", emitted)
+        self.assertNotIn("ควรลดพนักงาน", emitted)
+        self.assertEqual(
+            classify_claim("ควรลดพนักงานการตลาด"),
+            ClaimType.RECOMMENDATION,
+        )
+
+    def test_numeric_gate_accepts_transparent_percentage_arithmetic(self):
+        evidence = EvidenceState()
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-coverage",
+            "execute_query_tool",
+            {},
+            "employees reviews\n25 7",
+        ))
+        observation = ObservationState(
+            verdict=SemanticVerdict.REWRITE,
+            reason="grounded arithmetic",
+            supported_claims=(
+                "Coverage เท่ากับ 28%",
+                "ต่ำกว่าเกณฑ์ 80% อยู่ 52 percentage points",
+            ),
+            revised_answer="ignored",
+        )
+        emitted = verify_then_emit(
+            "ตรวจเกณฑ์ขั้นต่ำ 80%",
+            observation,
+            evidence,
+        )
+        self.assertIn("28%", emitted)
+        self.assertIn("52 percentage points", emitted)
+
     def test_final_router_ignores_ordered_list_numbers(self):
         evidence = EvidenceState()
         evidence.accept(EvidenceRecord.from_tool(
@@ -423,6 +521,12 @@ class Phase2BTests(unittest.TestCase):
             evidence,
         )
         self.assertEqual(risks, ())
+
+    def test_final_router_rejects_empty_answer(self):
+        self.assertEqual(
+            final_semantic_risk("นับพนักงาน", " \n", EvidenceState()),
+            ("empty-answer",),
+        )
 
     def test_evidence_state_renders_structured_observation(self):
         state = EvidenceState()

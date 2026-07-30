@@ -284,6 +284,32 @@ quality gate: Q4 passed while Q1 and Q10 retained unsupported business
 interpretation after final routing/rewrite. A full 10-question run was
 intentionally not performed.
 
+## Phase 2D: Typed Claim Gate
+
+Phase 2D removes LLM rewrite from the Phase 2C safety path:
+
+```text
+Agent draft
+→ semantic-risk routing
+→ Observer proposes atomic supported claims
+→ Python classifies and verifies each claim
+→ allowlist-only composition
+→ insufficient / refuse decision when required
+```
+
+The Python gate currently handles numeric post-conditions, including bounded
+ratio/percentage arithmetic, and always rejects recommendation claims unless a
+separate policy contract is introduced. Qualitative interpretation is routed
+to the semantic Observer. Empty drafts are also fail-closed.
+
+- [Typed Claim Gate live smoke report](../../artifacts/lab6_phase2d_claim_gate_smoke_report.md)
+- `artifacts/lab6_phase2c_claim_gate_smoke.json` contains Q1/Q4/Q10 raw runs
+- `artifacts/lab6_phase2c_claim_gate_q1_rerun.json` contains the empty-answer fix proof
+
+This is a safety improvement, not yet a statistical quality claim. The three
+smoke cases verify the intended failure modes, but a repeated, larger
+evaluation suite is still required.
+
 ---
 
 ## ผลลัพธ์ที่คาดหวัง

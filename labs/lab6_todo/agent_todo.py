@@ -29,6 +29,7 @@ from labs.lab6_todo.evidence_state import (
     SemanticVerdict,
 )
 from labs.lab6_todo.claim_ledger import ClaimLedger
+from labs.lab6_todo.claim_gate import verify_then_emit
 from labs.lab6_todo.dynamic_observer import (
     NextAction,
     build_claim_ledger,
@@ -167,10 +168,10 @@ def resolve_rewrite(
 ) -> str:
     """Phase 2B is bounded; Phase 2A retains its historical LLM recheck."""
     if dynamic_observer:
-        candidate = apply_bounded_rewrite(proposed, observation)
+        candidate = verify_then_emit(question, observation, evidence)
         print(
-            "[FINAL REWRITE] applied once; MCP disabled; "
-            f"violations={len(observation.violations)}"
+            "[FINAL CLAIM GATE] verify-then-emit; MCP disabled; "
+            f"observer_supported={len(observation.supported_claims)}"
         )
         return candidate
     candidate = observation.revised_answer or proposed
@@ -519,7 +520,13 @@ def _run_impl(
                 f"[FINAL OBSERVATION] verdict={observation.verdict.value} "
                 f"reason={observation.reason}"
             )
-            if observation.verdict is SemanticVerdict.QUERY_MORE:
+            if (
+                dynamic_observer
+                and observation.verdict is SemanticVerdict.APPROVE
+            ):
+                proposed = verify_then_emit(question, observation, evidence)
+                print("[FINAL CLAIM GATE] approved allowlist composed")
+            elif observation.verdict is SemanticVerdict.QUERY_MORE:
                 if budget.final_reviews < max_semantic_reviews:
                     messages.append({"role": "assistant", "content": proposed})
                     messages.append({
@@ -606,7 +613,13 @@ def _run_impl(
             f"[FINAL OBSERVATION] verdict={observation.verdict.value} "
             f"reason={observation.reason}"
         )
-        if observation.verdict in {
+        if (
+            dynamic_observer
+            and observation.verdict is SemanticVerdict.APPROVE
+        ):
+            content = verify_then_emit(question, observation, evidence)
+            print("[FINAL CLAIM GATE] approved allowlist composed")
+        elif observation.verdict in {
             SemanticVerdict.REWRITE,
             SemanticVerdict.REFUSE_DECISION,
         }:

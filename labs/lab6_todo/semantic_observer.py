@@ -67,9 +67,13 @@ Return one JSON object only:
   "revised_answer": "complete grounded answer or null"
 }
 
-For rewrite/refuse_decision, revised_answer must be a complete answer to show
-the user and must itself obey every rule above. For approve it may be null.
-For query_more it must be null.
+supported_claims is an allowlist consumed by Python. Each item must be one
+atomic, self-contained claim supported by accepted evidence. Do not place an
+unsupported recommendation in supported_claims. Phase 2C does not emit
+revised_answer; it composes a new answer only from the allowlist.
+
+For rewrite/refuse_decision, revised_answer remains required for legacy Phase
+2A compatibility. For approve it may be null. For query_more it must be null.
 """
 
 

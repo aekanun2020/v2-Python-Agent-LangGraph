@@ -68,6 +68,13 @@ DECISION_TERMS = (
     "อนุมัติ",
     "ปฏิเสธ",
 )
+QUALITATIVE_TERMS = (
+    "indicates", "suggests", "reflects", "implies", "important",
+    "balanced", "efficient", "risk", "therefore", "because",
+    "แสดงถึง", "สะท้อน", "บ่งชี้", "หมายความว่า", "สำคัญ",
+    "สมดุล", "มีประสิทธิภาพ", "ความเสี่ยง", "ดังนั้น", "เนื่องจาก",
+    "สามารถนำไปใช้", "เหมาะสม",
+)
 
 
 def _arguments_text(record: EvidenceRecord) -> str:
@@ -165,6 +172,8 @@ def final_semantic_risk(
 ) -> tuple[str, ...]:
     """Route only answers that need semantic judgment to the LLM reviewer."""
     reasons: list[str] = []
+    if not answer.strip():
+        reasons.append("empty-answer")
     allowed_numbers = _number_tokens(question)
     for record in evidence.records:
         allowed_numbers.update(_number_tokens(record.raw_result))
@@ -178,6 +187,8 @@ def final_semantic_risk(
     combined = (question + "\n" + answer).lower()
     if any(term in combined for term in DECISION_TERMS):
         reasons.append("semantic-decision")
+    if any(term in answer.lower() for term in QUALITATIVE_TERMS):
+        reasons.append("qualitative-interpretation")
     if any(
         observation.semantic_risk
         for observation in evidence.structured_observations
