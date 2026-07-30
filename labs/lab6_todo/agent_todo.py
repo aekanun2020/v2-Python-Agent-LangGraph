@@ -172,7 +172,12 @@ def resolve_rewrite(
 ) -> str:
     """Phase 2B is bounded; Phase 2A retains its historical LLM recheck."""
     if dynamic_observer:
-        candidate = verify_then_emit(question, observation, evidence)
+        candidate = verify_then_emit(
+            question,
+            observation,
+            evidence,
+            proposed_answer=proposed,
+        )
         print(
             "[FINAL CLAIM GATE] verify-then-emit; MCP disabled; "
             f"observer_supported={len(observation.supported_claims)}"
@@ -555,7 +560,12 @@ def _run_impl(
                 dynamic_observer
                 and observation.verdict is SemanticVerdict.APPROVE
             ):
-                proposed = verify_then_emit(question, observation, evidence)
+                proposed = verify_then_emit(
+                    question,
+                    observation,
+                    evidence,
+                    proposed_answer=proposed,
+                )
                 print("[FINAL CLAIM GATE] approved allowlist composed")
             elif observation.verdict is SemanticVerdict.QUERY_MORE:
                 if budget.final_reviews < max_semantic_reviews:
@@ -648,7 +658,12 @@ def _run_impl(
             dynamic_observer
             and observation.verdict is SemanticVerdict.APPROVE
         ):
-            content = verify_then_emit(question, observation, evidence)
+            content = verify_then_emit(
+                question,
+                observation,
+                evidence,
+                proposed_answer=content,
+            )
             print("[FINAL CLAIM GATE] approved allowlist composed")
         elif observation.verdict in {
             SemanticVerdict.REWRITE,

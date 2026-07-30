@@ -38,7 +38,8 @@ QUALITATIVE_TERMS = (
     "balanced", "efficient", "risk", "therefore", "because",
     "แสดงถึง", "สะท้อน", "บ่งชี้", "หมายความว่า", "สำคัญ",
     "สมดุล", "มีประสิทธิภาพ", "ความเสี่ยง", "ดังนั้น", "เนื่องจาก",
-    "สามารถนำไปใช้", "เหมาะสม",
+    "สามารถนำไปใช้", "เหมาะสม", "สอดคล้อง", "แนวโน้ม", "ส่งผล",
+    "ยุติธรรม", "กลยุทธ์", "strategic", "trend",
 )
 
 
@@ -56,10 +57,10 @@ def classify_claim(text: str) -> ClaimType:
     lowered = text.lower()
     if any(term in lowered for term in RECOMMENDATION_TERMS):
         return ClaimType.RECOMMENDATION
-    if _numbers(text):
-        return ClaimType.NUMERIC
     if any(term in lowered for term in QUALITATIVE_TERMS):
         return ClaimType.QUALITATIVE
+    if _numbers(text):
+        return ClaimType.NUMERIC
     return ClaimType.CATEGORICAL
 
 
@@ -92,12 +93,47 @@ def _numbers_supported(
     question: str,
     evidence: EvidenceState,
 ) -> bool:
-    allowed = _numeric_closure(question, evidence)
+    lowered = claim.lower()
+    derived = (
+        "%" in claim
+        or any(
+            term in lowered
+            for term in (
+                "coverage", "ratio", "rate", "average", "avg",
+                "shortfall", "percentage point", "÷", "/", "×",
+                "สัดส่วน", "อัตรา", "เฉลี่ย", "ต่ำกว่า",
+            )
+        )
+    )
+    if derived:
+        allowed = _numeric_closure(question, evidence)
+    else:
+        direct = list(_numbers(question))
+        for record in evidence.records:
+            direct.extend(_numbers(record.raw_result))
+        allowed = tuple(direct)
     return all(
         any(math.isclose(value, item, rel_tol=1e-4, abs_tol=0.011)
             for item in allowed)
         for value in _numbers(claim)
     )
+
+
+def _draft_candidates(proposed_answer: str) -> tuple[str, ...]:
+    """Extract only bounded factual candidates; prose remains LLM-reviewed."""
+    candidates = []
+    for raw in proposed_answer.splitlines():
+        text = re.sub(r"^\s*(?:[-*+]|\d+[.)])\s*", "", raw).strip()
+        text = text.strip("| ").strip()
+        if not text or not _numbers(text):
+            continue
+        lowered = text.lower()
+        if any(term in lowered for term in QUALITATIVE_TERMS):
+            continue
+        if len(text) > 500:
+            continue
+        candidates.append(text)
+    return tuple(dict.fromkeys(candidates))
 
 
 def _grain_supported(
@@ -190,6 +226,7 @@ def verify_claims(
     question: str,
     observation: ObservationState,
     evidence: EvidenceState,
+    proposed_answer: str = "",
 ) -> tuple[GatedClaim, ...]:
     """Verify the Observer allowlist; never edit the Agent draft."""
     results = []
@@ -205,7 +242,12 @@ def verify_claims(
         )
         for raw in observation.supported_claims
     )
-    for raw in observation.supported_claims:
+    observer_claims = tuple(observation.supported_claims)
+    draft_claims = tuple(
+        claim for claim in _draft_candidates(proposed_answer)
+        if claim not in observer_claims
+    )
+    for raw in observer_claims + draft_claims:
         claim = str(raw).strip()
         if not claim:
             continue
@@ -243,9 +285,15 @@ def verify_then_emit(
     question: str,
     observation: ObservationState,
     evidence: EvidenceState,
+    proposed_answer: str = "",
 ) -> str:
     """Compose only verified claims; fail closed for unsupported decisions."""
-    claims = verify_claims(question, observation, evidence)
+    claims = verify_claims(
+        question,
+        observation,
+        evidence,
+        proposed_answer=proposed_answer,
+    )
     accepted = [claim.text for claim in claims if claim.accepted]
     derived = _coverage_derivation(question, accepted, evidence)
     if derived:

@@ -1,0 +1,72 @@
+{
+  "generated_at": "2026-07-30T02:27:46.722288+00:00",
+  "model": "qwen/qwen3.5-35b-a3b",
+  "observer_model": "openai/gpt-oss-120b",
+  "mcp_server": "https://7ff8-184-22-21-43.ngrok-free.app/mcp",
+  "comparison": {
+    "phase2a_final_only": {
+      "semantic_observer": "on",
+      "dynamic_observer": "off"
+    },
+    "phase2c_python_first": {
+      "semantic_observer": "on",
+      "dynamic_observer": "on"
+    }
+  },
+  "questions": [
+    {
+      "id": "q01_headcount",
+      "level": 1,
+      "question": "พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมดกี่คน และแยกตามค่า `department` ในฐานข้อมูลอย่างไร",
+      "semantic_risk": "canonical labels and exact counts"
+    },
+    {
+      "id": "q04_review_coverage",
+      "level": 4,
+      "question": "มีพนักงานที่ปฏิบัติงาน 25 คน แต่มี performance review ปี 2023 จำนวน 7 รายการ ก่อนเปรียบเทียบผลงานระหว่างแผนก จงคำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ขั้นต่ำ 80% หรือไม่",
+      "semantic_risk": "records are not necessarily distinct employees"
+    }
+  ],
+  "runs": [
+    {
+      "question_id": "q01_headcount",
+      "level": 1,
+      "variant": "phase2c_python_first",
+      "elapsed_seconds": 46.504,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 3,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 3,
+      "llm_observer_skips": 3,
+      "final_verdicts": [
+        "rewrite"
+      ],
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมด 25 คน\n- แผนกเทคโนโลยีสารสนเทศ มี 5 คน\n- แผนกการตลาด มี 4 คน\n- แผนกทรัพยากรบุคคล มี 4 คน\n- แผนกการเงิน มี 3 คน\n- แผนกผลิต มี 3 คน\n- แผนกวิจัยและพัฒนา มี 3 คน\n- แผนกบัญชี มี 2 คน\n- แผนกบริหารทั่วไป มี 1 คน\n- จากการวิเคราะห์ข้อมูลในฐานข้อมูล พบว่าพนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมด **25 คน** โดยแยกตามแผนก (department) ดังนี้:\n- **เทคโนโลยีสารสนเทศ**: 5 คน\n- **การตลาด**: 4 คน\n- **ทรัพยากรบุคคล**: 4 คน\n- **การเงิน**: 3 คน\n- **ผลิต**: 3 คน\n- **วิจัยและพัฒนา**: 3 คน\n- **บัญชี**: 2 คน\n- **บริหารทั่วไป**: 1 คน",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมดกี่คน และแยกตามค่า `department` ในฐานข้อมูลอย่างไร\n[ROUTING] deterministic-first; claim planner disabled\n[step 1] TODO_WRITE\n[ ] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[ ] 2. สำรวจตารางพนักงานและตรวจสอบโครงสร้างข้อมูล\n[ ] 3. เขียนและรัน T-SQL query เพื่อหาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[ ] 4. วิเคราะห์และสรุปข้อค้นพบเชิงธุรกิจ\n[PYTHON OBSERVATION] evidence=call_a57c47f1a0c346da8b5fae01 decision=accept type=schema risk=False reasons=[]\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 2] TOOL get_database_context\n[step 3] TODO_UPDATE -> {'index': 1, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[ ] 2. สำรวจตารางพนักงานและตรวจสอบโครงสร้างข้อมูล\n[ ] 3. เขียนและรัน T-SQL query เพื่อหาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[ ] 4. วิเคราะห์และสรุปข้อค้นพบเชิงธุรกิจ\n[step 3] TODO_UPDATE -> {'index': 2, 'status': 'doing'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[~] 2. สำรวจตารางพนักงานและตรวจสอบโครงสร้างข้อมูล\n[ ] 3. เขียนและรัน T-SQL query เพื่อหาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[ ] 4. วิเคราะห์และสรุปข้อค้นพบเชิงธุรกิจ\n[PYTHON OBSERVATION] evidence=call_cb6c4438114546be87d03d9d decision=accept type=query_result risk=False reasons=[]\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 3] TOOL preview_table\n[step 4] TODO_UPDATE -> {'index': 2, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. สำรวจตารางพนักงานและตรวจสอบโครงสร้างข้อมูล\n[ ] 3. เขียนและรัน T-SQL query เพื่อหาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[ ] 4. วิเคราะห์และสรุปข้อค้นพบเชิงธุรกิจ\n[step 4] TODO_UPDATE -> {'index': 3, 'status': 'doing'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. สำรวจตารางพนักงานและตรวจสอบโครงสร้างข้อมูล\n[~] 3. เขียนและรัน T-SQL query เพื่อหาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[ ] 4. วิเคราะห์และสรุปข้อค้นพบเชิงธุรกิจ\n[PYTHON OBSERVATION] evidence=call_d9910b908f29469dba17136f decision=accept type=query_result risk=False reasons=[]\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 4] TOOL execute_query_tool\n[step 5] TODO_UPDATE -> {'index': 3, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. สำรวจตารางพนักงานและตรวจสอบโครงสร้างข้อมูล\n[x] 3. เขียนและรัน T-SQL query เพื่อหาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[ ] 4. วิเคราะห์และสรุปข้อค้นพบเชิงธุรกิจ\n[step 5] TODO_UPDATE -> {'index': 4, 'status': 'doing'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. สำรวจตารางพนักงานและตรวจสอบโครงสร้างข้อมูล\n[x] 3. เขียนและรัน T-SQL query เพื่อหาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[~] 4. วิเคราะห์และสรุปข้อค้นพบเชิงธุรกิจ\n[step 6] TODO_UPDATE -> {'index': 4, 'status': 'done'}\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. สำรวจตารางพนักงานและตรวจสอบโครงสร้างข้อมูล\n[x] 3. เขียนและรัน T-SQL query เพื่อหาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[x] 4. วิเคราะห์และสรุปข้อค้นพบเชิงธุรกิจ\n[FINAL ROUTING] risks=['qualitative-interpretation']\n[FINAL OBSERVATION] verdict=rewrite reason=Answer contains unsupported business insight statements not grounded in evidence; only factual count and department breakdown are supported.\n[FINAL CLAIM GATE] verify-then-emit; MCP disabled; observer_supported=9\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมด 25 คน\n- แผนกเทคโนโลยีสารสนเทศ มี 5 คน\n- แผนกการตลาด มี 4 คน\n- แผนกทรัพยากรบุคคล มี 4 คน\n- แผนกการเงิน มี 3 คน\n- แผนกผลิต มี 3 คน\n- แผนกวิจัยและพัฒนา มี 3 คน\n- แผนกบัญชี มี 2 คน\n- แผนกบริหารทั่วไป มี 1 คน\n- จากการวิเคราะห์ข้อมูลในฐานข้อมูล พบว่าพนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมด **25 คน** โดยแยกตามแผนก (department) ดังนี้:\n- **เทคโนโลยีสารสนเทศ**: 5 คน\n- **การตลาด**: 4 คน\n- **ทรัพยากรบุคคล**: 4 คน\n- **การเงิน**: 3 คน\n- **ผลิต**: 3 คน\n- **วิจัยและพัฒนา**: 3 คน\n- **บัญชี**: 2 คน\n- **บริหารทั่วไป**: 1 คน\n------------------------------------------------------------\n[todo สุดท้าย]\n[x] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[x] 2. สำรวจตารางพนักงานและตรวจสอบโครงสร้างข้อมูล\n[x] 3. เขียนและรัน T-SQL query เพื่อหาจำนวนพนักงานสถานะ 'ปฏิบัติงาน' แยกตาม department\n[x] 4. วิเคราะห์และสรุปข้อค้นพบเชิงธุรกิจ\n[context budget] BudgetState(steps=11, tool_calls=3, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q04_review_coverage",
+      "level": 4,
+      "variant": "phase2c_python_first",
+      "elapsed_seconds": 66.419,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 7,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 1,
+      "python_observations": 7,
+      "llm_observer_skips": 6,
+      "final_verdicts": [
+        "rewrite"
+      ],
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- พนักงานที่ปฏิบัติงานทั้งหมดคือ 25 คน\n- พนักงานที่มี performance review ปี 2023 มีจำนวน 7 คน\n- Evidence Coverage = (7 / 25) × 100% = 28%\n- Coverage 28% ต่ำกว่าเกณฑ์ขั้นต่ำ 80% จึงไม่ผ่าน\n- **พนักงานที่ปฏิบัติงานทั้งหมด**: 25 คน\n- **พนักงานที่มี performance review ปี 2023**: 7 คน (คิดเป็น 28%)\n- Evidence Coverage = (7 / 25) × 100% = **28%**\n- เกณฑ์ขั้นต่ำที่ต้องการ: **80%**\n- *ผลการประเมิน**: **ไม่ผ่านเกณฑ์** (28% < 80%)\n- **ความครอบคลุมต่ำมาก** - มีพนักงาน 18 คน (72%) ที่ไม่มี performance review ในปี 2023 ซึ่งส่งผลต่อความยุติธรรมในการประเมินผลงานและการพัฒนาพนักงาน",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] มีพนักงานที่ปฏิบัติงาน 25 คน แต่มี performance review ปี 2023 จำนวน 7 รายการ ก่อนเปรียบเทียบผลงานระหว่างแผนก จงคำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ขั้นต่ำ 80% หรือไม่\n[ROUTING] deterministic-first; claim planner disabled\n[step 1] TODO_WRITE\n[ ] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[ ] 2. ตรวจสอบข้อมูลพนักงานและ performance review\n[ ] 3. คำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ 80% หรือไม่\n[step 2] TODO_UPDATE -> {'index': 1, 'status': 'doing'}\n[~] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[ ] 2. ตรวจสอบข้อมูลพนักงานและ performance review\n[ ] 3. คำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ 80% หรือไม่\n[PYTHON OBSERVATION] evidence=call_62f02c7b259140e0ac9330cd decision=accept type=schema risk=False reasons=[]\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 2] TOOL get_database_context\n[step 3] TODO_UPDATE -> {'index': 2, 'status': 'doing'}\n[~] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[~] 2. ตรวจสอบข้อมูลพนักงานและ performance review\n[ ] 3. คำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ 80% หรือไม่\n[PYTHON OBSERVATION] evidence=call_626625b63bf847cbb95f984f decision=accept type=query_result risk=False reasons=[]\n[EVIDENCE CONTRACT] evidence=call_626625b63bf847cbb95f984f decision=reject reason=MSSQL Unicode filter literal must use N'…'\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 4] TOOL execute_query_tool\n[PYTHON OBSERVATION] evidence=call_4e0f945dc4f34cabbc35d044 decision=accept type=query_result risk=False reasons=[]\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 5] TOOL execute_query_tool\n[PYTHON OBSERVATION] evidence=call_67955b33c62745aeae2296dd decision=accept type=query_result risk=False reasons=[]\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 6] TOOL preview_table\n[PYTHON OBSERVATION] evidence=call_9b20e7faca8b4c269a45cbcf decision=accept type=query_result risk=False reasons=[]\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 7] TOOL execute_query_tool\n[PYTHON OBSERVATION] evidence=call_5696a7ee34d845099da1dafb decision=accept type=query_result risk=False reasons=[]\n[EVIDENCE CONTRACT] evidence=call_5696a7ee34d845099da1dafb decision=query_more reason=coverage numerator requires distinct entity grain\n[LLM OBSERVER SKIPPED] low risk or risk already reviewed\n[step 8] TOOL execute_query_tool\n[PYTHON OBSERVATION] evidence=call_b6fff293d6c648e6bf5e58b5 decision=accept type=query_result risk=True reasons=['distinct-grain']\n[DYNAMIC OBSERVATION] evidence=call_b6fff293d6c648e6bf5e58b5 supports=True complete=False proved=[] next=replan reason=query_more rejected because no structured missing-evidence request was supplied\n[step 9] TOOL execute_query_tool\n[step 10] TODO_UPDATE -> {'index': 3, 'status': 'done'}\n[~] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[~] 2. ตรวจสอบข้อมูลพนักงานและ performance review\n[x] 3. คำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ 80% หรือไม่\n[FINAL ROUTING] risks=['unsupported-numbers:100%,28%,72%', 'semantic-decision', 'qualitative-interpretation', 'risky-tool-semantics']\n[FINAL OBSERVATION] verdict=rewrite reason=Answer includes unsupported business recommendations; only factual coverage calculation is needed.\n[FINAL CLAIM GATE] verify-then-emit; MCP disabled; observer_supported=4\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- พนักงานที่ปฏิบัติงานทั้งหมดคือ 25 คน\n- พนักงานที่มี performance review ปี 2023 มีจำนวน 7 คน\n- Evidence Coverage = (7 / 25) × 100% = 28%\n- Coverage 28% ต่ำกว่าเกณฑ์ขั้นต่ำ 80% จึงไม่ผ่าน\n- **พนักงานที่ปฏิบัติงานทั้งหมด**: 25 คน\n- **พนักงานที่มี performance review ปี 2023**: 7 คน (คิดเป็น 28%)\n- Evidence Coverage = (7 / 25) × 100% = **28%**\n- เกณฑ์ขั้นต่ำที่ต้องการ: **80%**\n- *ผลการประเมิน**: **ไม่ผ่านเกณฑ์** (28% < 80%)\n- **ความครอบคลุมต่ำมาก** - มีพนักงาน 18 คน (72%) ที่ไม่มี performance review ในปี 2023 ซึ่งส่งผลต่อความยุติธรรมในการประเมินผลงานและการพัฒนาพนักงาน\n------------------------------------------------------------\n[todo สุดท้าย]\n[~] 1. เรียก get_database_context เพื่อเข้าใจโครงสร้างฐานข้อมูล\n[~] 2. ตรวจสอบข้อมูลพนักงานและ performance review\n[x] 3. คำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ 80% หรือไม่\n[context budget] BudgetState(steps=11, tool_calls=7, errors=0)\n",
+      "stderr": ""
+    }
+  ]
+}

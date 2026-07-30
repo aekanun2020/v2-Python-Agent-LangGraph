@@ -465,6 +465,54 @@ class Phase2BTests(unittest.TestCase):
         self.assertIn("25", emitted)
         self.assertNotIn("ลงทุน", emitted)
 
+    def test_claim_gate_recovers_grounded_numeric_lines_from_agent_draft(self):
+        evidence = EvidenceState()
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-department",
+            "execute_query_tool",
+            {},
+            "department employee_count\nผลิต 3\nบัญชี 2",
+        ))
+        observation = ObservationState(
+            verdict=SemanticVerdict.REWRITE,
+            reason="observer omitted facts",
+            supported_claims=(),
+            revised_answer="ignored",
+        )
+        emitted = verify_then_emit(
+            "นับพนักงานแยกแผนก",
+            observation,
+            evidence,
+            proposed_answer=(
+                "- ผลิต: 3 คน\n"
+                "- บัญชี: 2 คน\n"
+                "- ผลิตมี 3 คน สะท้อนถึงความสำคัญของฝ่ายผลิต"
+            ),
+        )
+        self.assertIn("ผลิต: 3 คน", emitted)
+        self.assertIn("บัญชี: 2 คน", emitted)
+        self.assertNotIn("สะท้อน", emitted)
+
+    def test_direct_zero_claim_cannot_pass_via_arithmetic_closure(self):
+        evidence = EvidenceState()
+        evidence.accept(EvidenceRecord.from_tool(
+            "call-total",
+            "execute_query_tool",
+            {},
+            "employee_count\n25",
+        ))
+        observation = ObservationState(
+            verdict=SemanticVerdict.APPROVE,
+            reason="incorrect observer claim",
+            supported_claims=("There are 0 active employees.",),
+        )
+        emitted = verify_then_emit(
+            "นับพนักงานที่ปฏิบัติงาน",
+            observation,
+            evidence,
+        )
+        self.assertNotIn("0 active employees", emitted)
+
     def test_claim_gate_refuses_decision_and_drops_recommendation(self):
         evidence = EvidenceState()
         evidence.accept(EvidenceRecord.from_tool(
