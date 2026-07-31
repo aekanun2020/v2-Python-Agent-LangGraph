@@ -1,0 +1,4 @@
+interface:
+  display_name: "HR Analytics"
+  short_description: "Grounded HR metrics and decision boundaries"
+  default_prompt: "Use $hr-analytics to answer this HR analytics question from MCP evidence."

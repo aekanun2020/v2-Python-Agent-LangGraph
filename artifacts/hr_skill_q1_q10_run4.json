@@ -1,0 +1,260 @@
+{
+  "generated_at": "2026-07-31T07:40:55.861531+00:00",
+  "model": "qwen/qwen3.5-35b-a3b",
+  "observer_model": "openai/gpt-oss-120b",
+  "mcp_server": "https://7ff8-184-22-21-43.ngrok-free.app/mcp",
+  "comparison": {
+    "phase2a_final_only": {
+      "semantic_observer": "on",
+      "dynamic_observer": "off"
+    },
+    "phase2c_python_first": {
+      "semantic_observer": "on",
+      "dynamic_observer": "on"
+    }
+  },
+  "questions": [
+    {
+      "id": "q01_headcount",
+      "level": 1,
+      "question": "พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมดกี่คน และแยกตามค่า `department` ในฐานข้อมูลอย่างไร",
+      "semantic_risk": "canonical labels and exact counts"
+    },
+    {
+      "id": "q02_employment_mix",
+      "level": 2,
+      "question": "สำหรับพนักงานสถานะ `ปฏิบัติงาน` จงแสดงจำนวนพนักงาน `ประจำ` และ `สัญญา` ของแต่ละแผนก พร้อมคำนวณสัดส่วนพนักงานสัญญาต่อจำนวนพนักงานของแผนก",
+      "semantic_risk": "correct denominator and no relabelling"
+    },
+    {
+      "id": "q03_contract_policy",
+      "level": 3,
+      "question": "บริษัทกำหนดว่าแผนกมีความเสี่ยงด้าน contract dependency เมื่อพนักงานสัญญามากกว่า 50% ของพนักงานที่ปฏิบัติงานในแผนก แผนกใดเข้าเกณฑ์ แสดง numerator, denominator และอัตราร้อยละ",
+      "semantic_risk": "strict greater-than boundary"
+    },
+    {
+      "id": "q04_review_coverage",
+      "level": 4,
+      "question": "มีพนักงานที่ปฏิบัติงาน 25 คน แต่มี performance review ปี 2023 จำนวน 7 รายการ ก่อนเปรียบเทียบผลงานระหว่างแผนก จงคำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ขั้นต่ำ 80% หรือไม่",
+      "semantic_risk": "records are not necessarily distinct employees"
+    },
+    {
+      "id": "q05_training_portfolio",
+      "level": 5,
+      "question": "ชั่วโมงอบรมของบริษัทกระจายตาม `training_type` อย่างไร และประเภทใดเกินนโยบาย concentration limit 50% ของชั่วโมงอบรมทั้งหมด",
+      "semantic_risk": "hours share, not course-count share"
+    },
+    {
+      "id": "q06_certificate_semantics",
+      "level": 6,
+      "question": "ทุกรายการอบรมมี `certificate_obtained = True` หรือไม่ และข้อมูลนี้พิสูจน์ได้หรือไม่ว่าพนักงานทุกคนมี certification ที่ยังใช้ได้",
+      "semantic_risk": "training certificate is not certification validity"
+    },
+    {
+      "id": "q07_expert_skill",
+      "level": 7,
+      "question": "จาก skill records ทั้งหมด จงวิเคราะห์สัดส่วนระดับ `เชี่ยวชาญ` และตรวจว่าสูงถึงเป้าหมาย 50% หรือไม่ พร้อมแยกตาม `skill_category`",
+      "semantic_risk": "record grain is not employee grain"
+    },
+    {
+      "id": "q08_project_concentration",
+      "level": 8,
+      "question": "บริษัทกำหนดว่า project portfolio มี concentration risk หากโครงการมูลค่าสูงสุดสองอันดับรวมกันเกิน 60% ของมูลค่าทุกโครงการ จงตรวจตามนโยบายนี้",
+      "semantic_risk": "top-two ratio and missing currency metadata"
+    },
+    {
+      "id": "q09_efficiency_trap",
+      "level": 9,
+      "question": "จากข้อมูลพบว่า `วิจัยและพัฒนา` มีพนักงานปฏิบัติงาน 3 คน และมีโครงการมูลค่า 10,000,000 ส่วน `เทคโนโลยีสารสนเทศ` มีพนักงาน 5 คนและโครงการมูลค่า 5,000,000 จงสรุปว่าแผนกใดใช้กำลังคนมีประสิทธิภาพกว่ากัน",
+      "semantic_risk": "project value per head is not efficiency"
+    },
+    {
+      "id": "q10_staffing_decision",
+      "level": 10,
+      "question": "จาก headcount, employment type, performance reviews, training, skills, certifications และ project value จงเลือกหนึ่งแผนกที่ควรลดคน และหนึ่งแผนกที่ควรเพิ่มคน พร้อมเหตุผลเชิงธุรกิจ",
+      "semantic_risk": "insufficient evidence for staffing decision"
+    }
+  ],
+  "runs": [
+    {
+      "question_id": "q01_headcount",
+      "level": 1,
+      "variant": "phase2c_python_first",
+      "elapsed_seconds": 0.901,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 0,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [],
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมด 25 คน\n- แผนกเทคโนโลยีสารสนเทศ มีพนักงาน 5 คน\n- แผนกการเงิน มีพนักงาน 3 คน\n- แผนกการตลาด มีพนักงาน 4 คน\n- แผนกทรัพยากรบุคคล มีพนักงาน 4 คน\n- แผนกบริหารทั่วไป มีพนักงาน 1 คน\n- แผนกบัญชี มีพนักงาน 2 คน\n- แผนกผลิต มีพนักงาน 3 คน\n- แผนกวิจัยและพัฒนา มีพนักงาน 3 คน",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมดกี่คน และแยกตามค่า `department` ในฐานข้อมูลอย่างไร\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=grouped_active_headcount\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมด 25 คน\n- แผนกเทคโนโลยีสารสนเทศ มีพนักงาน 5 คน\n- แผนกการเงิน มีพนักงาน 3 คน\n- แผนกการตลาด มีพนักงาน 4 คน\n- แผนกทรัพยากรบุคคล มีพนักงาน 4 คน\n- แผนกบริหารทั่วไป มีพนักงาน 1 คน\n- แผนกบัญชี มีพนักงาน 2 คน\n- แผนกผลิต มีพนักงาน 3 คน\n- แผนกวิจัยและพัฒนา มีพนักงาน 3 คน\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q02_employment_mix",
+      "level": 2,
+      "variant": "phase2c_python_first",
+      "elapsed_seconds": 0.67,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 0,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [],
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- department=เทคโนโลยีสารสนเทศ; regular_count=4; contract_count=1; employee_count=5; contract_pct=20.0%\n- department=การเงิน; regular_count=3; contract_count=0; employee_count=3; contract_pct=0.0%\n- department=การตลาด; regular_count=2; contract_count=2; employee_count=4; contract_pct=50.0%\n- department=ทรัพยากรบุคคล; regular_count=1; contract_count=3; employee_count=4; contract_pct=75.0%\n- department=บริหารทั่วไป; regular_count=1; contract_count=0; employee_count=1; contract_pct=0.0%\n- department=บัญชี; regular_count=2; contract_count=0; employee_count=2; contract_pct=0.0%\n- department=ผลิต; regular_count=3; contract_count=0; employee_count=3; contract_pct=0.0%\n- department=วิจัยและพัฒนา; regular_count=3; contract_count=0; employee_count=3; contract_pct=0.0%",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] สำหรับพนักงานสถานะ `ปฏิบัติงาน` จงแสดงจำนวนพนักงาน `ประจำ` และ `สัญญา` ของแต่ละแผนก พร้อมคำนวณสัดส่วนพนักงานสัญญาต่อจำนวนพนักงานของแผนก\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=employment_mix\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- department=เทคโนโลยีสารสนเทศ; regular_count=4; contract_count=1; employee_count=5; contract_pct=20.0%\n- department=การเงิน; regular_count=3; contract_count=0; employee_count=3; contract_pct=0.0%\n- department=การตลาด; regular_count=2; contract_count=2; employee_count=4; contract_pct=50.0%\n- department=ทรัพยากรบุคคล; regular_count=1; contract_count=3; employee_count=4; contract_pct=75.0%\n- department=บริหารทั่วไป; regular_count=1; contract_count=0; employee_count=1; contract_pct=0.0%\n- department=บัญชี; regular_count=2; contract_count=0; employee_count=2; contract_pct=0.0%\n- department=ผลิต; regular_count=3; contract_count=0; employee_count=3; contract_pct=0.0%\n- department=วิจัยและพัฒนา; regular_count=3; contract_count=0; employee_count=3; contract_pct=0.0%\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q03_contract_policy",
+      "level": 3,
+      "variant": "phase2c_python_first",
+      "elapsed_seconds": 0.764,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 0,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [],
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- department=ทรัพยากรบุคคล; regular_count=1; contract_count=3; employee_count=4; contract_pct=75.0%\n- เข้าเกณฑ์เมื่อ contract_pct มากกว่า 50% แบบ strict; ค่า 50% ไม่เข้าเกณฑ์\n- อัตรา 75% มากกว่าเกณฑ์ 50%",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] บริษัทกำหนดว่าแผนกมีความเสี่ยงด้าน contract dependency เมื่อพนักงานสัญญามากกว่า 50% ของพนักงานที่ปฏิบัติงานในแผนก แผนกใดเข้าเกณฑ์ แสดง numerator, denominator และอัตราร้อยละ\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=strict_contract_dependency\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- department=ทรัพยากรบุคคล; regular_count=1; contract_count=3; employee_count=4; contract_pct=75.0%\n- เข้าเกณฑ์เมื่อ contract_pct มากกว่า 50% แบบ strict; ค่า 50% ไม่เข้าเกณฑ์\n- อัตรา 75% มากกว่าเกณฑ์ 50%\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q04_review_coverage",
+      "level": 4,
+      "variant": "phase2c_python_first",
+      "elapsed_seconds": 0.75,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 0,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [],
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- พนักงานที่ปฏิบัติงานทั้งหมดคือ 25 คน\n- พนักงานที่มี performance review ปี 2023 คือ 7 คน\n- ไม่ผ่านเกณฑ์ขั้นต่ำ 80%\n- Evidence coverage ของพนักงานที่มี review เท่ากับ 7 / 25 = 28%\n- ไม่ผ่านเกณฑ์ขั้นต่ำ 80% โดยต่ำกว่า 52 percentage points",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] มีพนักงานที่ปฏิบัติงาน 25 คน แต่มี performance review ปี 2023 จำนวน 7 รายการ ก่อนเปรียบเทียบผลงานระหว่างแผนก จงคำนวณ evidence coverage และประเมินว่าผ่านเกณฑ์ขั้นต่ำ 80% หรือไม่\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=active_employee_denominator\n[METRIC CONTRACT EXECUTED] role=distinct_reviewed_employee_numerator\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- พนักงานที่ปฏิบัติงานทั้งหมดคือ 25 คน\n- พนักงานที่มี performance review ปี 2023 คือ 7 คน\n- ไม่ผ่านเกณฑ์ขั้นต่ำ 80%\n- Evidence coverage ของพนักงานที่มี review เท่ากับ 7 / 25 = 28%\n- ไม่ผ่านเกณฑ์ขั้นต่ำ 80% โดยต่ำกว่า 52 percentage points\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q05_training_portfolio",
+      "level": 5,
+      "variant": "phase2c_python_first",
+      "elapsed_seconds": 0.661,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 0,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [],
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- ชั่วโมงอบรมทั้งหมดคือ 252 ชั่วโมง\n- ภายใน 8 ชั่วโมง (3.17%) ไม่เกินนโยบาย concentration limit 50%\n- ภายนอก 152 ชั่วโมง (60.32%) เกินนโยบาย concentration limit 50%\n- ออนไลน์ 92 ชั่วโมง (36.51%) ไม่เกินนโยบาย concentration limit 50%",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] ชั่วโมงอบรมของบริษัทกระจายตาม `training_type` อย่างไร และประเภทใดเกินนโยบาย concentration limit 50% ของชั่วโมงอบรมทั้งหมด\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=hours_by_training_type\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- ชั่วโมงอบรมทั้งหมดคือ 252 ชั่วโมง\n- ภายใน 8 ชั่วโมง (3.17%) ไม่เกินนโยบาย concentration limit 50%\n- ภายนอก 152 ชั่วโมง (60.32%) เกินนโยบาย concentration limit 50%\n- ออนไลน์ 92 ชั่วโมง (36.51%) ไม่เกินนโยบาย concentration limit 50%\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q06_certificate_semantics",
+      "level": 6,
+      "variant": "phase2c_python_first",
+      "elapsed_seconds": 0.834,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 0,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [],
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- training records มีทั้งหมด 11 รายการ\n- ทุกรายการอบรมทั้ง 11 รายการมี `certificate_obtained = True`\n- `certificate_obtained` เป็นหลักฐานที่ grain ของ training record ไม่ใช่หลักฐานว่า employee ทุกคนมี certification ที่ยังใช้ได้\nหลักฐานที่มีไม่เพียงพอและไม่สามารถพิสูจน์ข้อสรุป การตัดสินใจ หรือคำแนะนำที่ร้องขอ",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] ทุกรายการอบรมมี `certificate_obtained = True` หรือไม่ และข้อมูลนี้พิสูจน์ได้หรือไม่ว่าพนักงานทุกคนมี certification ที่ยังใช้ได้\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=certification_entity_records\n[METRIC CONTRACT EXECUTED] role=training_certificate_flags\n[TERMINAL CONTRACT] refuse_decision; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- training records มีทั้งหมด 11 รายการ\n- ทุกรายการอบรมทั้ง 11 รายการมี `certificate_obtained = True`\n- `certificate_obtained` เป็นหลักฐานที่ grain ของ training record ไม่ใช่หลักฐานว่า employee ทุกคนมี certification ที่ยังใช้ได้\nหลักฐานที่มีไม่เพียงพอและไม่สามารถพิสูจน์ข้อสรุป การตัดสินใจ หรือคำแนะนำที่ร้องขอ\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q07_expert_skill",
+      "level": 7,
+      "variant": "phase2c_python_first",
+      "elapsed_seconds": 0.661,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 0,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [],
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- เทคนิค มี skill records 8 รายการ และระดับเชี่ยวชาญ 4 รายการ คิดเป็น 50.00% ซึ่งถึงเป้าหมาย 50%\n- การสื่อสาร มี skill records 1 รายการ และระดับเชี่ยวชาญ 0 รายการ คิดเป็น 0.00% ซึ่งไม่ถึงเป้าหมาย 50%\n- คอมพิวเตอร์ มี skill records 3 รายการ และระดับเชี่ยวชาญ 1 รายการ คิดเป็น 33.33% ซึ่งไม่ถึงเป้าหมาย 50%\n- บริหาร มี skill records 3 รายการ และระดับเชี่ยวชาญ 1 รายการ คิดเป็น 33.33% ซึ่งไม่ถึงเป้าหมาย 50%\n- รวมทั้งหมด มี skill records 15 รายการ และระดับเชี่ยวชาญ 6 รายการ คิดเป็น 40.00% ซึ่งไม่ถึงเป้าหมาย 50%",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] จาก skill records ทั้งหมด จงวิเคราะห์สัดส่วนระดับ `เชี่ยวชาญ` และตรวจว่าสูงถึงเป้าหมาย 50% หรือไม่ พร้อมแยกตาม `skill_category`\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=expert_share_by_category\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- เทคนิค มี skill records 8 รายการ และระดับเชี่ยวชาญ 4 รายการ คิดเป็น 50.00% ซึ่งถึงเป้าหมาย 50%\n- การสื่อสาร มี skill records 1 รายการ และระดับเชี่ยวชาญ 0 รายการ คิดเป็น 0.00% ซึ่งไม่ถึงเป้าหมาย 50%\n- คอมพิวเตอร์ มี skill records 3 รายการ และระดับเชี่ยวชาญ 1 รายการ คิดเป็น 33.33% ซึ่งไม่ถึงเป้าหมาย 50%\n- บริหาร มี skill records 3 รายการ และระดับเชี่ยวชาญ 1 รายการ คิดเป็น 33.33% ซึ่งไม่ถึงเป้าหมาย 50%\n- รวมทั้งหมด มี skill records 15 รายการ และระดับเชี่ยวชาญ 6 รายการ คิดเป็น 40.00% ซึ่งไม่ถึงเป้าหมาย 50%\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q08_project_concentration",
+      "level": 8,
+      "variant": "phase2c_python_first",
+      "elapsed_seconds": 0.647,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 0,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [],
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- มูลค่าโครงการรวมทั้งหมดคือ 28000000\n- มูลค่าโครงการสูงสุดสองอันดับรวมคือ 18000000\n- สัดส่วน top two ต่อทั้งหมดคือ 64.29%\n- เกณฑ์นโยบายคือมากกว่า 60%\n- มี concentration risk\n- อัตรา 64.29% มากกว่าเกณฑ์ 60%",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] บริษัทกำหนดว่า project portfolio มี concentration risk หากโครงการมูลค่าสูงสุดสองอันดับรวมกันเกิน 60% ของมูลค่าทุกโครงการ จงตรวจตามนโยบายนี้\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=portfolio_total_and_top_two\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- มูลค่าโครงการรวมทั้งหมดคือ 28000000\n- มูลค่าโครงการสูงสุดสองอันดับรวมคือ 18000000\n- สัดส่วน top two ต่อทั้งหมดคือ 64.29%\n- เกณฑ์นโยบายคือมากกว่า 60%\n- มี concentration risk\n- อัตรา 64.29% มากกว่าเกณฑ์ 60%\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q09_efficiency_trap",
+      "level": 9,
+      "variant": "phase2c_python_first",
+      "elapsed_seconds": 0.653,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 0,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [],
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- project value ต่อพนักงานของ เทคโนโลยีสารสนเทศ = 5e+06 / 5 = 1000000.00\n- project value ต่อพนักงานของ วิจัยและพัฒนา = 1e+07 / 3 = 3333333.33\nหลักฐานที่มีไม่เพียงพอและไม่สามารถพิสูจน์ข้อสรุป การตัดสินใจ หรือคำแนะนำที่ร้องขอ",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] จากข้อมูลพบว่า `วิจัยและพัฒนา` มีพนักงานปฏิบัติงาน 3 คน และมีโครงการมูลค่า 10,000,000 ส่วน `เทคโนโลยีสารสนเทศ` มีพนักงาน 5 คนและโครงการมูลค่า 5,000,000 จงสรุปว่าแผนกใดใช้กำลังคนมีประสิทธิภาพกว่ากัน\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=department_value_and_headcount\n[TERMINAL CONTRACT] refuse_decision; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- project value ต่อพนักงานของ เทคโนโลยีสารสนเทศ = 5e+06 / 5 = 1000000.00\n- project value ต่อพนักงานของ วิจัยและพัฒนา = 1e+07 / 3 = 3333333.33\nหลักฐานที่มีไม่เพียงพอและไม่สามารถพิสูจน์ข้อสรุป การตัดสินใจ หรือคำแนะนำที่ร้องขอ\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": ""
+    },
+    {
+      "question_id": "q10_staffing_decision",
+      "level": 10,
+      "variant": "phase2c_python_first",
+      "elapsed_seconds": 0.762,
+      "returncode": 0,
+      "timed_out": false,
+      "completed_with_answer": true,
+      "mcp_tool_calls": 0,
+      "blocked_tool_calls": 0,
+      "dynamic_observations": 0,
+      "python_observations": 0,
+      "llm_observer_skips": 0,
+      "final_verdicts": [],
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- แผนกเทคโนโลยีสารสนเทศ มีพนักงานปฏิบัติงาน 5 คน\n- แผนกการเงิน มีพนักงานปฏิบัติงาน 3 คน\n- แผนกการตลาด มีพนักงานปฏิบัติงาน 4 คน\n- แผนกทรัพยากรบุคคล มีพนักงานปฏิบัติงาน 4 คน\n- แผนกบริหารทั่วไป มีพนักงานปฏิบัติงาน 1 คน\n- แผนกบัญชี มีพนักงานปฏิบัติงาน 2 คน\n- แผนกผลิต มีพนักงานปฏิบัติงาน 3 คน\n- แผนกวิจัยและพัฒนา มีพนักงานปฏิบัติงาน 3 คน\nหลักฐานที่มีไม่เพียงพอและไม่สามารถพิสูจน์ข้อสรุป การตัดสินใจ หรือคำแนะนำที่ร้องขอ",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] จาก headcount, employment type, performance reviews, training, skills, certifications และ project value จงเลือกหนึ่งแผนกที่ควรลดคน และหนึ่งแผนกที่ควรเพิ่มคน พร้อมเหตุผลเชิงธุรกิจ\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=descriptive_active_headcount\n[TERMINAL CONTRACT] refuse_decision; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- แผนกเทคโนโลยีสารสนเทศ มีพนักงานปฏิบัติงาน 5 คน\n- แผนกการเงิน มีพนักงานปฏิบัติงาน 3 คน\n- แผนกการตลาด มีพนักงานปฏิบัติงาน 4 คน\n- แผนกทรัพยากรบุคคล มีพนักงานปฏิบัติงาน 4 คน\n- แผนกบริหารทั่วไป มีพนักงานปฏิบัติงาน 1 คน\n- แผนกบัญชี มีพนักงานปฏิบัติงาน 2 คน\n- แผนกผลิต มีพนักงานปฏิบัติงาน 3 คน\n- แผนกวิจัยและพัฒนา มีพนักงานปฏิบัติงาน 3 คน\nหลักฐานที่มีไม่เพียงพอและไม่สามารถพิสูจน์ข้อสรุป การตัดสินใจ หรือคำแนะนำที่ร้องขอ\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": ""
+    }
+  ]
+}

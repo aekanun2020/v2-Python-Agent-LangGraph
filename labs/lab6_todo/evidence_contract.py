@@ -305,9 +305,13 @@ def contract_claims(
         ):
             return ()
         claims = []
+        suffixes = {
+            str(column): str(suffix)
+            for column, suffix in output.get("suffixes", {}).items()
+        }
         for row in rows:
             claims.append("; ".join(
-                f"{column}={row[column]}"
+                f"{column}={row[column]}{suffixes.get(column, '')}"
                 for column in required_columns
             ))
         claims.extend(map(str, output.get("grounded_notes", ())))

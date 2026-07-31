@@ -38,6 +38,22 @@ not call the Agent or Observer LLM. Unmatched questions retain the general
 Agent path. See the
 [controlled Finance report](artifacts/finance_skill_run3_run4_report.md).
 
+### HR Skill isolation
+
+HR domain contracts and semantics now live in
+[`skills/hr-analytics`](skills/hr-analytics/SKILL.md), not in the generic
+runtime contract file. The frozen HR Q1–Q10 suite is fully contract matched.
+
+| Run | Questions | Atomic | Median |
+|---|---:|---:|---:|
+| HR Skill run 4 | 10/10 | 77/77 | 0.710s |
+| HR Skill run 5 | 10/10 | 77/77 | 0.706s |
+
+Both HR runs produced the same answer hash. A full Finance non-regression smoke
+remained `10/10`, `148/148`, with the same Finance answer hash as before HR
+isolation. See the
+[HR Skill isolation report](artifacts/hr_skill_run4_run5_report.md).
+
 ## v2 — PlannerState ที่แก้แผนจากหลักฐานจริง
 
 เวอร์ชันนี้เพิ่ม **Planner → Tool → Review → Replan → Answer Review** ให้ Lab 8

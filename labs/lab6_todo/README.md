@@ -62,6 +62,25 @@ python labs/lab6_todo/agent_todo.py \
 ข้อจำกัด: ผลนี้ใช้ได้กับ frozen Finance suite และ contracts ที่ประกาศไว้
 คำถามที่ไม่ match ยังใช้ general Agent/Observer path
 
+### HR Analytics Skill
+
+HR semantics และ contracts อยู่ที่ `skills/hr-analytics/`:
+
+- `SKILL.md`: workflow และ HR invariants
+- `references/semantics.md`: entity/record grain และ decision boundary
+- `references/answer_contracts.json`: executable HR Q1–Q10 contracts
+
+ไฟล์ `labs/lab6_todo/executable_metric_contracts.json` ไม่มี domain contract
+อีกแล้ว Runtime กลางค้นทั้ง HR และ Finance ด้วย path เดียว:
+
+```text
+skills/*/references/answer_contracts.json
+```
+
+ผล live HR สองรอบ: `10/10`, `77/77` และ answer hash ตรงกัน
+Finance non-regression หลังแยก HR: `10/10`, `148/148` และ hash เดิม ดู
+[`hr_skill_run4_run5_report.md`](../../artifacts/hr_skill_run4_run5_report.md)
+
 ---
 
 ## อธิบายจุดสำคัญของโค้ด
