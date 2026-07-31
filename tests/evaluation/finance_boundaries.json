@@ -1,0 +1,76 @@
+{
+  "suite": "finance-boundaries-v1",
+  "frozen_before_first_run": true,
+  "cases": [
+    {
+      "id": "fin_boundary_001",
+      "question": "loan_amnt สูงสุดหนึ่งรายการคือเท่าไร",
+      "expected_contract": null,
+      "forbidden_contract": "finance_portfolio_totals",
+      "reason": "ถาม record maximum ไม่ใช่ portfolio totals"
+    },
+    {
+      "id": "fin_boundary_002",
+      "question": "Joint App มีวงเงินเฉลี่ยเท่าไร",
+      "expected_contract": null,
+      "forbidden_contract": "finance_application_mix",
+      "reason": "ถาม amount average ไม่ใช่ record mix"
+    },
+    {
+      "id": "fin_boundary_003",
+      "question": "ลูกค้าที่มี loan_status Charged Off ควรถูกปฏิเสธครั้งต่อไปหรือไม่",
+      "expected_contract": null,
+      "forbidden_contract": "finance_status_mix",
+      "reason": "เป็น individual decision ไม่ใช่ status distribution"
+    },
+    {
+      "id": "fin_boundary_004",
+      "question": "ยอด funded_amnt ของปี 2020 เท่าไร",
+      "expected_contract": null,
+      "forbidden_contract": "finance_year_cohorts",
+      "reason": "อยู่นอก cohort 2016-2019 ที่ประกาศ"
+    },
+    {
+      "id": "fin_boundary_005",
+      "question": "home_ownership ใดทำให้ dti สูงขึ้น",
+      "expected_contract": null,
+      "forbidden_contract": "finance_home_ownership_segments",
+      "reason": "ถาม causal effect"
+    },
+    {
+      "id": "fin_boundary_006",
+      "question": "emp_length ของผู้กู้รายนี้คืออะไร",
+      "expected_contract": null,
+      "forbidden_contract": "finance_employment_extrema",
+      "reason": "ถามรายบุคคล ไม่ใช่ extrema ราย segment"
+    },
+    {
+      "id": "fin_boundary_007",
+      "question": "ค่า dti เฉลี่ยทั้งพอร์ตเป็นเท่าไร",
+      "expected_contract": null,
+      "forbidden_contract": "finance_dti_buckets",
+      "reason": "ไม่ได้ขอ bucket distribution"
+    },
+    {
+      "id": "fin_boundary_008",
+      "question": "annual_inc ของ Joint App แบ่งตามช่วงรายได้",
+      "expected_contract": null,
+      "forbidden_contract": "finance_fixed_income_bands",
+      "reason": "contract จำกัด Individual"
+    },
+    {
+      "id": "fin_boundary_009",
+      "question": "funding_ratio คือ approval rate ใช่หรือไม่",
+      "expected_contract": null,
+      "forbidden_contract": "finance_funding_gap_by_year",
+      "reason": "ไม่มีปีและเป็น semantic question ไม่ใช่ yearly metric"
+    },
+    {
+      "id": "fin_boundary_010",
+      "question": "Charged Off ทั้งพอร์ตมีกี่รายการ",
+      "expected_contract": null,
+      "forbidden_contract": "finance_dual_risk_screen",
+      "reason": "ไม่ได้แบ่ง emp_length หรือใช้ dual threshold"
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "suite": "hr-unseen-paraphrases-v1",
+  "frozen_before_first_run": true,
+  "cases": [
+    {
+      "id": "hr_para_001",
+      "question": "ช่วยแจกแจงจำนวนคนที่มีสถานะปฏิบัติงาน แยกตาม department",
+      "expected_contract": "active_headcount_by_department"
+    },
+    {
+      "id": "hr_para_002",
+      "question": "สำหรับสถานะปฏิบัติงาน แต่ละแผนกมีพนักงานประจำและสัญญาเป็นสัดส่วนเท่าไร",
+      "expected_contract": "active_employment_mix_by_department"
+    },
+    {
+      "id": "hr_para_003",
+      "question": "ภายใต้เกณฑ์ contract dependency มากกว่า 50% สำหรับคนปฏิบัติงาน แผนกใดเข้าเกณฑ์",
+      "expected_contract": "strict_contract_dependency_policy"
+    },
+    {
+      "id": "hr_para_004",
+      "question": "ตรวจ performance review coverage รายฝ่ายเทียบเกณฑ์ 80%",
+      "expected_contract": "performance_review_coverage"
+    },
+    {
+      "id": "hr_para_005",
+      "question": "training_type ใดมี concentration ของชั่วโมงอบรมเกิน 50% ของทั้งหมด",
+      "expected_contract": "training_hours_portfolio"
+    },
+    {
+      "id": "hr_para_006",
+      "question": "หมวดทักษะใดมีสัดส่วนระเบียนระดับเชี่ยวชาญเกินครึ่งหนึ่ง",
+      "expected_contract": "expert_skill_record_share"
+    },
+    {
+      "id": "hr_para_007",
+      "question": "โครงการสองรายการแรกกินสัดส่วนมูลค่ารวมเกินหกสิบเปอร์เซ็นต์หรือไม่",
+      "expected_contract": "top_two_project_concentration"
+    },
+    {
+      "id": "hr_para_008",
+      "question": "certificate_obtained พิสูจน์ได้หรือไม่ว่า certification ยัง valid และใช้ได้",
+      "expected_contract": "training_certificate_semantic_separation"
+    },
+    {
+      "id": "hr_para_009",
+      "question": "เปรียบเทียบ project value ต่อกำลังคนที่ยังทำงานอยู่รายฝ่าย แต่อย่าตีความเป็นผลิตภาพ",
+      "expected_contract": "project_value_per_active_employee"
+    },
+    {
+      "id": "hr_para_010",
+      "question": "จากจำนวนกำลังคนกับมูลค่างาน ช่วยบอกว่าฝ่ายไหนควรรับเพิ่มหรือลดอัตรากำลัง",
+      "expected_contract": "staffing_decision_insufficient"
+    }
+  ]
+}

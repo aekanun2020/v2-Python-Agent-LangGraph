@@ -1,0 +1,56 @@
+{
+  "suite": "finance-unseen-paraphrases-v1",
+  "frozen_before_first_run": true,
+  "cases": [
+    {
+      "id": "fin_para_001",
+      "question": "สรุปพอร์ตทั้งหมดทั้งยอดรวมและค่าเฉลี่ยของ loan_amnt กับ funded_amnt",
+      "expected_contract": "finance_portfolio_totals"
+    },
+    {
+      "id": "fin_para_002",
+      "question": "application_type แบบ Individual กับ Joint App มีสัดส่วนจำนวนรายการในพอร์ตร้อยละเท่าไร",
+      "expected_contract": "finance_application_mix"
+    },
+    {
+      "id": "fin_para_003",
+      "question": "แจกแจง loan_status ทุกสถานะ พร้อมจำนวนและสัดส่วนของแต่ละค่า",
+      "expected_contract": "finance_status_mix"
+    },
+    {
+      "id": "fin_para_004",
+      "question": "รายปี 2016 ถึง 2019 ใน issue_d_dim.year สรุป funded_amnt และ int_rate",
+      "expected_contract": "finance_year_cohorts"
+    },
+    {
+      "id": "fin_para_005",
+      "question": "จำแนกทุกกลุ่ม home_ownership แล้วรายงาน funded_amnt, int_rate และ dti",
+      "expected_contract": "finance_home_ownership_segments"
+    },
+    {
+      "id": "fin_para_006",
+      "question": "ช่วงอายุงานใดได้ยอดจัดสรรเฉลี่ยมากที่สุดและน้อยที่สุด โดยแสดงค่าที่ไม่ระบุด้วย",
+      "expected_contract": "finance_employment_extrema"
+    },
+    {
+      "id": "fin_para_007",
+      "question": "แบ่งภาระหนี้ต่อรายได้เป็นต่ำกว่า 10, 10 ถึงต่ำกว่า 20, 20 ถึงต่ำกว่า 30, ตั้งแต่ 30 และข้อมูลว่าง",
+      "expected_contract": "finance_dti_buckets"
+    },
+    {
+      "id": "fin_para_008",
+      "question": "เฉพาะผู้สมัครเดี่ยว แบ่งช่วงรายได้คงที่สี่ช่วงตั้งแต่ต่ำกว่า 50000 ถึง 100000 ขึ้นไป",
+      "expected_contract": "finance_fixed_income_bands"
+    },
+    {
+      "id": "fin_para_009",
+      "question": "แต่ละปี 2016-2019 จงหาส่วนต่างยอดที่ขอกับยอดที่จัดสรรและอัตราส่วนการจัดสรร",
+      "expected_contract": "finance_funding_gap_by_year"
+    },
+    {
+      "id": "fin_para_010",
+      "question": "คัดช่วงอายุงานที่สัดส่วน Charged Off สูงกว่าค่าเฉลี่ยรวมแบบ strict และผ่านทั้งสองเงื่อนไข",
+      "expected_contract": "finance_dual_risk_screen"
+    }
+  ]
+}

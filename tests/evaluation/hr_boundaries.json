@@ -1,0 +1,75 @@
+{
+  "suite": "hr-boundaries-v1",
+  "frozen_before_first_run": true,
+  "cases": [
+    {
+      "id": "hr_boundary_001",
+      "question": "นับพนักงานทั้งหมดแยกตามแผนก",
+      "expected_contract": null,
+      "forbidden_contract": "active_headcount_by_department",
+      "reason": "ไม่ได้จำกัดสถานะปฏิบัติงาน"
+    },
+    {
+      "id": "hr_boundary_002",
+      "question": "นับพนักงานที่ลาออกแล้วแยกตาม department",
+      "expected_contract": null,
+      "forbidden_contract": "active_headcount_by_department",
+      "reason": "ประชากรคนละสถานะ"
+    },
+    {
+      "id": "hr_boundary_003",
+      "question": "พนักงานที่ยังทำงานอยู่มีทั้งหมดกี่คน",
+      "expected_contract": null,
+      "forbidden_contract": "active_headcount_by_department",
+      "reason": "ไม่ได้ขอ grain รายแผนก"
+    },
+    {
+      "id": "hr_boundary_004",
+      "question": "แผนกใดมีผลงานดีที่สุด",
+      "expected_contract": null,
+      "reason": "ไม่มี metric นิยามผลงานดีที่สุด"
+    },
+    {
+      "id": "hr_boundary_005",
+      "question": "ควรลดคนหรือเพิ่มคนจาก headcount เพียงอย่างเดียวหรือไม่",
+      "expected_contract": null,
+      "forbidden_contract": "staffing_decision_insufficient",
+      "reason": "ไม่มี project value ตาม intent family ที่ประกาศ"
+    },
+    {
+      "id": "hr_boundary_006",
+      "question": "มีแผนกใดไม่มีพนักงานปฏิบัติงานเลย",
+      "expected_contract": null,
+      "forbidden_contract": "active_headcount_by_department",
+      "reason": "ต้องมี universe ของแผนกเพื่อพิสูจน์ศูนย์"
+    },
+    {
+      "id": "hr_boundary_007",
+      "question": "ใครบ้างที่มี performance review ล่าสุดต่ำกว่าเกณฑ์",
+      "expected_contract": null,
+      "forbidden_contract": "performance_review_coverage",
+      "reason": "ถามรายบุคคลและคะแนน ไม่ใช่ coverage"
+    },
+    {
+      "id": "hr_boundary_008",
+      "question": "นับจำนวนหลักสูตรอบรมแยกตาม training_type",
+      "expected_contract": null,
+      "forbidden_contract": "training_hours_portfolio",
+      "reason": "จำนวนหลักสูตรไม่ใช่สัดส่วนชั่วโมง"
+    },
+    {
+      "id": "hr_boundary_009",
+      "question": "พนักงานคนใดควรได้เลื่อนตำแหน่งจาก skill_category",
+      "expected_contract": null,
+      "forbidden_contract": "expert_skill_record_share",
+      "reason": "เป็นการตัดสินใจรายบุคคล ไม่ใช่ record share"
+    },
+    {
+      "id": "hr_boundary_010",
+      "question": "certification แต่ละชนิดมีผู้ถือกี่คน",
+      "expected_contract": null,
+      "forbidden_contract": "training_certificate_semantic_separation",
+      "reason": "ถามจำนวนผู้ถือ ไม่ใช่ semantic validity"
+    }
+  ]
+}

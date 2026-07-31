@@ -200,6 +200,12 @@ OpenRouter key สำหรับ general fallback path
 - การผ่าน frozen suite ไม่เท่ากับ production readiness
 - general fallback path ยังมีความไม่แน่นอนจาก LLM และควรประเมินแยก
 
+Unseen paraphrase/boundary baseline ยืนยันข้อจำกัดของ keyword selector:
+paraphrase recall `55%`, boundary precision `95%` และ false match `5%`
+ขณะที่ contracts ที่ route ถูกผ่าน live MCP `11/11` สามรอบด้วย evidence hash
+เดียวกัน ดู
+[Unseen Paraphrase + Boundary Baseline](../../artifacts/unseen_boundary_baseline_report.md)
+
 หลักที่ใช้ตีความผลคือ:
 
 > Observation อย่างเดียวจำเป็นแต่ไม่เพียงพอ

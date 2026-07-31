@@ -1,0 +1,594 @@
+{
+  "suite_version": "unseen-boundary-v1",
+  "selector": "literal question_terms_all/any",
+  "metrics": {
+    "paraphrases_total": 20,
+    "paraphrases_correct": 11,
+    "contract_recall": 0.55,
+    "boundaries_total": 20,
+    "boundaries_protected": 19,
+    "boundary_precision": 0.95,
+    "false_matches": 1,
+    "false_match_rate": 0.05
+  },
+  "routing_results": [
+    {
+      "id": "hr_para_001",
+      "question": "ช่วยแจกแจงจำนวนคนที่มีสถานะปฏิบัติงาน แยกตาม department",
+      "expected_contract": "active_headcount_by_department",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": "active_headcount_by_department",
+      "passed": true
+    },
+    {
+      "id": "hr_para_002",
+      "question": "สำหรับสถานะปฏิบัติงาน แต่ละแผนกมีพนักงานประจำและสัญญาเป็นสัดส่วนเท่าไร",
+      "expected_contract": "active_employment_mix_by_department",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": "active_employment_mix_by_department",
+      "passed": true
+    },
+    {
+      "id": "hr_para_003",
+      "question": "ภายใต้เกณฑ์ contract dependency มากกว่า 50% สำหรับคนปฏิบัติงาน แผนกใดเข้าเกณฑ์",
+      "expected_contract": "strict_contract_dependency_policy",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": "strict_contract_dependency_policy",
+      "passed": true
+    },
+    {
+      "id": "hr_para_004",
+      "question": "ตรวจ performance review coverage รายฝ่ายเทียบเกณฑ์ 80%",
+      "expected_contract": "performance_review_coverage",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": "performance_review_coverage",
+      "passed": true
+    },
+    {
+      "id": "hr_para_005",
+      "question": "training_type ใดมี concentration ของชั่วโมงอบรมเกิน 50% ของทั้งหมด",
+      "expected_contract": "training_hours_portfolio",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": "training_hours_portfolio",
+      "passed": true
+    },
+    {
+      "id": "hr_para_006",
+      "question": "หมวดทักษะใดมีสัดส่วนระเบียนระดับเชี่ยวชาญเกินครึ่งหนึ่ง",
+      "expected_contract": "expert_skill_record_share",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "hr_para_007",
+      "question": "โครงการสองรายการแรกกินสัดส่วนมูลค่ารวมเกินหกสิบเปอร์เซ็นต์หรือไม่",
+      "expected_contract": "top_two_project_concentration",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "hr_para_008",
+      "question": "certificate_obtained พิสูจน์ได้หรือไม่ว่า certification ยัง valid และใช้ได้",
+      "expected_contract": "training_certificate_semantic_separation",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": "training_certificate_semantic_separation",
+      "passed": true
+    },
+    {
+      "id": "hr_para_009",
+      "question": "เปรียบเทียบ project value ต่อกำลังคนที่ยังทำงานอยู่รายฝ่าย แต่อย่าตีความเป็นผลิตภาพ",
+      "expected_contract": "project_value_per_active_employee",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "hr_para_010",
+      "question": "จากจำนวนกำลังคนกับมูลค่างาน ช่วยบอกว่าฝ่ายไหนควรรับเพิ่มหรือลดอัตรากำลัง",
+      "expected_contract": "staffing_decision_insufficient",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "hr_boundary_001",
+      "question": "นับพนักงานทั้งหมดแยกตามแผนก",
+      "expected_contract": null,
+      "forbidden_contract": "active_headcount_by_department",
+      "reason": "ไม่ได้จำกัดสถานะปฏิบัติงาน",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "hr_boundary_002",
+      "question": "นับพนักงานที่ลาออกแล้วแยกตาม department",
+      "expected_contract": null,
+      "forbidden_contract": "active_headcount_by_department",
+      "reason": "ประชากรคนละสถานะ",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "hr_boundary_003",
+      "question": "พนักงานที่ยังทำงานอยู่มีทั้งหมดกี่คน",
+      "expected_contract": null,
+      "forbidden_contract": "active_headcount_by_department",
+      "reason": "ไม่ได้ขอ grain รายแผนก",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "hr_boundary_004",
+      "question": "แผนกใดมีผลงานดีที่สุด",
+      "expected_contract": null,
+      "reason": "ไม่มี metric นิยามผลงานดีที่สุด",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "hr_boundary_005",
+      "question": "ควรลดคนหรือเพิ่มคนจาก headcount เพียงอย่างเดียวหรือไม่",
+      "expected_contract": null,
+      "forbidden_contract": "staffing_decision_insufficient",
+      "reason": "ไม่มี project value ตาม intent family ที่ประกาศ",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": "staffing_decision_insufficient",
+      "passed": false
+    },
+    {
+      "id": "hr_boundary_006",
+      "question": "มีแผนกใดไม่มีพนักงานปฏิบัติงานเลย",
+      "expected_contract": null,
+      "forbidden_contract": "active_headcount_by_department",
+      "reason": "ต้องมี universe ของแผนกเพื่อพิสูจน์ศูนย์",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "hr_boundary_007",
+      "question": "ใครบ้างที่มี performance review ล่าสุดต่ำกว่าเกณฑ์",
+      "expected_contract": null,
+      "forbidden_contract": "performance_review_coverage",
+      "reason": "ถามรายบุคคลและคะแนน ไม่ใช่ coverage",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "hr_boundary_008",
+      "question": "นับจำนวนหลักสูตรอบรมแยกตาม training_type",
+      "expected_contract": null,
+      "forbidden_contract": "training_hours_portfolio",
+      "reason": "จำนวนหลักสูตรไม่ใช่สัดส่วนชั่วโมง",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "hr_boundary_009",
+      "question": "พนักงานคนใดควรได้เลื่อนตำแหน่งจาก skill_category",
+      "expected_contract": null,
+      "forbidden_contract": "expert_skill_record_share",
+      "reason": "เป็นการตัดสินใจรายบุคคล ไม่ใช่ record share",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "hr_boundary_010",
+      "question": "certification แต่ละชนิดมีผู้ถือกี่คน",
+      "expected_contract": null,
+      "forbidden_contract": "training_certificate_semantic_separation",
+      "reason": "ถามจำนวนผู้ถือ ไม่ใช่ semantic validity",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_para_001",
+      "question": "สรุปพอร์ตทั้งหมดทั้งยอดรวมและค่าเฉลี่ยของ loan_amnt กับ funded_amnt",
+      "expected_contract": "finance_portfolio_totals",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": "finance_portfolio_totals",
+      "passed": true
+    },
+    {
+      "id": "fin_para_002",
+      "question": "application_type แบบ Individual กับ Joint App มีสัดส่วนจำนวนรายการในพอร์ตร้อยละเท่าไร",
+      "expected_contract": "finance_application_mix",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": "finance_application_mix",
+      "passed": true
+    },
+    {
+      "id": "fin_para_003",
+      "question": "แจกแจง loan_status ทุกสถานะ พร้อมจำนวนและสัดส่วนของแต่ละค่า",
+      "expected_contract": "finance_status_mix",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": "finance_status_mix",
+      "passed": true
+    },
+    {
+      "id": "fin_para_004",
+      "question": "รายปี 2016 ถึง 2019 ใน issue_d_dim.year สรุป funded_amnt และ int_rate",
+      "expected_contract": "finance_year_cohorts",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": "finance_year_cohorts",
+      "passed": true
+    },
+    {
+      "id": "fin_para_005",
+      "question": "จำแนกทุกกลุ่ม home_ownership แล้วรายงาน funded_amnt, int_rate และ dti",
+      "expected_contract": "finance_home_ownership_segments",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": "finance_home_ownership_segments",
+      "passed": true
+    },
+    {
+      "id": "fin_para_006",
+      "question": "ช่วงอายุงานใดได้ยอดจัดสรรเฉลี่ยมากที่สุดและน้อยที่สุด โดยแสดงค่าที่ไม่ระบุด้วย",
+      "expected_contract": "finance_employment_extrema",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "fin_para_007",
+      "question": "แบ่งภาระหนี้ต่อรายได้เป็นต่ำกว่า 10, 10 ถึงต่ำกว่า 20, 20 ถึงต่ำกว่า 30, ตั้งแต่ 30 และข้อมูลว่าง",
+      "expected_contract": "finance_dti_buckets",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "fin_para_008",
+      "question": "เฉพาะผู้สมัครเดี่ยว แบ่งช่วงรายได้คงที่สี่ช่วงตั้งแต่ต่ำกว่า 50000 ถึง 100000 ขึ้นไป",
+      "expected_contract": "finance_fixed_income_bands",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "fin_para_009",
+      "question": "แต่ละปี 2016-2019 จงหาส่วนต่างยอดที่ขอกับยอดที่จัดสรรและอัตราส่วนการจัดสรร",
+      "expected_contract": "finance_funding_gap_by_year",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "fin_para_010",
+      "question": "คัดช่วงอายุงานที่สัดส่วน Charged Off สูงกว่าค่าเฉลี่ยรวมแบบ strict และผ่านทั้งสองเงื่อนไข",
+      "expected_contract": "finance_dual_risk_screen",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "fin_boundary_001",
+      "question": "loan_amnt สูงสุดหนึ่งรายการคือเท่าไร",
+      "expected_contract": null,
+      "forbidden_contract": "finance_portfolio_totals",
+      "reason": "ถาม record maximum ไม่ใช่ portfolio totals",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_002",
+      "question": "Joint App มีวงเงินเฉลี่ยเท่าไร",
+      "expected_contract": null,
+      "forbidden_contract": "finance_application_mix",
+      "reason": "ถาม amount average ไม่ใช่ record mix",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_003",
+      "question": "ลูกค้าที่มี loan_status Charged Off ควรถูกปฏิเสธครั้งต่อไปหรือไม่",
+      "expected_contract": null,
+      "forbidden_contract": "finance_status_mix",
+      "reason": "เป็น individual decision ไม่ใช่ status distribution",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_004",
+      "question": "ยอด funded_amnt ของปี 2020 เท่าไร",
+      "expected_contract": null,
+      "forbidden_contract": "finance_year_cohorts",
+      "reason": "อยู่นอก cohort 2016-2019 ที่ประกาศ",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_005",
+      "question": "home_ownership ใดทำให้ dti สูงขึ้น",
+      "expected_contract": null,
+      "forbidden_contract": "finance_home_ownership_segments",
+      "reason": "ถาม causal effect",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_006",
+      "question": "emp_length ของผู้กู้รายนี้คืออะไร",
+      "expected_contract": null,
+      "forbidden_contract": "finance_employment_extrema",
+      "reason": "ถามรายบุคคล ไม่ใช่ extrema ราย segment",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_007",
+      "question": "ค่า dti เฉลี่ยทั้งพอร์ตเป็นเท่าไร",
+      "expected_contract": null,
+      "forbidden_contract": "finance_dti_buckets",
+      "reason": "ไม่ได้ขอ bucket distribution",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_008",
+      "question": "annual_inc ของ Joint App แบ่งตามช่วงรายได้",
+      "expected_contract": null,
+      "forbidden_contract": "finance_fixed_income_bands",
+      "reason": "contract จำกัด Individual",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_009",
+      "question": "funding_ratio คือ approval rate ใช่หรือไม่",
+      "expected_contract": null,
+      "forbidden_contract": "finance_funding_gap_by_year",
+      "reason": "ไม่มีปีและเป็น semantic question ไม่ใช่ yearly metric",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_010",
+      "question": "Charged Off ทั้งพอร์ตมีกี่รายการ",
+      "expected_contract": null,
+      "forbidden_contract": "finance_dual_risk_screen",
+      "reason": "ไม่ได้แบ่ง emp_length หรือใช้ dual threshold",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    }
+  ],
+  "live_results": [
+    {
+      "case_id": "hr_para_001",
+      "contract_id": "active_headcount_by_department",
+      "mcp_tools_discovered": 5,
+      "satisfied": true,
+      "missing_roles": [],
+      "elapsed_seconds": 0.092212,
+      "roles": [
+        {
+          "role_id": "grouped_active_headcount",
+          "query": "SELECT department, COUNT(*) AS employee_count FROM employees WHERE status = N'ปฏิบัติงาน' GROUP BY department ORDER BY department",
+          "result": "       department  employee_count\nเทคโนโลยีสารสนเทศ               5\n          การเงิน               3\n          การตลาด               4\n    ทรัพยากรบุคคล               4\n     บริหารทั่วไป               1\n            บัญชี               2\n             ผลิต               3\n    วิจัยและพัฒนา               3"
+        }
+      ]
+    },
+    {
+      "case_id": "hr_para_002",
+      "contract_id": "active_employment_mix_by_department",
+      "mcp_tools_discovered": 5,
+      "satisfied": true,
+      "missing_roles": [],
+      "elapsed_seconds": 0.092228,
+      "roles": [
+        {
+          "role_id": "employment_mix",
+          "query": "SELECT department, SUM(CASE WHEN employee_type = N'ประจำ' THEN 1 ELSE 0 END) AS regular_count, SUM(CASE WHEN employee_type = N'สัญญา' THEN 1 ELSE 0 END) AS contract_count, COUNT(*) AS employee_count, CAST(100.0 * SUM(CASE WHEN employee_type = N'สัญญา' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0) AS decimal(10,2)) AS contract_pct FROM employees WHERE status = N'ปฏิบัติงาน' GROUP BY department ORDER BY department",
+          "result": "       department  regular_count  contract_count  employee_count  contract_pct\nเทคโนโลยีสารสนเทศ              4               1               5          20.0\n          การเงิน              3               0               3           0.0\n          การตลาด              2               2               4          50.0\n    ทรัพยากรบุคคล              1               3               4          75.0\n     บริหารทั่วไป              1               0               1           0.0\n            บัญชี              2               0               2           0.0\n             ผลิต              3               0               3           0.0\n    วิจัยและพัฒนา              3               0               3           0.0"
+        }
+      ]
+    },
+    {
+      "case_id": "hr_para_003",
+      "contract_id": "strict_contract_dependency_policy",
+      "mcp_tools_discovered": 5,
+      "satisfied": true,
+      "missing_roles": [],
+      "elapsed_seconds": 0.091183,
+      "roles": [
+        {
+          "role_id": "strict_contract_dependency",
+          "query": "SELECT department, SUM(CASE WHEN employee_type = N'ประจำ' THEN 1 ELSE 0 END) AS regular_count, SUM(CASE WHEN employee_type = N'สัญญา' THEN 1 ELSE 0 END) AS contract_count, COUNT(*) AS employee_count, CAST(100.0 * SUM(CASE WHEN employee_type = N'สัญญา' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0) AS decimal(10,2)) AS contract_pct FROM employees WHERE status = N'ปฏิบัติงาน' GROUP BY department HAVING 100.0 * SUM(CASE WHEN employee_type = N'สัญญา' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0) > 50 ORDER BY department",
+          "result": "   department  regular_count  contract_count  employee_count  contract_pct\nทรัพยากรบุคคล              1               3               4          75.0"
+        }
+      ]
+    },
+    {
+      "case_id": "hr_para_004",
+      "contract_id": "performance_review_coverage",
+      "mcp_tools_discovered": 5,
+      "satisfied": true,
+      "missing_roles": [],
+      "elapsed_seconds": 0.183541,
+      "roles": [
+        {
+          "role_id": "active_employee_denominator",
+          "query": "SELECT COUNT(*) AS active_employee_count FROM employees WHERE status = N'ปฏิบัติงาน'",
+          "result": " active_employee_count\n                    25"
+        },
+        {
+          "role_id": "distinct_reviewed_employee_numerator",
+          "query": "SELECT COUNT(DISTINCT employee_id) AS reviewed_employee_count FROM performance_reviews WHERE review_period = N'2023'",
+          "result": " reviewed_employee_count\n                       7"
+        }
+      ]
+    },
+    {
+      "case_id": "hr_para_005",
+      "contract_id": "training_hours_portfolio",
+      "mcp_tools_discovered": 5,
+      "satisfied": true,
+      "missing_roles": [],
+      "elapsed_seconds": 0.088923,
+      "roles": [
+        {
+          "role_id": "hours_by_training_type",
+          "query": "SELECT training_type, SUM(hours) AS training_hours FROM training_records GROUP BY training_type ORDER BY training_type",
+          "result": "training_type  training_hours\n        ภายใน               8\n       ภายนอก             152\n      ออนไลน์              92"
+        }
+      ]
+    },
+    {
+      "case_id": "hr_para_008",
+      "contract_id": "training_certificate_semantic_separation",
+      "mcp_tools_discovered": 5,
+      "satisfied": true,
+      "missing_roles": [],
+      "elapsed_seconds": 0.177004,
+      "roles": [
+        {
+          "role_id": "training_certificate_flags",
+          "query": "SELECT COUNT(*) AS training_record_count, SUM(CASE WHEN certificate_obtained = 1 THEN 1 ELSE 0 END) AS obtained_true_count FROM training_records",
+          "result": " training_record_count  obtained_true_count\n                    11                   11"
+        },
+        {
+          "role_id": "certification_entity_records",
+          "query": "SELECT COUNT(*) AS certification_record_count, COUNT(DISTINCT employee_id) AS certified_employee_count FROM certifications",
+          "result": " certification_record_count  certified_employee_count\n                          7                         7"
+        }
+      ]
+    },
+    {
+      "case_id": "fin_para_001",
+      "contract_id": "finance_portfolio_totals",
+      "mcp_tools_discovered": 5,
+      "satisfied": true,
+      "missing_roles": [],
+      "elapsed_seconds": 0.132228,
+      "roles": [
+        {
+          "role_id": "portfolio_totals",
+          "query": "SELECT COUNT_BIG(*) AS loan_count, CONVERT(varchar(40), CAST(SUM(loan_amnt) AS decimal(38,2))) AS requested_total, CONVERT(varchar(40), CAST(SUM(funded_amnt) AS decimal(38,2))) AS funded_total, CONVERT(varchar(40), CAST(AVG(loan_amnt) AS decimal(20,6))) AS requested_avg, CONVERT(varchar(40), CAST(AVG(funded_amnt) AS decimal(20,6))) AS funded_avg FROM loans_fact",
+          "result": " loan_count requested_total   funded_total requested_avg   funded_avg\n    1432440  22017159100.00 22017131100.00  15370.388358 15370.368811"
+        }
+      ]
+    },
+    {
+      "case_id": "fin_para_002",
+      "contract_id": "finance_application_mix",
+      "mcp_tools_discovered": 5,
+      "satisfied": true,
+      "missing_roles": [],
+      "elapsed_seconds": 0.111785,
+      "roles": [
+        {
+          "role_id": "application_mix",
+          "query": "SELECT a.application_type, COUNT_BIG(*) AS loan_count, CAST(100.0 * COUNT_BIG(*) / SUM(COUNT_BIG(*)) OVER () AS decimal(10,4)) AS portfolio_pct FROM loans_fact l JOIN application_type_dim a ON l.application_type_id = a.application_type_id GROUP BY a.application_type ORDER BY loan_count DESC",
+          "result": "application_type  loan_count  portfolio_pct\n      Individual     1320357        92.1754\n       Joint App      112083         7.8246"
+        }
+      ]
+    },
+    {
+      "case_id": "fin_para_003",
+      "contract_id": "finance_status_mix",
+      "mcp_tools_discovered": 5,
+      "satisfied": true,
+      "missing_roles": [],
+      "elapsed_seconds": 0.108677,
+      "roles": [
+        {
+          "role_id": "status_mix",
+          "query": "SELECT s.loan_status, COUNT_BIG(*) AS loan_count, CAST(100.0 * COUNT_BIG(*) / SUM(COUNT_BIG(*)) OVER () AS decimal(10,4)) AS portfolio_pct FROM loans_fact l JOIN loan_status_dim s ON l.loan_status_id = s.loan_status_id GROUP BY s.loan_status ORDER BY loan_count DESC",
+          "result": "       loan_status  loan_count  portfolio_pct\n           Current      702223        49.0229\n        Fully Paid      551955        38.5325\n       Charged Off      147348        10.2865\nLate (31-120 days)       18752         1.3091\n   In Grace Period        7928         0.5535\n Late (16-30 days)        4207         0.2937\n           Default          27         0.0019"
+        }
+      ]
+    },
+    {
+      "case_id": "fin_para_004",
+      "contract_id": "finance_year_cohorts",
+      "mcp_tools_discovered": 5,
+      "satisfied": true,
+      "missing_roles": [],
+      "elapsed_seconds": 0.127707,
+      "roles": [
+        {
+          "role_id": "year_cohorts",
+          "query": "SELECT i.year, COUNT_BIG(*) AS loan_count, CAST(AVG(l.funded_amnt) AS decimal(20,6)) AS avg_funded_amnt, CAST(AVG(l.int_rate) * 100 AS decimal(12,6)) AS avg_int_rate_pct FROM loans_fact l JOIN issue_d_dim i ON l.issue_d_id = i.issue_d_id GROUP BY i.year ORDER BY i.year",
+          "result": " year  loan_count  avg_funded_amnt  avg_int_rate_pct\n 2016      434407     14733.974591         13.041364\n 2017      387116     14858.279947         13.367410\n 2018      495242     16025.020394         12.728426\n 2019      115675     16671.263021         12.719964"
+        }
+      ]
+    },
+    {
+      "case_id": "fin_para_005",
+      "contract_id": "finance_home_ownership_segments",
+      "mcp_tools_discovered": 5,
+      "satisfied": true,
+      "missing_roles": [],
+      "elapsed_seconds": 0.125512,
+      "roles": [
+        {
+          "role_id": "home_ownership_segments",
+          "query": "SELECT h.home_ownership, COUNT_BIG(*) AS loan_count, CAST(AVG(l.funded_amnt) AS decimal(20,6)) AS avg_funded_amnt, CAST(AVG(l.int_rate) * 100 AS decimal(12,6)) AS avg_int_rate_pct, CAST(AVG(l.dti) AS decimal(12,6)) AS avg_dti FROM loans_fact l JOIN home_ownership_dim h ON l.home_ownership_id = h.home_ownership_id GROUP BY h.home_ownership ORDER BY loan_count DESC",
+          "result": "home_ownership  loan_count  avg_funded_amnt  avg_int_rate_pct   avg_dti\n      MORTGAGE      701646     17024.786039         12.588802 19.747853\n          RENT      556961     13544.125890         13.483818 18.540844\n           OWN      170888     14549.707557         13.075346 19.213482\n           ANY        2940     14206.037415         12.823949 18.384255\n          NONE           5     14400.000000         13.140000 23.902000"
+        }
+      ]
+    }
+  ],
+  "live_evidence_hash": "d9070a6f6b2c78badea34f0ce181eb35d641d3f4c9b59cb4461ac9a7b4be01bc",
+  "live_contract_completion": 1.0
+}

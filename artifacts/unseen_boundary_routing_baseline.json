@@ -1,0 +1,417 @@
+{
+  "suite_version": "unseen-boundary-v1",
+  "selector": "literal question_terms_all/any",
+  "metrics": {
+    "paraphrases_total": 20,
+    "paraphrases_correct": 11,
+    "contract_recall": 0.55,
+    "boundaries_total": 20,
+    "boundaries_protected": 19,
+    "boundary_precision": 0.95,
+    "false_matches": 1,
+    "false_match_rate": 0.05
+  },
+  "routing_results": [
+    {
+      "id": "hr_para_001",
+      "question": "ช่วยแจกแจงจำนวนคนที่มีสถานะปฏิบัติงาน แยกตาม department",
+      "expected_contract": "active_headcount_by_department",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": "active_headcount_by_department",
+      "passed": true
+    },
+    {
+      "id": "hr_para_002",
+      "question": "สำหรับสถานะปฏิบัติงาน แต่ละแผนกมีพนักงานประจำและสัญญาเป็นสัดส่วนเท่าไร",
+      "expected_contract": "active_employment_mix_by_department",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": "active_employment_mix_by_department",
+      "passed": true
+    },
+    {
+      "id": "hr_para_003",
+      "question": "ภายใต้เกณฑ์ contract dependency มากกว่า 50% สำหรับคนปฏิบัติงาน แผนกใดเข้าเกณฑ์",
+      "expected_contract": "strict_contract_dependency_policy",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": "strict_contract_dependency_policy",
+      "passed": true
+    },
+    {
+      "id": "hr_para_004",
+      "question": "ตรวจ performance review coverage รายฝ่ายเทียบเกณฑ์ 80%",
+      "expected_contract": "performance_review_coverage",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": "performance_review_coverage",
+      "passed": true
+    },
+    {
+      "id": "hr_para_005",
+      "question": "training_type ใดมี concentration ของชั่วโมงอบรมเกิน 50% ของทั้งหมด",
+      "expected_contract": "training_hours_portfolio",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": "training_hours_portfolio",
+      "passed": true
+    },
+    {
+      "id": "hr_para_006",
+      "question": "หมวดทักษะใดมีสัดส่วนระเบียนระดับเชี่ยวชาญเกินครึ่งหนึ่ง",
+      "expected_contract": "expert_skill_record_share",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "hr_para_007",
+      "question": "โครงการสองรายการแรกกินสัดส่วนมูลค่ารวมเกินหกสิบเปอร์เซ็นต์หรือไม่",
+      "expected_contract": "top_two_project_concentration",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "hr_para_008",
+      "question": "certificate_obtained พิสูจน์ได้หรือไม่ว่า certification ยัง valid และใช้ได้",
+      "expected_contract": "training_certificate_semantic_separation",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": "training_certificate_semantic_separation",
+      "passed": true
+    },
+    {
+      "id": "hr_para_009",
+      "question": "เปรียบเทียบ project value ต่อกำลังคนที่ยังทำงานอยู่รายฝ่าย แต่อย่าตีความเป็นผลิตภาพ",
+      "expected_contract": "project_value_per_active_employee",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "hr_para_010",
+      "question": "จากจำนวนกำลังคนกับมูลค่างาน ช่วยบอกว่าฝ่ายไหนควรรับเพิ่มหรือลดอัตรากำลัง",
+      "expected_contract": "staffing_decision_insufficient",
+      "kind": "paraphrase",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "hr_boundary_001",
+      "question": "นับพนักงานทั้งหมดแยกตามแผนก",
+      "expected_contract": null,
+      "forbidden_contract": "active_headcount_by_department",
+      "reason": "ไม่ได้จำกัดสถานะปฏิบัติงาน",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "hr_boundary_002",
+      "question": "นับพนักงานที่ลาออกแล้วแยกตาม department",
+      "expected_contract": null,
+      "forbidden_contract": "active_headcount_by_department",
+      "reason": "ประชากรคนละสถานะ",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "hr_boundary_003",
+      "question": "พนักงานที่ยังทำงานอยู่มีทั้งหมดกี่คน",
+      "expected_contract": null,
+      "forbidden_contract": "active_headcount_by_department",
+      "reason": "ไม่ได้ขอ grain รายแผนก",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "hr_boundary_004",
+      "question": "แผนกใดมีผลงานดีที่สุด",
+      "expected_contract": null,
+      "reason": "ไม่มี metric นิยามผลงานดีที่สุด",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "hr_boundary_005",
+      "question": "ควรลดคนหรือเพิ่มคนจาก headcount เพียงอย่างเดียวหรือไม่",
+      "expected_contract": null,
+      "forbidden_contract": "staffing_decision_insufficient",
+      "reason": "ไม่มี project value ตาม intent family ที่ประกาศ",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": "staffing_decision_insufficient",
+      "passed": false
+    },
+    {
+      "id": "hr_boundary_006",
+      "question": "มีแผนกใดไม่มีพนักงานปฏิบัติงานเลย",
+      "expected_contract": null,
+      "forbidden_contract": "active_headcount_by_department",
+      "reason": "ต้องมี universe ของแผนกเพื่อพิสูจน์ศูนย์",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "hr_boundary_007",
+      "question": "ใครบ้างที่มี performance review ล่าสุดต่ำกว่าเกณฑ์",
+      "expected_contract": null,
+      "forbidden_contract": "performance_review_coverage",
+      "reason": "ถามรายบุคคลและคะแนน ไม่ใช่ coverage",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "hr_boundary_008",
+      "question": "นับจำนวนหลักสูตรอบรมแยกตาม training_type",
+      "expected_contract": null,
+      "forbidden_contract": "training_hours_portfolio",
+      "reason": "จำนวนหลักสูตรไม่ใช่สัดส่วนชั่วโมง",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "hr_boundary_009",
+      "question": "พนักงานคนใดควรได้เลื่อนตำแหน่งจาก skill_category",
+      "expected_contract": null,
+      "forbidden_contract": "expert_skill_record_share",
+      "reason": "เป็นการตัดสินใจรายบุคคล ไม่ใช่ record share",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "hr_boundary_010",
+      "question": "certification แต่ละชนิดมีผู้ถือกี่คน",
+      "expected_contract": null,
+      "forbidden_contract": "training_certificate_semantic_separation",
+      "reason": "ถามจำนวนผู้ถือ ไม่ใช่ semantic validity",
+      "kind": "boundary",
+      "domain": "hr",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_para_001",
+      "question": "สรุปพอร์ตทั้งหมดทั้งยอดรวมและค่าเฉลี่ยของ loan_amnt กับ funded_amnt",
+      "expected_contract": "finance_portfolio_totals",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": "finance_portfolio_totals",
+      "passed": true
+    },
+    {
+      "id": "fin_para_002",
+      "question": "application_type แบบ Individual กับ Joint App มีสัดส่วนจำนวนรายการในพอร์ตร้อยละเท่าไร",
+      "expected_contract": "finance_application_mix",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": "finance_application_mix",
+      "passed": true
+    },
+    {
+      "id": "fin_para_003",
+      "question": "แจกแจง loan_status ทุกสถานะ พร้อมจำนวนและสัดส่วนของแต่ละค่า",
+      "expected_contract": "finance_status_mix",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": "finance_status_mix",
+      "passed": true
+    },
+    {
+      "id": "fin_para_004",
+      "question": "รายปี 2016 ถึง 2019 ใน issue_d_dim.year สรุป funded_amnt และ int_rate",
+      "expected_contract": "finance_year_cohorts",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": "finance_year_cohorts",
+      "passed": true
+    },
+    {
+      "id": "fin_para_005",
+      "question": "จำแนกทุกกลุ่ม home_ownership แล้วรายงาน funded_amnt, int_rate และ dti",
+      "expected_contract": "finance_home_ownership_segments",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": "finance_home_ownership_segments",
+      "passed": true
+    },
+    {
+      "id": "fin_para_006",
+      "question": "ช่วงอายุงานใดได้ยอดจัดสรรเฉลี่ยมากที่สุดและน้อยที่สุด โดยแสดงค่าที่ไม่ระบุด้วย",
+      "expected_contract": "finance_employment_extrema",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "fin_para_007",
+      "question": "แบ่งภาระหนี้ต่อรายได้เป็นต่ำกว่า 10, 10 ถึงต่ำกว่า 20, 20 ถึงต่ำกว่า 30, ตั้งแต่ 30 และข้อมูลว่าง",
+      "expected_contract": "finance_dti_buckets",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "fin_para_008",
+      "question": "เฉพาะผู้สมัครเดี่ยว แบ่งช่วงรายได้คงที่สี่ช่วงตั้งแต่ต่ำกว่า 50000 ถึง 100000 ขึ้นไป",
+      "expected_contract": "finance_fixed_income_bands",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "fin_para_009",
+      "question": "แต่ละปี 2016-2019 จงหาส่วนต่างยอดที่ขอกับยอดที่จัดสรรและอัตราส่วนการจัดสรร",
+      "expected_contract": "finance_funding_gap_by_year",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "fin_para_010",
+      "question": "คัดช่วงอายุงานที่สัดส่วน Charged Off สูงกว่าค่าเฉลี่ยรวมแบบ strict และผ่านทั้งสองเงื่อนไข",
+      "expected_contract": "finance_dual_risk_screen",
+      "kind": "paraphrase",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": false
+    },
+    {
+      "id": "fin_boundary_001",
+      "question": "loan_amnt สูงสุดหนึ่งรายการคือเท่าไร",
+      "expected_contract": null,
+      "forbidden_contract": "finance_portfolio_totals",
+      "reason": "ถาม record maximum ไม่ใช่ portfolio totals",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_002",
+      "question": "Joint App มีวงเงินเฉลี่ยเท่าไร",
+      "expected_contract": null,
+      "forbidden_contract": "finance_application_mix",
+      "reason": "ถาม amount average ไม่ใช่ record mix",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_003",
+      "question": "ลูกค้าที่มี loan_status Charged Off ควรถูกปฏิเสธครั้งต่อไปหรือไม่",
+      "expected_contract": null,
+      "forbidden_contract": "finance_status_mix",
+      "reason": "เป็น individual decision ไม่ใช่ status distribution",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_004",
+      "question": "ยอด funded_amnt ของปี 2020 เท่าไร",
+      "expected_contract": null,
+      "forbidden_contract": "finance_year_cohorts",
+      "reason": "อยู่นอก cohort 2016-2019 ที่ประกาศ",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_005",
+      "question": "home_ownership ใดทำให้ dti สูงขึ้น",
+      "expected_contract": null,
+      "forbidden_contract": "finance_home_ownership_segments",
+      "reason": "ถาม causal effect",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_006",
+      "question": "emp_length ของผู้กู้รายนี้คืออะไร",
+      "expected_contract": null,
+      "forbidden_contract": "finance_employment_extrema",
+      "reason": "ถามรายบุคคล ไม่ใช่ extrema ราย segment",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_007",
+      "question": "ค่า dti เฉลี่ยทั้งพอร์ตเป็นเท่าไร",
+      "expected_contract": null,
+      "forbidden_contract": "finance_dti_buckets",
+      "reason": "ไม่ได้ขอ bucket distribution",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_008",
+      "question": "annual_inc ของ Joint App แบ่งตามช่วงรายได้",
+      "expected_contract": null,
+      "forbidden_contract": "finance_fixed_income_bands",
+      "reason": "contract จำกัด Individual",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_009",
+      "question": "funding_ratio คือ approval rate ใช่หรือไม่",
+      "expected_contract": null,
+      "forbidden_contract": "finance_funding_gap_by_year",
+      "reason": "ไม่มีปีและเป็น semantic question ไม่ใช่ yearly metric",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    },
+    {
+      "id": "fin_boundary_010",
+      "question": "Charged Off ทั้งพอร์ตมีกี่รายการ",
+      "expected_contract": null,
+      "forbidden_contract": "finance_dual_risk_screen",
+      "reason": "ไม่ได้แบ่ง emp_length หรือใช้ dual threshold",
+      "kind": "boundary",
+      "domain": "finance",
+      "actual_contract": null,
+      "passed": true
+    }
+  ],
+  "live_results": [],
+  "live_contract_completion": null
+}
