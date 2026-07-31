@@ -1,0 +1,662 @@
+{
+  "grader": "finance-skill-atomic-v1",
+  "questions_passed": 10,
+  "questions_total": 10,
+  "atomic_passed": 148,
+  "atomic_total": 148,
+  "result_sha256": "be4fcb4e3350613525e97e3c0603e3bf33649d50896b50f22c0c02a129225c07",
+  "results": [
+    {
+      "id": "Q01",
+      "passed": true,
+      "checks": [
+        {
+          "claim": "loan_count=1432440",
+          "passed": true
+        },
+        {
+          "claim": "requested_total=22017159100.00",
+          "passed": true
+        },
+        {
+          "claim": "funded_total=22017131100.00",
+          "passed": true
+        },
+        {
+          "claim": "requested_avg=15370.388358",
+          "passed": true
+        },
+        {
+          "claim": "funded_avg=15370.368811",
+          "passed": true
+        },
+        {
+          "claim": "ไม่มี currency metadata",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรเพิ่ม",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรลด",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:โอกาสในการพัฒนา",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:มีประสิทธิภาพ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:สถานการณ์เศรษฐกิจ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ตอบสนองความต้องการ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:บาท",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ดอลลาร์",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: usd",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: thb",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "Q02",
+      "passed": true,
+      "checks": [
+        {
+          "claim": "application_type=individual; loan_count=1320357; portfolio_pct=92.1754",
+          "passed": true
+        },
+        {
+          "claim": "application_type=joint app; loan_count=112083; portfolio_pct=7.8246",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรเพิ่ม",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรลด",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:โอกาสในการพัฒนา",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:มีประสิทธิภาพ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:สถานการณ์เศรษฐกิจ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ตอบสนองความต้องการ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:บาท",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ดอลลาร์",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: usd",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: thb",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "Q03",
+      "passed": true,
+      "checks": [
+        {
+          "claim": "loan_status=current; loan_count=702223; portfolio_pct=49.0229",
+          "passed": true
+        },
+        {
+          "claim": "loan_status=fully paid; loan_count=551955; portfolio_pct=38.5325",
+          "passed": true
+        },
+        {
+          "claim": "loan_status=charged off; loan_count=147348; portfolio_pct=10.2865",
+          "passed": true
+        },
+        {
+          "claim": "loan_status=late (31-120 days); loan_count=18752; portfolio_pct=1.3091",
+          "passed": true
+        },
+        {
+          "claim": "loan_status=in grace period; loan_count=7928; portfolio_pct=0.5535",
+          "passed": true
+        },
+        {
+          "claim": "loan_status=late (16-30 days); loan_count=4207; portfolio_pct=0.2937",
+          "passed": true
+        },
+        {
+          "claim": "loan_status=default; loan_count=27; portfolio_pct=0.0019",
+          "passed": true
+        },
+        {
+          "claim": "ไม่ใช่ผลอนุมัติหรือปฏิเสธ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรเพิ่ม",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรลด",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:โอกาสในการพัฒนา",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:มีประสิทธิภาพ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:สถานการณ์เศรษฐกิจ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ตอบสนองความต้องการ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:บาท",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ดอลลาร์",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: usd",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: thb",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "Q04",
+      "passed": true,
+      "checks": [
+        {
+          "claim": "year=2016; loan_count=434407; avg_funded_amnt=14733.974591; avg_int_rate_pct=13.041364",
+          "passed": true
+        },
+        {
+          "claim": "year=2017; loan_count=387116; avg_funded_amnt=14858.279947; avg_int_rate_pct=13.367410",
+          "passed": true
+        },
+        {
+          "claim": "year=2018; loan_count=495242; avg_funded_amnt=16025.020394; avg_int_rate_pct=12.728426",
+          "passed": true
+        },
+        {
+          "claim": "year=2019; loan_count=115675; avg_funded_amnt=16671.263021; avg_int_rate_pct=12.719964",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรเพิ่ม",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรลด",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:โอกาสในการพัฒนา",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:มีประสิทธิภาพ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:สถานการณ์เศรษฐกิจ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ตอบสนองความต้องการ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:บาท",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ดอลลาร์",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: usd",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: thb",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "Q05",
+      "passed": true,
+      "checks": [
+        {
+          "claim": "home_ownership=mortgage; loan_count=701646; avg_funded_amnt=17024.786039; avg_int_rate_pct=12.588802; avg_dti=19.747853",
+          "passed": true
+        },
+        {
+          "claim": "home_ownership=rent; loan_count=556961; avg_funded_amnt=13544.125890; avg_int_rate_pct=13.483818; avg_dti=18.540844",
+          "passed": true
+        },
+        {
+          "claim": "home_ownership=own; loan_count=170888; avg_funded_amnt=14549.707557; avg_int_rate_pct=13.075346; avg_dti=19.213482",
+          "passed": true
+        },
+        {
+          "claim": "home_ownership=any; loan_count=2940; avg_funded_amnt=14206.037415; avg_int_rate_pct=12.823949; avg_dti=18.384255",
+          "passed": true
+        },
+        {
+          "claim": "home_ownership=none; loan_count=5; avg_funded_amnt=14400.000000; avg_int_rate_pct=13.140000; avg_dti=23.902000",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรเพิ่ม",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรลด",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:โอกาสในการพัฒนา",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:มีประสิทธิภาพ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:สถานการณ์เศรษฐกิจ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ตอบสนองความต้องการ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:บาท",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ดอลลาร์",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: usd",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: thb",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "Q06",
+      "passed": true,
+      "checks": [
+        {
+          "claim": "extreme_type=highest; emp_length=10+ years; loan_count=478304; avg_funded_amnt=16514.623963; avg_int_rate_pct=12.851166; avg_dti=19.227889",
+          "passed": true
+        },
+        {
+          "claim": "extreme_type=lowest_overall; emp_length=n/a; loan_count=108470; avg_funded_amnt=12263.196506; avg_int_rate_pct=13.207055; avg_dti=22.875127",
+          "passed": true
+        },
+        {
+          "claim": "extreme_type=lowest_non_na; emp_length=1 year; loan_count=95926; avg_funded_amnt=14488.151023; avg_int_rate_pct=13.198205; avg_dti=18.420589",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรเพิ่ม",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรลด",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:โอกาสในการพัฒนา",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:มีประสิทธิภาพ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:สถานการณ์เศรษฐกิจ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ตอบสนองความต้องการ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:บาท",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ดอลลาร์",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: usd",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: thb",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "Q07",
+      "passed": true,
+      "checks": [
+        {
+          "claim": "dti_bucket=<10; loan_count=254841; avg_funded_amnt=14533.541699; avg_int_rate_pct=11.888448",
+          "passed": true
+        },
+        {
+          "claim": "dti_bucket=10-<20; loan_count=575531; avg_funded_amnt=15471.560611; avg_int_rate_pct=12.421760",
+          "passed": true
+        },
+        {
+          "claim": "dti_bucket=20-<30; loan_count=432491; avg_funded_amnt=15527.219815; avg_int_rate_pct=13.583355",
+          "passed": true
+        },
+        {
+          "claim": "dti_bucket=30+; loan_count=167993; avg_funded_amnt=15845.435524; avg_int_rate_pct=15.115695",
+          "passed": true
+        },
+        {
+          "claim": "dti_bucket=null; loan_count=1584; avg_funded_amnt=20025.868056; avg_int_rate_pct=14.046143",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรเพิ่ม",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรลด",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:โอกาสในการพัฒนา",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:มีประสิทธิภาพ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:สถานการณ์เศรษฐกิจ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ตอบสนองความต้องการ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:บาท",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ดอลลาร์",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: usd",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: thb",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "Q08",
+      "passed": true,
+      "checks": [
+        {
+          "claim": "income_band=<50000; loan_count=334020; min_annual_inc=1900.0; max_annual_inc=49999.00; avg_funded_amnt=9057.922205; avg_int_rate_pct=13.721959; avg_dti=19.632060",
+          "passed": true
+        },
+        {
+          "claim": "income_band=50000-<70000; loan_count=324848; min_annual_inc=50000.0; max_annual_inc=69999.48; avg_funded_amnt=12879.194808; avg_int_rate_pct=13.142466; avg_dti=19.062727",
+          "passed": true
+        },
+        {
+          "claim": "income_band=70000-<100000; loan_count=333863; min_annual_inc=70000.0; max_annual_inc=99999.84; avg_funded_amnt=16428.018079; avg_int_rate_pct=12.803399; avg_dti=18.100492",
+          "passed": true
+        },
+        {
+          "claim": "income_band=100000+; loan_count=327626; min_annual_inc=100000.0; max_annual_inc=61000000.00; avg_funded_amnt=21591.207734; avg_int_rate_pct=12.099061; avg_dti=15.801032",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรเพิ่ม",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรลด",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:โอกาสในการพัฒนา",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:มีประสิทธิภาพ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:สถานการณ์เศรษฐกิจ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ตอบสนองความต้องการ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:บาท",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ดอลลาร์",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: usd",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: thb",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "Q09",
+      "passed": true,
+      "checks": [
+        {
+          "claim": "year=2016; requested_total=6400569700.00; funded_total=6400541700.00; funding_gap=28000.00; funding_ratio=0.99999563",
+          "passed": true
+        },
+        {
+          "claim": "year=2017; requested_total=5751877900.00; funded_total=5751877900.00; funding_gap=0.00; funding_ratio=1.00000000",
+          "passed": true
+        },
+        {
+          "claim": "year=2018; requested_total=7936263150.00; funded_total=7936263150.00; funding_gap=0.00; funding_ratio=1.00000000",
+          "passed": true
+        },
+        {
+          "claim": "year=2019; requested_total=1928448350.00; funded_total=1928448350.00; funding_gap=0.00; funding_ratio=1.00000000",
+          "passed": true
+        },
+        {
+          "claim": "funding_ratio ไม่ใช่ approval rate",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรเพิ่ม",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรลด",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:โอกาสในการพัฒนา",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:มีประสิทธิภาพ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:สถานการณ์เศรษฐกิจ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ตอบสนองความต้องการ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:บาท",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ดอลลาร์",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: usd",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: thb",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "Q10",
+      "passed": true,
+      "checks": [
+        {
+          "claim": "emp_length=n/a; loan_count=108470; avg_int_rate_pct=13.207055; charged_off_rate_pct=13.2119",
+          "passed": true
+        },
+        {
+          "claim": "emp_length=1 year; loan_count=95926; avg_int_rate_pct=13.198205; charged_off_rate_pct=10.8875",
+          "passed": true
+        },
+        {
+          "claim": "emp_length=2 years; loan_count=130251; avg_int_rate_pct=13.090283; charged_off_rate_pct=10.5603",
+          "passed": true
+        },
+        {
+          "claim": "emp_length=3 years; loan_count=116802; avg_int_rate_pct=13.100319; charged_off_rate_pct=10.5520",
+          "passed": true
+        },
+        {
+          "claim": "emp_length=5 years; loan_count=88686; avg_int_rate_pct=13.068333; charged_off_rate_pct=10.3139",
+          "passed": true
+        },
+        {
+          "claim": "ไม่ใช่ causal model หรือคำตัดสินสินเชื่อรายบุคคล",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรเพิ่ม",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ควรลด",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:โอกาสในการพัฒนา",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:มีประสิทธิภาพ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:สถานการณ์เศรษฐกิจ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ตอบสนองความต้องการ",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:บาท",
+          "passed": true
+        },
+        {
+          "claim": "forbidden:ดอลลาร์",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: usd",
+          "passed": true
+        },
+        {
+          "claim": "forbidden: thb",
+          "passed": true
+        }
+      ]
+    }
+  ]
+}

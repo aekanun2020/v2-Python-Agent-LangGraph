@@ -1,0 +1,107 @@
+{
+  "agent_model": "qwen/qwen3.5-35b-a3b",
+  "observer_model": "openai/gpt-oss-120b",
+  "mcp_server": "https://7ff8-184-22-21-43.ngrok-free.app/mcp",
+  "records": [
+    {
+      "id": "Q01",
+      "question": "พอร์ตสินเชื่อทั้งหมดมีกี่รายการ ยอดวงเงินที่ขอ loan_amnt และยอดที่ได้รับ funding funded_amnt รวมเท่าใด และค่าเฉลี่ยต่อรายการเท่าใด ห้ามระบุสกุลเงินถ้าไม่มี metadata",
+      "exit_code": 0,
+      "elapsed_seconds": 0.812,
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- loan_count=1432440; requested_total=22017159100.00; funded_total=22017131100.00; requested_avg=15370.388358; funded_avg=15370.368811\n- ไม่มี currency metadata จึงไม่ระบุสกุลเงิน",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] พอร์ตสินเชื่อทั้งหมดมีกี่รายการ ยอดวงเงินที่ขอ loan_amnt และยอดที่ได้รับ funding funded_amnt รวมเท่าใด และค่าเฉลี่ยต่อรายการเท่าใด ห้ามระบุสกุลเงินถ้าไม่มี metadata\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=portfolio_totals\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- loan_count=1432440; requested_total=22017159100.00; funded_total=22017131100.00; requested_avg=15370.388358; funded_avg=15370.368811\n- ไม่มี currency metadata จึงไม่ระบุสกุลเงิน\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": "",
+      "timeout": false
+    },
+    {
+      "id": "Q02",
+      "question": "สัดส่วนจำนวนรายการระหว่าง application_type แบบ Individual และ Joint App เป็นเท่าใด รายงานทั้งจำนวนและร้อยละของพอร์ตทั้งหมด โดยคง label ตามฐานข้อมูล",
+      "exit_code": 0,
+      "elapsed_seconds": 0.726,
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- application_type=Individual; loan_count=1320357; portfolio_pct=92.1754\n- application_type=Joint App; loan_count=112083; portfolio_pct=7.8246",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] สัดส่วนจำนวนรายการระหว่าง application_type แบบ Individual และ Joint App เป็นเท่าใด รายงานทั้งจำนวนและร้อยละของพอร์ตทั้งหมด โดยคง label ตามฐานข้อมูล\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=application_mix\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- application_type=Individual; loan_count=1320357; portfolio_pct=92.1754\n- application_type=Joint App; loan_count=112083; portfolio_pct=7.8246\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": "",
+      "timeout": false
+    },
+    {
+      "id": "Q03",
+      "question": "กระจายจำนวนและสัดส่วนสินเชื่อตาม loan_status ทุกสถานะอย่างไร ห้ามตีความ loan_status เป็นผลการอนุมัติ",
+      "exit_code": 0,
+      "elapsed_seconds": 0.841,
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- loan_status=Current; loan_count=702223; portfolio_pct=49.0229\n- loan_status=Fully Paid; loan_count=551955; portfolio_pct=38.5325\n- loan_status=Charged Off; loan_count=147348; portfolio_pct=10.2865\n- loan_status=Late (31-120 days); loan_count=18752; portfolio_pct=1.3091\n- loan_status=In Grace Period; loan_count=7928; portfolio_pct=0.5535\n- loan_status=Late (16-30 days); loan_count=4207; portfolio_pct=0.2937\n- loan_status=Default; loan_count=27; portfolio_pct=0.0019\n- loan_status เป็นสถานะหลังปล่อยกู้ ไม่ใช่ผลอนุมัติหรือปฏิเสธ",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] กระจายจำนวนและสัดส่วนสินเชื่อตาม loan_status ทุกสถานะอย่างไร ห้ามตีความ loan_status เป็นผลการอนุมัติ\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=status_mix\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- loan_status=Current; loan_count=702223; portfolio_pct=49.0229\n- loan_status=Fully Paid; loan_count=551955; portfolio_pct=38.5325\n- loan_status=Charged Off; loan_count=147348; portfolio_pct=10.2865\n- loan_status=Late (31-120 days); loan_count=18752; portfolio_pct=1.3091\n- loan_status=In Grace Period; loan_count=7928; portfolio_pct=0.5535\n- loan_status=Late (16-30 days); loan_count=4207; portfolio_pct=0.2937\n- loan_status=Default; loan_count=27; portfolio_pct=0.0019\n- loan_status เป็นสถานะหลังปล่อยกู้ ไม่ใช่ผลอนุมัติหรือปฏิเสธ\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": "",
+      "timeout": false
+    },
+    {
+      "id": "Q04",
+      "question": "ในแต่ละปี issue_d_dim.year มีจำนวนรายการ วงเงิน funded_amnt เฉลี่ย และ int_rate เฉลี่ยเท่าใด รายงานปี 2016 ถึง 2019 และแสดง int_rate เป็นร้อยละอย่างถูกต้อง",
+      "exit_code": 0,
+      "elapsed_seconds": 0.826,
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- year=2016; loan_count=434407; avg_funded_amnt=14733.974591; avg_int_rate_pct=13.041364\n- year=2017; loan_count=387116; avg_funded_amnt=14858.279947; avg_int_rate_pct=13.367410\n- year=2018; loan_count=495242; avg_funded_amnt=16025.020394; avg_int_rate_pct=12.728426\n- year=2019; loan_count=115675; avg_funded_amnt=16671.263021; avg_int_rate_pct=12.719964\n- avg_int_rate_pct แปลงจาก int_rate × 100; เป็นการเปรียบเทียบเชิงพรรณนา",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] ในแต่ละปี issue_d_dim.year มีจำนวนรายการ วงเงิน funded_amnt เฉลี่ย และ int_rate เฉลี่ยเท่าใด รายงานปี 2016 ถึง 2019 และแสดง int_rate เป็นร้อยละอย่างถูกต้อง\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=year_cohorts\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- year=2016; loan_count=434407; avg_funded_amnt=14733.974591; avg_int_rate_pct=13.041364\n- year=2017; loan_count=387116; avg_funded_amnt=14858.279947; avg_int_rate_pct=13.367410\n- year=2018; loan_count=495242; avg_funded_amnt=16025.020394; avg_int_rate_pct=12.728426\n- year=2019; loan_count=115675; avg_funded_amnt=16671.263021; avg_int_rate_pct=12.719964\n- avg_int_rate_pct แปลงจาก int_rate × 100; เป็นการเปรียบเทียบเชิงพรรณนา\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": "",
+      "timeout": false
+    },
+    {
+      "id": "Q05",
+      "question": "จำแนกตาม home_ownership ทุก label แล้ว รายงานจำนวนรายการ funded_amnt เฉลี่ย int_rate เฉลี่ย และ dti เฉลี่ย ห้ามตัดกลุ่มขนาดเล็กออก",
+      "exit_code": 0,
+      "elapsed_seconds": 0.715,
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- home_ownership=MORTGAGE; loan_count=701646; avg_funded_amnt=17024.786039; avg_int_rate_pct=12.588802; avg_dti=19.747853\n- home_ownership=RENT; loan_count=556961; avg_funded_amnt=13544.125890; avg_int_rate_pct=13.483818; avg_dti=18.540844\n- home_ownership=OWN; loan_count=170888; avg_funded_amnt=14549.707557; avg_int_rate_pct=13.075346; avg_dti=19.213482\n- home_ownership=ANY; loan_count=2940; avg_funded_amnt=14206.037415; avg_int_rate_pct=12.823949; avg_dti=18.384255\n- home_ownership=NONE; loan_count=5; avg_funded_amnt=14400.000000; avg_int_rate_pct=13.140000; avg_dti=23.902000",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] จำแนกตาม home_ownership ทุก label แล้ว รายงานจำนวนรายการ funded_amnt เฉลี่ย int_rate เฉลี่ย และ dti เฉลี่ย ห้ามตัดกลุ่มขนาดเล็กออก\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=home_ownership_segments\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- home_ownership=MORTGAGE; loan_count=701646; avg_funded_amnt=17024.786039; avg_int_rate_pct=12.588802; avg_dti=19.747853\n- home_ownership=RENT; loan_count=556961; avg_funded_amnt=13544.125890; avg_int_rate_pct=13.483818; avg_dti=18.540844\n- home_ownership=OWN; loan_count=170888; avg_funded_amnt=14549.707557; avg_int_rate_pct=13.075346; avg_dti=19.213482\n- home_ownership=ANY; loan_count=2940; avg_funded_amnt=14206.037415; avg_int_rate_pct=12.823949; avg_dti=18.384255\n- home_ownership=NONE; loan_count=5; avg_funded_amnt=14400.000000; avg_int_rate_pct=13.140000; avg_dti=23.902000\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": "",
+      "timeout": false
+    },
+    {
+      "id": "Q06",
+      "question": "จำแนกตาม emp_length แล้ว กลุ่มใดมี funded_amnt เฉลี่ยสูงสุดและต่ำสุด รายงานจำนวน int_rate เฉลี่ย และ dti เฉลี่ยของกลุ่มดังกล่าว พร้อมระบุกลุ่มต่ำสุดเมื่อไม่รวม N/A",
+      "exit_code": 0,
+      "elapsed_seconds": 0.906,
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- extreme_type=highest; emp_length=10+ years; loan_count=478304; avg_funded_amnt=16514.623963; avg_int_rate_pct=12.851166; avg_dti=19.227889\n- extreme_type=lowest_overall; emp_length=N/A; loan_count=108470; avg_funded_amnt=12263.196506; avg_int_rate_pct=13.207055; avg_dti=22.875127\n- extreme_type=lowest_non_na; emp_length=1 year; loan_count=95926; avg_funded_amnt=14488.151023; avg_int_rate_pct=13.198205; avg_dti=18.420589",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] จำแนกตาม emp_length แล้ว กลุ่มใดมี funded_amnt เฉลี่ยสูงสุดและต่ำสุด รายงานจำนวน int_rate เฉลี่ย และ dti เฉลี่ยของกลุ่มดังกล่าว พร้อมระบุกลุ่มต่ำสุดเมื่อไม่รวม N/A\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=employment_extrema\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- extreme_type=highest; emp_length=10+ years; loan_count=478304; avg_funded_amnt=16514.623963; avg_int_rate_pct=12.851166; avg_dti=19.227889\n- extreme_type=lowest_overall; emp_length=N/A; loan_count=108470; avg_funded_amnt=12263.196506; avg_int_rate_pct=13.207055; avg_dti=22.875127\n- extreme_type=lowest_non_na; emp_length=1 year; loan_count=95926; avg_funded_amnt=14488.151023; avg_int_rate_pct=13.198205; avg_dti=18.420589\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": "",
+      "timeout": false
+    },
+    {
+      "id": "Q07",
+      "question": "แบ่ง dti เป็น bucket <10, 10-<20, 20-<30, 30+ และ NULL แล้วรายงานจำนวน funded_amnt เฉลี่ย และ int_rate เฉลี่ยของทุก bucket พร้อมบอกแนวโน้มเชิงพรรณนาโดยห้ามอ้าง causality",
+      "exit_code": 0,
+      "elapsed_seconds": 0.764,
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- dti_bucket=<10; loan_count=254841; avg_funded_amnt=14533.541699; avg_int_rate_pct=11.888448\n- dti_bucket=10-<20; loan_count=575531; avg_funded_amnt=15471.560611; avg_int_rate_pct=12.421760\n- dti_bucket=20-<30; loan_count=432491; avg_funded_amnt=15527.219815; avg_int_rate_pct=13.583355\n- dti_bucket=30+; loan_count=167993; avg_funded_amnt=15845.435524; avg_int_rate_pct=15.115695\n- dti_bucket=NULL; loan_count=1584; avg_funded_amnt=20025.868056; avg_int_rate_pct=14.046143\n- ขอบเขต bucket เป็นไปตามคำถาม; ความแตกต่างเป็น association เชิงพรรณนา ไม่ใช่ causality",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] แบ่ง dti เป็น bucket <10, 10-<20, 20-<30, 30+ และ NULL แล้วรายงานจำนวน funded_amnt เฉลี่ย และ int_rate เฉลี่ยของทุก bucket พร้อมบอกแนวโน้มเชิงพรรณนาโดยห้ามอ้าง causality\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=dti_buckets\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- dti_bucket=<10; loan_count=254841; avg_funded_amnt=14533.541699; avg_int_rate_pct=11.888448\n- dti_bucket=10-<20; loan_count=575531; avg_funded_amnt=15471.560611; avg_int_rate_pct=12.421760\n- dti_bucket=20-<30; loan_count=432491; avg_funded_amnt=15527.219815; avg_int_rate_pct=13.583355\n- dti_bucket=30+; loan_count=167993; avg_funded_amnt=15845.435524; avg_int_rate_pct=15.115695\n- dti_bucket=NULL; loan_count=1584; avg_funded_amnt=20025.868056; avg_int_rate_pct=14.046143\n- ขอบเขต bucket เป็นไปตามคำถาม; ความแตกต่างเป็น association เชิงพรรณนา ไม่ใช่ causality\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": "",
+      "timeout": false
+    },
+    {
+      "id": "Q08",
+      "question": "สำหรับ application_type = Individual ที่ annual_inc ไม่เป็น NULL ให้แบ่ง fixed income band เป็น <50000, 50000-<70000, 70000-<100000 และ 100000+ แล้วรายงานจำนวน ช่วงรายได้ funded_amnt เฉลี่ย int_rate เฉลี่ย และ dti เฉลี่ยของทุก band",
+      "exit_code": 0,
+      "elapsed_seconds": 0.864,
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- income_band=<50000; loan_count=334020; min_annual_inc=1900.0; max_annual_inc=49999.00; avg_funded_amnt=9057.922205; avg_int_rate_pct=13.721959; avg_dti=19.632060\n- income_band=50000-<70000; loan_count=324848; min_annual_inc=50000.0; max_annual_inc=69999.48; avg_funded_amnt=12879.194808; avg_int_rate_pct=13.142466; avg_dti=19.062727\n- income_band=70000-<100000; loan_count=333863; min_annual_inc=70000.0; max_annual_inc=99999.84; avg_funded_amnt=16428.018079; avg_int_rate_pct=12.803399; avg_dti=18.100492\n- income_band=100000+; loan_count=327626; min_annual_inc=100000.0; max_annual_inc=61000000.00; avg_funded_amnt=21591.207734; avg_int_rate_pct=12.099061; avg_dti=15.801032",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] สำหรับ application_type = Individual ที่ annual_inc ไม่เป็น NULL ให้แบ่ง fixed income band เป็น <50000, 50000-<70000, 70000-<100000 และ 100000+ แล้วรายงานจำนวน ช่วงรายได้ funded_amnt เฉลี่ย int_rate เฉลี่ย และ dti เฉลี่ยของทุก band\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=fixed_income_bands\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- income_band=<50000; loan_count=334020; min_annual_inc=1900.0; max_annual_inc=49999.00; avg_funded_amnt=9057.922205; avg_int_rate_pct=13.721959; avg_dti=19.632060\n- income_band=50000-<70000; loan_count=324848; min_annual_inc=50000.0; max_annual_inc=69999.48; avg_funded_amnt=12879.194808; avg_int_rate_pct=13.142466; avg_dti=19.062727\n- income_band=70000-<100000; loan_count=333863; min_annual_inc=70000.0; max_annual_inc=99999.84; avg_funded_amnt=16428.018079; avg_int_rate_pct=12.803399; avg_dti=18.100492\n- income_band=100000+; loan_count=327626; min_annual_inc=100000.0; max_annual_inc=61000000.00; avg_funded_amnt=21591.207734; avg_int_rate_pct=12.099061; avg_dti=15.801032\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": "",
+      "timeout": false
+    },
+    {
+      "id": "Q09",
+      "question": "แต่ละปี 2016-2019 มี requested_total จาก loan_amnt, funded_total จาก funded_amnt, funding_gap และ funding_ratio = SUM(funded_amnt)/SUM(loan_amnt) เท่าใด และห้ามสรุปว่าเป็น approval rate",
+      "exit_code": 0,
+      "elapsed_seconds": 0.763,
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- year=2016; requested_total=6400569700.00; funded_total=6400541700.00; funding_gap=28000.00; funding_ratio=0.99999563\n- year=2017; requested_total=5751877900.00; funded_total=5751877900.00; funding_gap=0.00; funding_ratio=1.00000000\n- year=2018; requested_total=7936263150.00; funded_total=7936263150.00; funding_gap=0.00; funding_ratio=1.00000000\n- year=2019; requested_total=1928448350.00; funded_total=1928448350.00; funding_gap=0.00; funding_ratio=1.00000000\n- funding_ratio ไม่ใช่ approval rate เพราะไม่มี rejected-applications denominator หรือ approval-decision field",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] แต่ละปี 2016-2019 มี requested_total จาก loan_amnt, funded_total จาก funded_amnt, funding_gap และ funding_ratio = SUM(funded_amnt)/SUM(loan_amnt) เท่าใด และห้ามสรุปว่าเป็น approval rate\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=funding_gap_by_year\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- year=2016; requested_total=6400569700.00; funded_total=6400541700.00; funding_gap=28000.00; funding_ratio=0.99999563\n- year=2017; requested_total=5751877900.00; funded_total=5751877900.00; funding_gap=0.00; funding_ratio=1.00000000\n- year=2018; requested_total=7936263150.00; funded_total=7936263150.00; funding_gap=0.00; funding_ratio=1.00000000\n- year=2019; requested_total=1928448350.00; funded_total=1928448350.00; funding_gap=0.00; funding_ratio=1.00000000\n- funding_ratio ไม่ใช่ approval rate เพราะไม่มี rejected-applications denominator หรือ approval-decision field\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": "",
+      "timeout": false
+    },
+    {
+      "id": "Q10",
+      "question": "กลุ่ม emp_length ใดมีทั้ง int_rate เฉลี่ยสูงกว่าค่าเฉลี่ยทั้งพอร์ต และสัดส่วน Charged Off สูงกว่าค่าเฉลี่ยทั้งพอร์ต โดยใช้เงื่อนไขมากกว่าแบบ strict รายงาน benchmark และทุกกลุ่มที่ผ่าน ห้ามใช้เป็น causal model หรือคำตัดสินรายบุคคล",
+      "exit_code": 0,
+      "elapsed_seconds": 0.771,
+      "answer": "ข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- emp_length=N/A; loan_count=108470; avg_int_rate_pct=13.207055; charged_off_rate_pct=13.2119; overall_avg_int_rate_pct=12.99533; overall_charged_off_rate_pct=10.2865\n- emp_length=1 year; loan_count=95926; avg_int_rate_pct=13.198205; charged_off_rate_pct=10.8875; overall_avg_int_rate_pct=12.99533; overall_charged_off_rate_pct=10.2865\n- emp_length=2 years; loan_count=130251; avg_int_rate_pct=13.090283; charged_off_rate_pct=10.5603; overall_avg_int_rate_pct=12.99533; overall_charged_off_rate_pct=10.2865\n- emp_length=3 years; loan_count=116802; avg_int_rate_pct=13.100319; charged_off_rate_pct=10.5520; overall_avg_int_rate_pct=12.99533; overall_charged_off_rate_pct=10.2865\n- emp_length=5 years; loan_count=88686; avg_int_rate_pct=13.068333; charged_off_rate_pct=10.3139; overall_avg_int_rate_pct=12.99533; overall_charged_off_rate_pct=10.2865\n- เป็น descriptive segment screen ไม่ใช่ causal model หรือคำตัดสินสินเชื่อรายบุคคล",
+      "stdout": "[MCP] ค้นพบ 5 tools\n\n[user] กลุ่ม emp_length ใดมีทั้ง int_rate เฉลี่ยสูงกว่าค่าเฉลี่ยทั้งพอร์ต และสัดส่วน Charged Off สูงกว่าค่าเฉลี่ยทั้งพอร์ต โดยใช้เงื่อนไขมากกว่าแบบ strict รายงาน benchmark และทุกกลุ่มที่ผ่าน ห้ามใช้เป็น causal model หรือคำตัดสินรายบุคคล\n[ROUTING] deterministic-first; claim planner disabled\n[METRIC CONTRACT EXECUTED] role=dual_risk_screen\n[TERMINAL CONTRACT] approve; contract evidence composed\n------------------------------------------------------------\n[answer]\nข้อเท็จจริงที่ผ่านการตรวจหลักฐาน:\n- emp_length=N/A; loan_count=108470; avg_int_rate_pct=13.207055; charged_off_rate_pct=13.2119; overall_avg_int_rate_pct=12.99533; overall_charged_off_rate_pct=10.2865\n- emp_length=1 year; loan_count=95926; avg_int_rate_pct=13.198205; charged_off_rate_pct=10.8875; overall_avg_int_rate_pct=12.99533; overall_charged_off_rate_pct=10.2865\n- emp_length=2 years; loan_count=130251; avg_int_rate_pct=13.090283; charged_off_rate_pct=10.5603; overall_avg_int_rate_pct=12.99533; overall_charged_off_rate_pct=10.2865\n- emp_length=3 years; loan_count=116802; avg_int_rate_pct=13.100319; charged_off_rate_pct=10.5520; overall_avg_int_rate_pct=12.99533; overall_charged_off_rate_pct=10.2865\n- emp_length=5 years; loan_count=88686; avg_int_rate_pct=13.068333; charged_off_rate_pct=10.3139; overall_avg_int_rate_pct=12.99533; overall_charged_off_rate_pct=10.2865\n- เป็น descriptive segment screen ไม่ใช่ causal model หรือคำตัดสินสินเชื่อรายบุคคล\n------------------------------------------------------------\n[todo สุดท้าย]\n\n[context budget] BudgetState(steps=0, tool_calls=0, errors=0)\n",
+      "stderr": "",
+      "timeout": false
+    }
+  ]
+}

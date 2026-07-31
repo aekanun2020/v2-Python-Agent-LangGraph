@@ -1,0 +1,215 @@
+{
+  "version": "finance-answer-contracts-v1",
+  "contracts": [
+    {
+      "id": "finance_portfolio_totals",
+      "question_terms_all": ["loan_amnt", "funded_amnt", "ค่าเฉลี่ย"],
+      "question_terms_any": ["พอร์ต", "ทั้งหมด", "รวม"],
+      "terminal_verdict": "approve",
+      "roles": [{
+        "id": "portfolio_totals",
+        "table_terms": ["loans_fact"],
+        "query_terms_all": ["count_big(", "sum(loan_amnt)", "sum(funded_amnt)", "avg(loan_amnt)", "avg(funded_amnt)"],
+        "query_terms_forbidden": ["loan_status", "currency"],
+        "result_fields_any": ["loan_count"],
+        "result_must_contain": ["requested_total", "funded_total", "requested_avg", "funded_avg"],
+        "minimum_result_lines": 2,
+        "query_template": "SELECT COUNT_BIG(*) AS loan_count, CONVERT(varchar(40), CAST(SUM(loan_amnt) AS decimal(38,2))) AS requested_total, CONVERT(varchar(40), CAST(SUM(funded_amnt) AS decimal(38,2))) AS funded_total, CONVERT(varchar(40), CAST(AVG(loan_amnt) AS decimal(20,6))) AS requested_avg, CONVERT(varchar(40), CAST(AVG(funded_amnt) AS decimal(20,6))) AS funded_avg FROM loans_fact"
+      }],
+      "output": {
+        "role_id": "portfolio_totals",
+        "required_columns": ["loan_count", "requested_total", "funded_total", "requested_avg", "funded_avg"],
+        "grounded_notes": ["ไม่มี currency metadata จึงไม่ระบุสกุลเงิน"]
+      }
+    },
+    {
+      "id": "finance_application_mix",
+      "question_terms_all": ["application_type", "Individual", "Joint App"],
+      "question_terms_any": ["สัดส่วน", "ร้อยละ", "พอร์ต"],
+      "terminal_verdict": "approve",
+      "roles": [{
+        "id": "application_mix",
+        "table_terms": ["application_type_dim"],
+        "query_terms_all": ["count_big(", "portfolio_pct", "group by", "application_type"],
+        "query_terms_forbidden": ["recommend", "currency"],
+        "result_fields_any": ["portfolio_pct"],
+        "result_must_contain": ["Individual", "Joint App"],
+        "minimum_result_lines": 3,
+        "query_template": "SELECT a.application_type, COUNT_BIG(*) AS loan_count, CAST(100.0 * COUNT_BIG(*) / SUM(COUNT_BIG(*)) OVER () AS decimal(10,4)) AS portfolio_pct FROM loans_fact l JOIN application_type_dim a ON l.application_type_id = a.application_type_id GROUP BY a.application_type ORDER BY loan_count DESC"
+      }],
+      "output": {
+        "role_id": "application_mix",
+        "required_columns": ["application_type", "loan_count", "portfolio_pct"],
+        "spaced_column": "application_type"
+      }
+    },
+    {
+      "id": "finance_status_mix",
+      "question_terms_all": ["loan_status", "สัดส่วน"],
+      "question_terms_any": ["ทุกสถานะ", "กระจาย", "จำนวน"],
+      "terminal_verdict": "approve",
+      "roles": [{
+        "id": "status_mix",
+        "table_terms": ["loan_status_dim"],
+        "query_terms_all": ["count_big(", "portfolio_pct", "group by", "loan_status"],
+        "query_terms_forbidden": ["approved", "rejected", "อนุมัติ"],
+        "result_fields_any": ["portfolio_pct"],
+        "result_must_contain": ["Current", "Fully Paid", "Charged Off", "Default"],
+        "minimum_result_lines": 8,
+        "query_template": "SELECT s.loan_status, COUNT_BIG(*) AS loan_count, CAST(100.0 * COUNT_BIG(*) / SUM(COUNT_BIG(*)) OVER () AS decimal(10,4)) AS portfolio_pct FROM loans_fact l JOIN loan_status_dim s ON l.loan_status_id = s.loan_status_id GROUP BY s.loan_status ORDER BY loan_count DESC"
+      }],
+      "output": {
+        "role_id": "status_mix",
+        "required_columns": ["loan_status", "loan_count", "portfolio_pct"],
+        "spaced_column": "loan_status",
+        "grounded_notes": ["loan_status เป็นสถานะหลังปล่อยกู้ ไม่ใช่ผลอนุมัติหรือปฏิเสธ"]
+      }
+    },
+    {
+      "id": "finance_year_cohorts",
+      "question_terms_all": ["funded_amnt", "int_rate", "2016", "2019"],
+      "question_terms_any": ["issue_d_dim.year", "แต่ละปี", "รายปี"],
+      "terminal_verdict": "approve",
+      "roles": [{
+        "id": "year_cohorts",
+        "table_terms": ["issue_d_dim"],
+        "query_terms_all": ["count_big(", "avg(", "funded_amnt", "int_rate", "group by", "year"],
+        "query_terms_forbidden": ["currency"],
+        "result_fields_any": ["avg_funded_amnt"],
+        "result_must_contain": ["2016", "2017", "2018", "2019"],
+        "minimum_result_lines": 5,
+        "query_template": "SELECT i.year, COUNT_BIG(*) AS loan_count, CAST(AVG(l.funded_amnt) AS decimal(20,6)) AS avg_funded_amnt, CAST(AVG(l.int_rate) * 100 AS decimal(12,6)) AS avg_int_rate_pct FROM loans_fact l JOIN issue_d_dim i ON l.issue_d_id = i.issue_d_id GROUP BY i.year ORDER BY i.year"
+      }],
+      "output": {
+        "role_id": "year_cohorts",
+        "required_columns": ["year", "loan_count", "avg_funded_amnt", "avg_int_rate_pct"],
+        "grounded_notes": ["avg_int_rate_pct แปลงจาก int_rate × 100; เป็นการเปรียบเทียบเชิงพรรณนา"]
+      }
+    },
+    {
+      "id": "finance_home_ownership_segments",
+      "question_terms_all": ["home_ownership", "funded_amnt", "int_rate", "dti"],
+      "question_terms_any": ["ทุก label", "ทุกกลุ่ม", "จำแนก"],
+      "terminal_verdict": "approve",
+      "roles": [{
+        "id": "home_ownership_segments",
+        "table_terms": ["home_ownership_dim"],
+        "query_terms_all": ["count_big(", "avg(", "funded_amnt", "int_rate", "dti", "group by", "home_ownership"],
+        "query_terms_forbidden": ["having", "currency"],
+        "result_fields_any": ["avg_dti"],
+        "result_must_contain": ["MORTGAGE", "RENT", "OWN", "ANY", "NONE"],
+        "minimum_result_lines": 6,
+        "query_template": "SELECT h.home_ownership, COUNT_BIG(*) AS loan_count, CAST(AVG(l.funded_amnt) AS decimal(20,6)) AS avg_funded_amnt, CAST(AVG(l.int_rate) * 100 AS decimal(12,6)) AS avg_int_rate_pct, CAST(AVG(l.dti) AS decimal(12,6)) AS avg_dti FROM loans_fact l JOIN home_ownership_dim h ON l.home_ownership_id = h.home_ownership_id GROUP BY h.home_ownership ORDER BY loan_count DESC"
+      }],
+      "output": {
+        "role_id": "home_ownership_segments",
+        "required_columns": ["home_ownership", "loan_count", "avg_funded_amnt", "avg_int_rate_pct", "avg_dti"]
+      }
+    },
+    {
+      "id": "finance_employment_extrema",
+      "question_terms_all": ["emp_length", "funded_amnt", "สูงสุด", "ต่ำสุด"],
+      "question_terms_any": ["N/A", "ไม่รวม", "จำแนก"],
+      "terminal_verdict": "approve",
+      "roles": [{
+        "id": "employment_extrema",
+        "table_terms": ["emp_length_dim"],
+        "query_terms_all": ["row_number(", "avg_funded_amnt", "highest", "lowest_overall", "lowest_non_na"],
+        "query_terms_forbidden": ["currency"],
+        "result_fields_any": ["extreme_type"],
+        "result_must_contain": ["highest", "lowest_overall", "lowest_non_na"],
+        "minimum_result_lines": 4,
+        "query_template": "WITH s AS (SELECT e.emp_length, COUNT_BIG(*) AS loan_count, AVG(l.funded_amnt) AS avg_funded_amnt, AVG(l.int_rate) * 100 AS avg_int_rate_pct, AVG(l.dti) AS avg_dti FROM loans_fact l JOIN emp_length_dim e ON l.emp_length_id=e.emp_length_id GROUP BY e.emp_length), r AS (SELECT *, ROW_NUMBER() OVER (ORDER BY avg_funded_amnt DESC, emp_length) AS highest, ROW_NUMBER() OVER (ORDER BY avg_funded_amnt ASC, emp_length) AS lowest_overall FROM s), n AS (SELECT *, ROW_NUMBER() OVER (ORDER BY avg_funded_amnt ASC, emp_length) AS lowest_non_na FROM s WHERE emp_length <> 'N/A'), extrema AS (SELECT 'highest' AS extreme_type, emp_length, loan_count, avg_funded_amnt, avg_int_rate_pct, avg_dti, 1 AS sort_order FROM r WHERE highest=1 UNION ALL SELECT 'lowest_overall', emp_length, loan_count, avg_funded_amnt, avg_int_rate_pct, avg_dti, 2 FROM r WHERE lowest_overall=1 UNION ALL SELECT 'lowest_non_na', emp_length, loan_count, avg_funded_amnt, avg_int_rate_pct, avg_dti, 3 FROM n WHERE lowest_non_na=1) SELECT extreme_type, emp_length, loan_count, CAST(avg_funded_amnt AS decimal(20,6)) AS avg_funded_amnt, CAST(avg_int_rate_pct AS decimal(12,6)) AS avg_int_rate_pct, CAST(avg_dti AS decimal(12,6)) AS avg_dti FROM extrema ORDER BY sort_order"
+      }],
+      "output": {
+        "role_id": "employment_extrema",
+        "required_columns": ["extreme_type", "emp_length", "loan_count", "avg_funded_amnt", "avg_int_rate_pct", "avg_dti"],
+        "spaced_column": "emp_length"
+      }
+    },
+    {
+      "id": "finance_dti_buckets",
+      "question_terms_all": ["dti", "<10", "10-<20", "20-<30", "30+", "NULL"],
+      "question_terms_any": ["bucket", "แบ่ง"],
+      "terminal_verdict": "approve",
+      "roles": [{
+        "id": "dti_buckets",
+        "table_terms": ["loans_fact"],
+        "query_terms_all": ["case", "dti_bucket", "count_big(", "avg(", "group by"],
+        "query_terms_forbidden": ["currency"],
+        "result_fields_any": ["dti_bucket"],
+        "result_must_contain": ["<10", "10-<20", "20-<30", "30+", "NULL"],
+        "minimum_result_lines": 6,
+        "query_template": "WITH b AS (SELECT CASE WHEN dti IS NULL THEN 'NULL' WHEN dti < 10 THEN '<10' WHEN dti < 20 THEN '10-<20' WHEN dti < 30 THEN '20-<30' ELSE '30+' END AS dti_bucket, funded_amnt, int_rate FROM loans_fact) SELECT dti_bucket, COUNT_BIG(*) AS loan_count, CAST(AVG(funded_amnt) AS decimal(20,6)) AS avg_funded_amnt, CAST(AVG(int_rate) * 100 AS decimal(12,6)) AS avg_int_rate_pct FROM b GROUP BY dti_bucket ORDER BY CASE dti_bucket WHEN '<10' THEN 1 WHEN '10-<20' THEN 2 WHEN '20-<30' THEN 3 WHEN '30+' THEN 4 ELSE 5 END"
+      }],
+      "output": {
+        "role_id": "dti_buckets",
+        "required_columns": ["dti_bucket", "loan_count", "avg_funded_amnt", "avg_int_rate_pct"],
+        "grounded_notes": ["ขอบเขต bucket เป็นไปตามคำถาม; ความแตกต่างเป็น association เชิงพรรณนา ไม่ใช่ causality"]
+      }
+    },
+    {
+      "id": "finance_fixed_income_bands",
+      "question_terms_all": ["Individual", "annual_inc", "<50000", "50000-<70000", "70000-<100000", "100000+"],
+      "question_terms_any": ["fixed income", "band", "ช่วงรายได้"],
+      "terminal_verdict": "approve",
+      "roles": [{
+        "id": "fixed_income_bands",
+        "table_terms": ["loans_fact"],
+        "query_terms_all": ["case", "income_band", "application_type = 'Individual'", "annual_inc is not null", "count_big(", "min(", "max(", "avg("],
+        "query_terms_forbidden": ["ntile", "currency"],
+        "result_fields_any": ["income_band"],
+        "result_must_contain": ["<50000", "50000-<70000", "70000-<100000", "100000+"],
+        "minimum_result_lines": 5,
+        "query_template": "WITH b AS (SELECT CASE WHEN annual_inc < 50000 THEN '<50000' WHEN annual_inc < 70000 THEN '50000-<70000' WHEN annual_inc < 100000 THEN '70000-<100000' ELSE '100000+' END AS income_band, annual_inc, funded_amnt, int_rate, dti FROM loans_fact WHERE application_type = 'Individual' AND annual_inc IS NOT NULL) SELECT income_band, COUNT_BIG(*) AS loan_count, CAST(MIN(annual_inc) AS decimal(20,2)) AS min_annual_inc, CAST(MAX(annual_inc) AS decimal(20,2)) AS max_annual_inc, CAST(AVG(funded_amnt) AS decimal(20,6)) AS avg_funded_amnt, CAST(AVG(int_rate) * 100 AS decimal(12,6)) AS avg_int_rate_pct, CAST(AVG(dti) AS decimal(12,6)) AS avg_dti FROM b GROUP BY income_band ORDER BY MIN(annual_inc)"
+      }],
+      "output": {
+        "role_id": "fixed_income_bands",
+        "required_columns": ["income_band", "loan_count", "min_annual_inc", "max_annual_inc", "avg_funded_amnt", "avg_int_rate_pct", "avg_dti"]
+      }
+    },
+    {
+      "id": "finance_funding_gap_by_year",
+      "question_terms_all": ["requested_total", "funded_total", "funding_gap", "funding_ratio"],
+      "question_terms_any": ["แต่ละปี", "2016-2019", "approval rate"],
+      "terminal_verdict": "approve",
+      "roles": [{
+        "id": "funding_gap_by_year",
+        "table_terms": ["issue_d_dim"],
+        "query_terms_all": ["sum(", "loan_amnt", "funded_amnt", "funding_gap", "funding_ratio", "group by", "year"],
+        "query_terms_forbidden": ["loan_status", "approved", "rejected"],
+        "result_fields_any": ["funding_ratio"],
+        "result_must_contain": ["2016", "2017", "2018", "2019"],
+        "minimum_result_lines": 5,
+        "query_template": "SELECT i.year, CONVERT(varchar(40), CAST(SUM(l.loan_amnt) AS decimal(38,2))) AS requested_total, CONVERT(varchar(40), CAST(SUM(l.funded_amnt) AS decimal(38,2))) AS funded_total, CONVERT(varchar(40), CAST(SUM(l.loan_amnt-l.funded_amnt) AS decimal(38,2))) AS funding_gap, CONVERT(varchar(40), CAST(SUM(l.funded_amnt)/NULLIF(SUM(l.loan_amnt),0) AS decimal(12,8))) AS funding_ratio FROM loans_fact l JOIN issue_d_dim i ON l.issue_d_id=i.issue_d_id GROUP BY i.year ORDER BY i.year"
+      }],
+      "output": {
+        "role_id": "funding_gap_by_year",
+        "required_columns": ["year", "requested_total", "funded_total", "funding_gap", "funding_ratio"],
+        "grounded_notes": ["funding_ratio ไม่ใช่ approval rate เพราะไม่มี rejected-applications denominator หรือ approval-decision field"]
+      }
+    },
+    {
+      "id": "finance_dual_risk_screen",
+      "question_terms_all": ["emp_length", "Charged Off", "สูงกว่าค่าเฉลี่ยทั้งพอร์ต"],
+      "question_terms_any": ["strict", "ทั้ง", "ทุกกลุ่มที่ผ่าน"],
+      "terminal_verdict": "approve",
+      "roles": [{
+        "id": "dual_risk_screen",
+        "table_terms": ["loan_status_dim", "emp_length_dim"],
+        "query_terms_all": ["overall_avg_int_rate", "overall_charged_off_rate", "avg_int_rate", "charged_off_rate", ">", "charged off"],
+        "query_terms_forbidden": ["approved", "rejected", "causal"],
+        "result_fields_any": ["overall_avg_int_rate_pct"],
+        "result_must_contain": ["N/A", "1 year", "2 years", "3 years", "5 years"],
+        "minimum_result_lines": 6,
+        "query_template": "WITH o AS (SELECT AVG(l.int_rate) AS overall_avg_int_rate, AVG(CASE WHEN s.loan_status='Charged Off' THEN 1.0 ELSE 0.0 END) AS overall_charged_off_rate FROM loans_fact l JOIN loan_status_dim s ON l.loan_status_id=s.loan_status_id), g AS (SELECT e.emp_length, COUNT_BIG(*) AS loan_count, AVG(l.int_rate) AS avg_int_rate, AVG(CASE WHEN s.loan_status='Charged Off' THEN 1.0 ELSE 0.0 END) AS charged_off_rate FROM loans_fact l JOIN emp_length_dim e ON l.emp_length_id=e.emp_length_id JOIN loan_status_dim s ON l.loan_status_id=s.loan_status_id GROUP BY e.emp_length) SELECT g.emp_length, g.loan_count, CAST(g.avg_int_rate*100 AS decimal(12,6)) AS avg_int_rate_pct, CAST(g.charged_off_rate*100 AS decimal(12,6)) AS charged_off_rate_pct, CAST(o.overall_avg_int_rate*100 AS decimal(12,6)) AS overall_avg_int_rate_pct, CAST(o.overall_charged_off_rate*100 AS decimal(12,6)) AS overall_charged_off_rate_pct FROM g CROSS JOIN o WHERE g.avg_int_rate > o.overall_avg_int_rate AND g.charged_off_rate > o.overall_charged_off_rate ORDER BY g.charged_off_rate DESC"
+      }],
+      "output": {
+        "role_id": "dual_risk_screen",
+        "required_columns": ["emp_length", "loan_count", "avg_int_rate_pct", "charged_off_rate_pct", "overall_avg_int_rate_pct", "overall_charged_off_rate_pct"],
+        "spaced_column": "emp_length",
+        "grounded_notes": ["เป็น descriptive segment screen ไม่ใช่ causal model หรือคำตัดสินสินเชื่อรายบุคคล"]
+      }
+    }
+  ]
+}

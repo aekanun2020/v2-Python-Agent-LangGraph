@@ -30,6 +30,8 @@ class MetricContractStatus:
 
 
 _CONTRACT_PATH = Path(__file__).with_name("executable_metric_contracts.json")
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_SKILL_CONTRACT_GLOB = "skills/*/references/answer_contracts.json"
 
 
 def _plain_number(value: float) -> str:
@@ -39,8 +41,18 @@ def _plain_number(value: float) -> str:
 
 
 def _contracts() -> tuple[dict, ...]:
-    payload = json.loads(_CONTRACT_PATH.read_text(encoding="utf-8"))
-    return tuple(payload["contracts"])
+    paths = (_CONTRACT_PATH, *_REPO_ROOT.glob(_SKILL_CONTRACT_GLOB))
+    contracts = []
+    identifiers = set()
+    for path in paths:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        for contract in payload["contracts"]:
+            identifier = contract["id"]
+            if identifier in identifiers:
+                raise ValueError(f"duplicate answer contract id: {identifier}")
+            identifiers.add(identifier)
+            contracts.append(contract)
+    return tuple(contracts)
 
 
 def select_metric_contract(question: str) -> dict | None:
@@ -275,6 +287,31 @@ def contract_claims(
             valid, _ = _role_query_valid(role, _query_text(record))
             if valid and _role_result_valid(role, record.raw_result):
                 role_records[role["id"]] = record
+    output = contract.get("output")
+    if output:
+        role_id = output["role_id"]
+        record = role_records.get(role_id)
+        if not record:
+            return ()
+        required_columns = tuple(output["required_columns"])
+        rows = _parse_result_rows(
+            record.raw_result,
+            required_columns,
+            output.get("spaced_column"),
+        )
+        if not rows or any(
+            any(column not in row for column in required_columns)
+            for row in rows
+        ):
+            return ()
+        claims = []
+        for row in rows:
+            claims.append("; ".join(
+                f"{column}={row[column]}"
+                for column in required_columns
+            ))
+        claims.extend(map(str, output.get("grounded_notes", ())))
+        return tuple(claims)
     if status.contract_id == "active_headcount_by_department":
         record = role_records["grouped_active_headcount"]
         rows = []
@@ -463,3 +500,43 @@ def contract_claims(
             verdict,
         )
     return ()
+
+
+def _parse_result_rows(
+    raw_result: str,
+    columns: tuple[str, ...],
+    spaced_column: str | None = None,
+) -> tuple[dict[str, str], ...]:
+    """Parse MCP tabular text under a contract-declared column shape."""
+    lines = [line.rstrip() for line in raw_result.splitlines() if line.strip()]
+    if len(lines) < 2:
+        return ()
+    headers = tuple(re.findall(r"\S+", lines[0]))
+    if not headers or set(headers) != set(columns):
+        return ()
+    spaced_index = (
+        columns.index(spaced_column)
+        if spaced_column in columns
+        else None
+    )
+    rows = []
+    for line in lines[1:]:
+        tokens = line.split()
+        if spaced_index is None:
+            values = tokens
+        else:
+            spaced_width = len(tokens) - len(columns) + 1
+            if spaced_width < 1:
+                continue
+            values = (
+                tokens[:spaced_index]
+                + [" ".join(tokens[
+                    spaced_index:spaced_index + spaced_width
+                ])]
+                + tokens[spaced_index + spaced_width:]
+            )
+        if len(values) != len(columns) or any(not value for value in values):
+            continue
+        by_header = dict(zip(headers, values))
+        rows.append({column: by_header[column] for column in columns})
+    return tuple(rows)

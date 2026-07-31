@@ -1,0 +1,4 @@
+interface:
+  display_name: "Finance Analytics"
+  short_description: "Grounded finance metrics and semantic contracts"
+  default_prompt: "Use $finance-analytics to answer this finance analytics question from MCP evidence."

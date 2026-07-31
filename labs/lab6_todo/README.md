@@ -33,6 +33,35 @@ python labs/lab6_todo/agent_todo.py
 
 (default task คือรายงาน HR 3 ขั้น: นับพนักงานแยกแผนก → top-3 มูลค่าโครงการ → สรุปเชิงธุรกิจ)
 
+### Finance Analytics Skill
+
+Skill อยู่ที่ `skills/finance-analytics/` และประกอบด้วย:
+
+- `SKILL.md`: workflow และ invariants
+- `references/semantics.md`: ความหมาย field และ decision boundary
+- `references/answer_contracts.json`: executable Q1–Q10 contracts
+
+เมื่อคำถาม match contract, runtime จะข้าม Agent/Observer LLM และทำ:
+
+```text
+question → Skill contract → MCP query → completeness check
+         → deterministic evidence answer
+```
+
+ตัวอย่าง:
+
+```bash
+python labs/lab6_todo/agent_todo.py \
+  "พอร์ตสินเชื่อทั้งหมดมีกี่รายการ ยอดวงเงินที่ขอ loan_amnt และยอดที่ได้รับ funding funded_amnt รวมเท่าใด และค่าเฉลี่ยต่อรายการเท่าใด"
+```
+
+ผล controlled test ก่อน Skill `2/10`; หลัง Skill สองรอบติดต่อกัน
+`10/10`, `148/148 atomic checks` และ answer hash ตรงกัน ดู
+[`finance_skill_run3_run4_report.md`](../../artifacts/finance_skill_run3_run4_report.md)
+
+ข้อจำกัด: ผลนี้ใช้ได้กับ frozen Finance suite และ contracts ที่ประกาศไว้
+คำถามที่ไม่ match ยังใช้ general Agent/Observer path
+
 ---
 
 ## อธิบายจุดสำคัญของโค้ด

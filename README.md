@@ -20,6 +20,24 @@ universal production claim. See the
 [Lab 6 run guide](labs/lab6_todo/README.md#current-phase-2d-executable-metric-contracts)
 and [final evidence report](artifacts/lab6_phase2d_executable_contract_final_report.md).
 
+### Finance Skill forward test
+
+An unseen Finance Q1–Q10 suite exposed that the generic claim gate completed
+only 2/10 strict answer contracts. The new
+[`finance-analytics` Skill](skills/finance-analytics/SKILL.md) moves lending
+semantics and executable answer contracts outside the runtime core.
+
+| Runtime | Questions | Atomic | Median |
+|---|---:|---:|---:|
+| Before Skill | 2/10 | not frozen | 97.591s |
+| Skill run 3 | 10/10 | 148/148 | 0.792s |
+| Skill run 4 | 10/10 | 148/148 | 0.730s |
+
+Matched Skill contracts execute `contract → MCP → deterministic emit`; they do
+not call the Agent or Observer LLM. Unmatched questions retain the general
+Agent path. See the
+[controlled Finance report](artifacts/finance_skill_run3_run4_report.md).
+
 ## v2 — PlannerState ที่แก้แผนจากหลักฐานจริง
 
 เวอร์ชันนี้เพิ่ม **Planner → Tool → Review → Replan → Answer Review** ให้ Lab 8
