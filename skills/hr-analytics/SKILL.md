@@ -35,3 +35,18 @@ Use executable evidence contracts before narrative interpretation.
 
 The generic runtime owns discovery, MCP execution, completeness validation,
 and fail-closed output. This Skill owns HR meanings and contracts.
+
+## Runtime Boundary
+
+- The generic runtime discovers this Skill through
+  `skills/*/references/answer_contracts.json`.
+- A matched contract executes its declared MCP query and deterministic output
+  path without Agent or Observer LLM calls.
+- An unmatched HR question remains on the general agent path; this Skill does
+  not claim universal HR coverage.
+- Domain contracts must stay in this Skill and must not be copied into
+  `labs/lab6_todo/executable_metric_contracts.json`.
+
+The frozen HR Q1–Q10 suite passed `77/77` atomic checks in two repeated runs
+with identical answer hashes. This validates the declared contracts only.
+See `artifacts/hr_skill_run4_run5_report.md`.

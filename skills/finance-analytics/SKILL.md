@@ -34,3 +34,18 @@ Use deterministic contracts before prose generation.
 
 The runtime, not this prose, owns required-column completeness and fail-closed
 emission.
+
+## Runtime Boundary
+
+- The generic runtime discovers this Skill through
+  `skills/*/references/answer_contracts.json`.
+- A matched contract executes its declared MCP query and deterministic output
+  path without Agent or Observer LLM calls.
+- An unmatched Finance question remains on the general agent path; this Skill
+  does not claim universal lending or finance coverage.
+- Domain contracts must stay in this Skill and must not be copied into
+  `labs/lab6_todo/executable_metric_contracts.json`.
+
+The frozen Finance Q1–Q10 suite passed `148/148` atomic checks in two repeated
+runs with identical answer hashes. The full smoke remained unchanged after
+the HR Skill was added. See `artifacts/finance_skill_run3_run4_report.md`.

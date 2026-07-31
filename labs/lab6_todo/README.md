@@ -1,545 +1,242 @@
-# Lab 6 — TodoWrite: วางแผน Multi-step Task
+# Lab 6 — Pure Python Agent: Observation, Evidence และ Skill Contracts
 
-> หลักสูตร **Agentic AI Development with Python (หลักสูตรที่ 2)** — Module 2.2
+Lab นี้เริ่มจาก TodoWrite แบบ Pure Python แล้วพัฒนาเป็น agent runtime ที่แยก
+การวางแผน การเรียก MCP การรับหลักฐาน และการตรวจคำตอบออกจากกันอย่างชัดเจน
+โดยไม่ใช้ LangGraph
 
-> **ตำแหน่งใน [8 Layer ของ repo](../../README.md#สถาปัตยกรรม-agent-app--agent--llm--8-layers):** Layer 3 (Skills) + เริ่มแตะ Layer 2 (Memory) — TodoWrite คือ state ของแผนงานหลายขั้นที่ไหลข้าม step
+เป้าหมายปัจจุบันไม่ใช่ทำให้ LLM “ตอบเก่งทุกเรื่อง” แต่ทำให้คำตอบใน bounded
+domain ตรวจสอบย้อนกลับได้ และไม่ปล่อย claim ที่เกินหลักฐาน
 
----
+## สิ่งที่ผู้เรียนจะเห็น
 
-## จุดประสงค์การเรียนรู้
+- `TodoState` เก็บแผนงานหลายขั้นในหน่วยความจำ
+- `ContextState` เก็บ goal, phase, action/error signatures และ budgets
+- `EvidenceState` เก็บผล MCP ที่ผ่านการยอมรับพร้อม provenance
+- Dynamic Observation ตรวจผลหลัง tool call และเลือก
+  `accept / query_more / replan / stop`
+- deterministic checks ตรวจ error, query role, grain, field, label และความครบ
+- LLM Semantic Observer ถูกเรียกเฉพาะเส้นทางทั่วไปที่มีความเสี่ยงด้านความหมาย
+- Claim Gate ประกอบคำตอบแบบ fail-closed จาก claim ที่ตรวจแล้ว
+- Skill contracts ให้ semantics และ acceptance criteria ของ bounded domain
 
-- เพิ่ม internal tools (`todo_write`, `todo_update`) เพื่อให้ agent วางแผนงานหลายขั้นก่อนเริ่มลงมือ
-- เข้าใจการจัดการ **state ใน agent** ด้วย class `TodoState` ที่เก็บ todo list ไว้ใน memory
-- เห็นว่า agent ใช้ todo เป็นแผนงาน แล้วอัปเดตสถานะ (todo → doing → done) ระหว่างทำงานจริงด้วย MCP tools
-- เพิ่ม Context State แบบ Pure Python เพื่อสังเกต loop โดยไม่เปลี่ยนการตัดสินใจของ Agent
-
----
-
-## สิ่งที่ต้องเตรียมก่อน (Prerequisites)
-
-- ทำ Setup สภาพแวดล้อมใน [Lab 1](../lab1_setup/README.md) ให้เสร็จก่อน (conda env `agentic-ai` + `.env`)
-- ต้องมี `MCP_SERVER_URL` ใน `.env` ชี้ไปยัง MCP MSSQL Server จริง
-
----
-
-## วิธีรัน
-
-```bash
-conda activate agentic-ai
-cd v2-Python-Agent-LangGraph   # รันจาก root repo (เพราะ import labs.core.*)
-
-python labs/lab6_todo/agent_todo.py
-```
-
-(default task คือรายงาน HR 3 ขั้น: นับพนักงานแยกแผนก → top-3 มูลค่าโครงการ → สรุปเชิงธุรกิจ)
-
-### Finance Analytics Skill
-
-Skill อยู่ที่ `skills/finance-analytics/` และประกอบด้วย:
-
-- `SKILL.md`: workflow และ invariants
-- `references/semantics.md`: ความหมาย field และ decision boundary
-- `references/answer_contracts.json`: executable Q1–Q10 contracts
-
-เมื่อคำถาม match contract, runtime จะข้าม Agent/Observer LLM และทำ:
+## สถาปัตยกรรมปัจจุบัน
 
 ```text
-question → Skill contract → MCP query → completeness check
-         → deterministic evidence answer
+User question
+      |
+      v
+Skill contract selector -------------------- no match
+      |                                        |
+    match                                      v
+      |                                Pure Python Agent loop
+      v                                Plan -> MCP -> Observe
+MCP query declared by contract                |
+      |                                        v
+      v                              deterministic checks
+evidence completeness                         |
+      |                               semantic risk?
+      v                                  |          |
+deterministic answer emit                 no        yes
+                                             |       |
+                                             |       v
+                                             |   LLM Observer
+                                             |       |
+                                             +-- Claim Gate
+                                                     |
+                                                     v
+                                                   Answer
 ```
 
-ตัวอย่าง:
+เส้นทางที่ match Skill contract จะไม่เรียก Agent หรือ Observer LLM:
 
-```bash
-python labs/lab6_todo/agent_todo.py \
-  "พอร์ตสินเชื่อทั้งหมดมีกี่รายการ ยอดวงเงินที่ขอ loan_amnt และยอดที่ได้รับ funding funded_amnt รวมเท่าใด และค่าเฉลี่ยต่อรายการเท่าใด"
+```text
+contract -> MCP -> completeness check -> deterministic emit
 ```
 
-ผล controlled test ก่อน Skill `2/10`; หลัง Skill สองรอบติดต่อกัน
-`10/10`, `148/148 atomic checks` และ answer hash ตรงกัน ดู
-[`finance_skill_run3_run4_report.md`](../../artifacts/finance_skill_run3_run4_report.md)
+คำถามที่ไม่ match contract จะใช้ agent loop ทั่วไปและ semantic-risk routing
+ตามเดิม
 
-ข้อจำกัด: ผลนี้ใช้ได้กับ frozen Finance suite และ contracts ที่ประกาศไว้
-คำถามที่ไม่ match ยังใช้ general Agent/Observer path
+## Contract และ Skill คืออะไร
 
-### HR Analytics Skill
+Contract คือ executable business specification ซึ่งกำหนด:
 
-HR semantics และ contracts อยู่ที่ `skills/hr-analytics/`:
+- intent family และคำที่ใช้เลือก contract
+- MCP query roles และ read-only query template
+- table, filter, grain และ field ที่ต้องพบ
+- output columns, canonical labels และ arithmetic ที่อนุญาต
+- terminal verdict, grounded notes และข้อห้ามทางความหมาย
 
-- `SKILL.md`: workflow และ HR invariants
-- `references/semantics.md`: entity/record grain และ decision boundary
-- `references/answer_contracts.json`: executable HR Q1–Q10 contracts
+Observation เป็นกลไกทั่วไป แต่ไม่รู้ business semantics ด้วยตัวเอง จึงต้องรับ
+acceptance criteria จาก Skill:
 
-ไฟล์ `labs/lab6_todo/executable_metric_contracts.json` ไม่มี domain contract
-อีกแล้ว Runtime กลางค้นทั้ง HR และ Finance ด้วย path เดียว:
+```text
+Skill          = ความรู้และข้อกำหนดของ bounded domain
+Contract       = นิยามที่ runtime ตรวจได้ว่า evidence ถูกและครบหรือไม่
+Observation    = ตัดสินผล tool เทียบกับ contract และ state ปัจจุบัน
+Claim Gate     = อนุญาตเฉพาะ claim ที่พิสูจน์แล้วออกสู่คำตอบ
+```
+
+## ตำแหน่งของ contracts
+
+Generic runtime ค้นหาไฟล์:
 
 ```text
 skills/*/references/answer_contracts.json
 ```
 
-ผล live HR สองรอบ: `10/10`, `77/77` และ answer hash ตรงกัน
-Finance non-regression หลังแยก HR: `10/10`, `148/148` และ hash เดิม ดู
-[`hr_skill_run4_run5_report.md`](../../artifacts/hr_skill_run4_run5_report.md)
+Skill ที่มีอยู่:
 
----
+- [`skills/hr-analytics`](../../skills/hr-analytics/SKILL.md)
+- [`skills/finance-analytics`](../../skills/finance-analytics/SKILL.md)
 
-## อธิบายจุดสำคัญของโค้ด
+ไฟล์ [`executable_metric_contracts.json`](executable_metric_contracts.json)
+ตั้งใจให้ไม่มี domain contract (`"contracts": []`) เพื่อยืนยันว่า runtime core
+ไม่ผูกกับ HR หรือ Finance
 
-ไฟล์: `labs/lab6_todo/agent_todo.py`
+## วิธีรัน
 
-### `TodoState` — state ของ todo list (in-memory)
-
-```python
-class TodoState:
-    def write(self, items: list[str]) -> str: ...    # สร้าง todo ใหม่ทั้งหมด
-    def update(self, index: int, status: str) -> str: ...  # เปลี่ยนสถานะทีละข้อ
-    def render(self) -> str: ...                     # แสดง [ ] / [~] / [x] ต่อ item
-```
-
-`render()` คืน string เช่น `"[x] 1. นับพนักงาน\n[~] 2. top-3\n[ ] 3. สรุป"` — LLM อ่านและรู้สถานะปัจจุบันของแผนงาน
-
-> จุดที่ควรเปิดอ่าน: method `update()` — มี logic รองรับทั้ง 1-based index (ตาม render) และ 0-based (ที่ LLM บางครั้งส่งมาผิด) เพื่อความทนทาน
-
-### `build_tools(registry)` — รวม todo tools + MCP tools
-
-```python
-todo_tools = [
-    {tool: "todo_write", ...},   # สร้าง todo list
-    {tool: "todo_update", ...},  # อัปเดตสถานะ
-]
-return todo_tools + registry.openai_tools   # รวมกับ MCP tools
-```
-
-agent เห็น tools ทั้งหมดรวมกัน — ตัดสินใจว่าจะใช้ todo tool หรือ MCP tool ตามความเหมาะสม
-
-### `run(question, registry, max_steps=30)` — agent loop + todo dispatch
-
-```python
-if name == "todo_write":
-    result = todo.write(args.get("items", []))
-elif name == "todo_update":
-    result = todo.update(args.get("index"), args.get("status"))
-else:
-    result = registry.dispatch(name, args)   # MCP tool
-```
-
-todo tools ถูก handle ใน Python โดยตรง (ไม่ผ่าน MCP) ส่วน tools อื่นส่งไป `registry.dispatch()`
-
-### System prompt — บังคับ planning ก่อน action
-
-```python
-SYSTEM = (
-    "...ถ้างานมี 3 ขั้นขึ้นไป ให้เรียก todo_write เขียนแผนก่อนเริ่มลงมือ "
-    "แล้วทำทีละข้อ เรียก todo_update เปลี่ยนสถานะเป็น 'doing' ก่อนทำ และ 'done' เมื่อเสร็จ..."
-)
-```
-
-pattern นี้คือ **plan-then-execute** ที่ให้ agent โปร่งใสและตรวจสอบได้
-
-## Context State Phase 1
-
-ไฟล์ `context_state.py` เพิ่ม control state ขนาดเล็กโดยไม่ใช้ LangGraph, LLM,
-embedding, relevance scoring หรือ rolling summary:
-
-```text
-ContextState
-├─ original_goal          # immutable anchor
-├─ phase / active_step
-├─ completed_steps
-├─ accepted_evidence_refs # เก็บ reference ไม่ยัดผล tool ซ้ำ
-├─ recent action+result signatures
-├─ recent error signatures
-└─ steps/tool/error budgets
-```
-
-ตรวจ drift แบบ deterministic 3 กรณี:
-
-1. tool + arguments + result เดิมซ้ำ
-2. exception type + message เดิมซ้ำ
-3. action kind ไม่ตรงกับ phase ปัจจุบัน
-
-การตรวจใช้ SHA-256 จาก canonical JSON จึงไม่ถือว่า tool ชื่อเดียวกันแต่ arguments
-หรือผลต่างกันเป็น loop และไม่ใช้ keyword/embedding ที่อาจไม่แม่นกับภาษาไทย
-
-Phase นี้เป็น **observe-only**: เมื่อพบ drift จะแสดง `[CONTEXT ALERT]` แต่ไม่ block
-tool, ไม่ replan และไม่เปลี่ยนคำตอบ เพื่อรักษาพฤติกรรมของ original agent ไว้เป็น baseline
-
-ทดสอบโดยไม่เรียก OpenRouter หรือ MCP:
-
-```bash
-python -m unittest -v tests.test_lab6_context_state
-```
-
-สิ่งที่ยังไม่ทำใน Phase 1: persistence, cold storage จริง, context compaction,
-rolling summary, semantic drift และ recovery policy
-
-ผล live baseline 10 คำถามแสดงว่า Phase 1 ยังไม่เพิ่ม semantic accuracy:
-
-- [Ground-truth contract](../../artifacts/lab6_context_baseline_ground_truth.md)
-- [Experiment report](../../artifacts/lab6_context_baseline_report.md)
-- `artifacts/lab6_context_baseline_runs.json` เก็บ raw outputs และ metrics
-
-## Evidence State + Final Semantic Observer (Phase 2)
-
-Phase 2 แยก state เป็นสองส่วน:
-
-```text
-ControlState                    EvidenceState
-├─ goal / phase / steps         ├─ evidence id
-├─ action/error signatures      ├─ tool + arguments
-└─ budgets                      ├─ raw result + stable hash
-                                └─ bounded evidence pack
-```
-
-เมื่อ Agent เสนอคำตอบ Final Observer จะตรวจ question + accepted evidence +
-proposed answer แล้วคืน structured verdict:
-
-```text
-approve | rewrite | query_more | refuse_decision
-```
-
-`rewrite` และ `refuse_decision` ถูกตรวจซ้ำอีกหนึ่งรอบก่อนแสดงผล หากยังไม่ผ่าน
-ระบบจะ fail closed แทนการปล่อยคำตอบที่ตรวจไม่ผ่าน ส่วน MCP มี hard budget 12 calls
-ต่อ task เพื่อไม่ให้ query วนโดยไม่มีขอบเขต
-
-รัน Phase 2 (default):
-
-```bash
-python labs/lab6_todo/agent_todo.py \
-  "นับพนักงานที่ยังปฏิบัติงานแยกตามแผนก"
-```
-
-รัน baseline โดยปิด Final Observer:
-
-```bash
-python labs/lab6_todo/agent_todo.py --semantic-observer off \
-  "นับพนักงานที่ยังปฏิบัติงานแยกตามแผนก"
-```
-
-ผลทดลองสด 20 runs:
-
-- [Phase 2 experiment report](../../artifacts/lab6_semantic_phase2_report.md)
-- `artifacts/lab6_semantic_phase2_runs.json` เก็บ raw outputs และ metrics
-
-Phase 2 เพิ่ม strict grounded answer จาก 0/10 เป็น 4/10 ใน sample นี้ แต่มี latency
-เพิ่มและยังมี failure ด้าน data grain จึงเป็น experimental branch ไม่ใช่
-production-ready implementation
-
-## Claim Ledger + Dynamic Observation (Phase 2B)
-
-Phase 2B เพิ่มส่วนกลางหลัง MCP call:
-
-```text
-Tool Result
-   ↓
-EvidenceFact(subject, predicate, value, unit, grain, evidence_id)
-   ↓
-ClaimLedger(required → proved | contradicted)
-   ↓
-DynamicObservation
-  accept | query_more | replan | stop
-```
-
-Claim Planner สร้าง evidence requirements จากคำถามก่อนเริ่มทำงาน และตรวจว่า
-coverage/rate ใช้ numerator กับ denominator grain เดียวกัน หากมีเพียง record count
-แต่ต้องการ entity coverage จะขอ `COUNT(DISTINCT entity_id)` เพิ่ม
-
-Dynamic Observer มี timeout 45 วินาทีและ budget สูงสุด 6 LLM observations ต่อ task
-เพื่อป้องกัน latency แบบไร้ขอบเขต หาก reviewer ล้มเหลว raw evidence ยังคงถูกเก็บและ
-Agent ทำงานต่อได้ ส่วน Final Observer จะได้รับทั้ง Claim Ledger, structured facts และ
-raw evidence
-
-ปิดเฉพาะ Phase 2B เพื่อเปรียบเทียบกับ Phase 2A:
-
-```bash
-python labs/lab6_todo/agent_todo.py --dynamic-observer off \
-  "คำถาม"
-```
-
-สถานะและผล live proof ระหว่างพัฒนา:
-
-- [Phase 2B progress report](../../artifacts/lab6_phase2b_progress_report.md)
-- [Phase 2A vs Phase 2B: first 10-question live run](../../artifacts/lab6_phase2a_phase2b_report.md)
-- `artifacts/lab6_phase2a_phase2b_runs.json` contains the raw live outputs and timings
-- [Phase 2 failure-case rerun](../../artifacts/lab6_phase2_failure_rerun_report.md)
-- `artifacts/lab6_phase2a_phase2b_failure_rerun.json` contains the repeated raw runs
-- [Phase 2B completed architecture](../../artifacts/lab6_phase2b_architecture_complete.md)
-
-Phase 2B now makes Python—not the reviewer LLM—the authority for claim
-completion, structured `query_more`, tool termination, budgets, and bounded
-rewrite. This is architecture-complete but still requires a new live benchmark
-before it can be considered better than Phase 2A.
-
-- [Phase 2B architecture live completion report](../../artifacts/lab6_phase2b_completion_live_report.md)
-
-The live report supersedes the “architecture-complete” wording above:
-termination and safety are bounded, but provider-dependent planning/rechecking
-still prevents operational completion. Phase 2B remains experimental.
-
-- [Full 10-question rerun at commit 4518267](../../artifacts/lab6_phase2_full_rerun_4518267_report.md)
-- `artifacts/lab6_phase2_full_rerun_4518267.json` contains all 20 raw runs
-
-The full rerun scored Phase 2A at 5/10 and Phase 2B at 0/10 under strict
-grounded grading. Phase 2B must not be merged in its current form.
-
-## Phase 2C: Python-first Observation
-
-Phase 2C replaces the rejected Phase 2B critical path:
-
-```text
-Agent calls tool
-→ Python checks error / empty / fields / numbers / risk
-→ LLM Observer only for semantic-risk
-→ answer
-```
-
-There is no mandatory Claim Planner, no LLM after every tool result, and no
-LLM post-rewrite recheck. Low-risk results and answers stay on the Python path.
-
-The Agent and semantic Observer can use different OpenRouter models:
-
-```env
-OPENROUTER_MODEL=qwen/qwen3.5-35b-a3b
-OBSERVER_MODEL=openai/gpt-oss-120b
-```
-
-`OPENROUTER_MODEL` performs planning, tool selection, query construction, and
-answer drafting. `OBSERVER_MODEL` is called only for semantic-risk tool results
-and semantic-risk final answers. If `OBSERVER_MODEL` is omitted, it falls back
-to `OPENROUTER_MODEL` for backward compatibility.
-
-- [Phase 2C Python-first report and live smoke](../../artifacts/lab6_phase2c_python_first_report.md)
-- `artifacts/lab6_phase2c_python_first_smoke.json` contains the three raw runs
-- [Phase 2A vs Phase 2C full 10-question report](../../artifacts/lab6_phase2a_phase2c_full_10_report.md)
-- `artifacts/lab6_phase2a_phase2c_full_10.json` contains all 20 raw runs
-
-The first full run scored Phase 2A at 4/10 and Phase 2C at 5/10 under strict
-grounded grading. Phase 2C is a recovery from Phase 2B, not yet a merge-ready
-replacement.
-
-- [Phase 2C two-run stability report](../../artifacts/lab6_phase2c_stability_report.md)
-- `artifacts/lab6_phase2a_phase2c_full_10_rerun2.json` contains the second 20-run output
-
-Phase 2C scored 5/10 in both full runs, but only Q1 passed in both. Eight of ten
-questions changed pass/fail status, so the stable aggregate score must not be
-interpreted as deterministic behavior.
-
-- [Qwen Agent + GPT-OSS Observer live smoke](../../artifacts/lab6_phase2c_gptoss_observer_smoke_report.md)
-- `artifacts/lab6_phase2c_gptoss_observer_smoke.json` contains the raw runs
-
-The split-model wiring was verified live, but this smoke did not pass the
-quality gate: Q4 passed while Q1 and Q10 retained unsupported business
-interpretation after final routing/rewrite. A full 10-question run was
-intentionally not performed.
-
-## Phase 2D: Typed Claim Gate
-
-Phase 2D removes LLM rewrite from the Phase 2C safety path:
-
-```text
-Agent draft
-→ semantic-risk routing
-→ Observer proposes atomic supported claims
-→ Python classifies and verifies each claim
-→ allowlist-only composition
-→ insufficient / refuse decision when required
-```
-
-The Python gate currently handles numeric post-conditions, including bounded
-ratio/percentage arithmetic, and always rejects recommendation claims unless a
-separate policy contract is introduced. Qualitative interpretation is routed
-to the semantic Observer. Empty drafts are also fail-closed.
-
-- [Typed Claim Gate live smoke report](../../artifacts/lab6_phase2d_claim_gate_smoke_report.md)
-- `artifacts/lab6_phase2c_claim_gate_smoke.json` contains Q1/Q4/Q10 raw runs
-- `artifacts/lab6_phase2c_claim_gate_q1_rerun.json` contains the empty-answer fix proof
-
-This is a safety improvement, not yet a statistical quality claim. The three
-smoke cases verify the intended failure modes, but a repeated, larger
-evaluation suite is still required.
-
-## Deterministic frozen replay
-
-Before expanding the architecture further, the Q1/Q4/Q10 before/after answers
-were frozen and graded with an atomic Python rubric:
-
-```bash
-python scripts/grade_lab6_frozen_replay.py \
-  --fixture tests/fixtures/lab6_claim_gate_frozen.json \
-  --output artifacts/lab6_claim_gate_frozen_replay.json \
-  --repeat 20
-```
-
-All 20 repetitions produced the same SHA-256 result. With the distinct-grain
-item added, gate-off passed 16/20 atomic items (0/3 whole questions), while
-gate-on passed 20/20 atomic items (3/3 whole questions).
-
-- [Frozen replay report](../../artifacts/lab6_claim_gate_frozen_replay_report.md)
-- `artifacts/lab6_claim_gate_frozen_replay.json` contains every atomic result
-
-This measures replay determinism and the local gate effect only. It does not
-establish live statistical superiority or diagnose the cause of prior
-generation variance.
-
-## Phase 2A vs Phase 2D live comparison
-
-A paired 10-question live run was performed with the same Agent, Observer, and
-MCP endpoint:
-
-- [Live comparison report](../../artifacts/lab6_phase2a_phase2d_live_10_report.md)
-- `artifacts/lab6_phase2a_phase2d_live_10.json` contains all 20 raw runs
-
-The result does not establish Phase 2D superiority. Phase 2D was faster on
-median and improved several semantic traps, but produced a critical Q1
-false-support (`0` instead of the ground-truth `25`) and hit its whole-run
-deadline on Q10. The frozen replay result must therefore not be generalized to
-live Agent behavior.
-
-The versioned Q1–Q10 metric/grain contracts are in
-`labs/lab6_todo/hr_metric_contracts.json`. A 20-repeat deterministic replay of
-the live artifact scored Phase 2A at 45/77 atomic items (4/10 questions) and
-Phase 2D at 61/77 atomic items (5/10 questions). See
-`artifacts/lab6_phase2a_phase2d_live_10_atomic.json`.
-
-## Evidence admission contracts
-
-Phase 2D now validates tool evidence before adding it to accepted evidence:
-
-- MSSQL Unicode string filters must use `N'…'`;
-- coverage counts must prove distinct entity grain;
-- retry/query-more/error payloads are not admitted merely because the tool
-  call returned successfully.
-
-A targeted Q1/Q4 live rerun passed 17/17 deterministic atomic items and 2/2
-whole questions. Q4 logged a rejected non-distinct query and recovered with a
-distinct-employee query.
-
-- [Evidence-contract smoke report](../../artifacts/lab6_phase2d_evidence_contract_smoke_report.md)
-- `artifacts/lab6_phase2d_evidence_contract_smoke.json` contains raw live runs
-- `artifacts/lab6_phase2d_evidence_contract_smoke_atomic.json` contains the
-  20-repeat deterministic grade
-
-Five subsequent Q1/Q4 live repeats were not stable (whole-question outcomes:
-1/2, 2/2, 0/2, 1/2, 1/2). See the
-[targeted stability audit](../../artifacts/lab6_phase2d_targeted_stability_report.md).
-The full suite was therefore not rerun. Parser hardening, claim-set grain
-preservation, and deterministic coverage derivation were added, but require
-another repeated live audit.
-
-## Current Phase 2D: executable metric contracts
-
-The earlier unstable result above has now been superseded. The current Pure
-Python runtime uses versioned executable contracts for intents whose metric,
-grain, filter, output fields, arithmetic, and decision boundary can be stated
-exactly:
-
-```text
-Question
-→ select declarative contract
-→ execute missing MCP evidence roles
-→ validate query semantics + result shape
-→ deterministic claim composition
-→ approve | refuse_decision
-```
-
-Questions without a complete executable contract still use the normal
-Agent → Tool → Python Observation → semantic-risk Observer → typed claim gate
-path. The runtime never reads the frozen ground-truth values to answer a live
-question; `hr_metric_contracts.json` is evaluation data, while
-`executable_metric_contracts.json` contains query and verification rules.
-
-### Run the current Agent
+รันจาก root repository เสมอ:
 
 ```bash
 conda activate agentic-ai
 cd v2-Python-Agent-LangGraph
 
 python labs/lab6_todo/agent_todo.py \
-  "พนักงานที่มีสถานะ `ปฏิบัติงาน` มีทั้งหมดกี่คน และแยกตามค่า `department` ในฐานข้อมูลอย่างไร"
+  "นับพนักงานที่ยังปฏิบัติงานแยกตามแผนก"
 ```
 
-Required `.env` values:
+ตัวอย่างคำถาม Finance:
+
+```bash
+python labs/lab6_todo/agent_todo.py \
+  "สรุปจำนวนรายการและยอด loan_amnt กับ funded_amnt รวมทั้งพอร์ต"
+```
+
+ถ้าไม่ส่งคำถาม โปรแกรมจะเปิด interactive prompt:
+
+```bash
+python labs/lab6_todo/agent_todo.py
+```
+
+ตัวเลือกสำหรับการทดลองเปรียบเทียบ:
+
+```bash
+# ปิด LLM Final Semantic Observer
+python labs/lab6_todo/agent_todo.py --semantic-observer off "คำถาม"
+
+# ปิด Dynamic Observation/Claim Ledger เพื่อดู baseline path
+python labs/lab6_todo/agent_todo.py --dynamic-observer off "คำถาม"
+
+# กำหนด hard wall-clock deadline
+python labs/lab6_todo/agent_todo.py --max-run-seconds 120 "คำถาม"
+```
+
+## Environment
+
+คัดลอก `.env.example` เป็น `.env` และใส่ค่าจริง:
 
 ```dotenv
 OPENROUTER_API_KEY=your-key
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 OPENROUTER_MODEL=qwen/qwen3.5-35b-a3b
 OBSERVER_MODEL=openai/gpt-oss-120b
-MCP_SERVER_URL=https://your-mcp.example/mcp
+MCP_SERVER_URL=https://your-mcp-server.example/mcp
 ```
 
-### Reproduce the comparison
+`OPENROUTER_MODEL` ใช้กับ planning, tool selection และคำตอบบน general path
+ส่วน `OBSERVER_MODEL` ใช้ตรวจความหมายเมื่อ risk router เห็นว่าจำเป็น หากไม่ตั้ง
+`OBSERVER_MODEL` ระบบจะใช้ `OPENROUTER_MODEL`
 
-Enhanced:
+คำถามที่ match contract ไม่จำเป็นต้องเรียกสองโมเดลนี้ แต่โปรแกรมยังต้องมี
+OpenRouter key สำหรับ general fallback path
 
-```bash
-python scripts/compare_lab6_phase2a_phase2b.py \
-  --output artifacts/my_phase2d_run.json \
-  --timeout 180 \
-  --max-run-seconds 150 \
-  --variant phase2c_python_first
-```
+## ไฟล์สำคัญ
 
-Baseline:
+| ไฟล์ | หน้าที่ |
+|---|---|
+| `agent_todo.py` | entry point, TodoWrite, agent loop และ contract fast path |
+| `context_state.py` | control state และ runtime budgets |
+| `evidence_state.py` | evidence/observation types และ provenance |
+| `evidence_contract.py` | ค้นหา Skill contracts, ตรวจ evidence และประกอบ contract claims |
+| `dynamic_observer.py` | post-tool observation และ claim ledger |
+| `risk_router.py` | deterministic observation และ semantic-risk routing |
+| `semantic_observer.py` | LLM observer สำหรับความเสี่ยงด้านความหมาย |
+| `claim_gate.py` | verify-then-emit แบบ fail-closed |
+| `phase2_runtime.py` | MCP/LLM budgets และ hard deadline |
 
-```bash
-python scripts/compare_lab6_phase2a_phase2b.py \
-  --output artifacts/my_phase2a_run.json \
-  --timeout 180 \
-  --max-run-seconds 150 \
-  --variant phase2a_final_only
-```
+## ผลที่พิสูจน์แล้ว
 
-Deterministic atomic grade:
+### HR Skill
 
-```bash
-python scripts/grade_lab6_frozen_replay.py \
-  --fixture artifacts/my_phase2d_run.json \
-  --run-artifact \
-  --output artifacts/my_phase2d_run_atomic.json \
-  --repeat 20
-```
-
-### Controlled result
-
-| Variant / run | Atomic | Whole questions | Total time |
+| Run | Questions | Atomic items | Median |
 |---|---:|---:|---:|
-| Phase 2A baseline | 57/77 | 3/10 | 638.960s |
-| Phase 2D run 5 | 77/77 | 10/10 | 176.945s |
-| Phase 2D run 6 | 77/77 | 10/10 | 169.515s |
+| HR run 4 | 10/10 | 77/77 | 0.710s |
+| HR run 5 | 10/10 | 77/77 | 0.706s |
 
-The two enhanced full runs produced the same deterministic grading hash after
-20 replays. Therefore, within the frozen Q1–Q10 suite and controlled TestDB
-configuration, the enhanced runtime is supported as better than the Phase 2A
-baseline. This is not a universal or production-readiness claim.
+สองรอบได้ answer hash เดียวกัน:
+`af20423f90d8b38b2469691032831cf67efa7f2da81868056ed391b015ed51f9`
 
-- [Final controlled comparison](../../artifacts/lab6_phase2d_executable_contract_final_report.md)
-- `artifacts/lab6_phase2d_final_comparison_summary.json`
-- raw baseline and enhanced run 5/run 6 JSON artifacts are versioned beside
-  the report
+ดู [HR report](../../artifacts/hr_skill_run4_run5_report.md)
 
----
+### Finance Skill
 
-## ผลลัพธ์ที่คาดหวัง
+| Run | Questions | Atomic items | Median |
+|---|---:|---:|---:|
+| ก่อน Finance Skill | 2/10 | — | 97.591s |
+| Finance run 3 | 10/10 | 148/148 | 0.792s |
+| Finance run 4 | 10/10 | 148/148 | 0.730s |
 
+หลังเพิ่ม HR Skill แล้ว Finance non-regression ยังคง `10/10`, `148/148`
+และได้ answer hash เดิม
+
+ดู [Finance report](../../artifacts/finance_skill_run3_run4_report.md)
+
+## สิ่งที่ผลทดลองยังไม่พิสูจน์
+
+- ไม่ได้รับรองคำถาม HR/Finance ทุกแบบ
+- ไม่ได้รับรองคำถามที่อยู่นอก intent families ใน contracts
+- keyword contract selection ยังไม่ใช่ semantic router ทั่วไป
+- ไม่ได้รับรอง causal inference หรือการตัดสินใจรายบุคคล
+- การผ่าน frozen suite ไม่เท่ากับ production readiness
+- general fallback path ยังมีความไม่แน่นอนจาก LLM และควรประเมินแยก
+
+หลักที่ใช้ตีความผลคือ:
+
+> Observation อย่างเดียวจำเป็นแต่ไม่เพียงพอ
+> bounded-domain Skill ให้ semantics, contract ให้เกณฑ์ที่ตรวจได้ และ Claim
+> Gate บังคับไม่ให้คำตอบเกิน accepted evidence
+
+## ทดสอบ
+
+```bash
+python -m pytest tests --ignore=tests/test_lab8_planner.py -q
 ```
-[MCP] ค้นพบ 5 tools
 
-[user] ช่วยทำรายงาน HR: 1) นับพนักงาน... 2) หาพนักงาน... 3) สรุป...
-[step 1] TODO_WRITE
-[ ] 1. นับพนักงานที่ปฏิบัติงานแยกตามแผนก
-[ ] 2. หาพนักงานที่มีมูลค่าโครงการรวมสูงสุด 3 อันดับแรก
-[ ] 3. สรุปข้อค้นพบเชิงธุรกิจ
-[step 2] TODO_UPDATE -> {'index': 1, 'status': 'doing'}
-...
-[step N] TODO_UPDATE -> {'index': 3, 'status': 'done'}
-------------------------------------------------------------
-[answer]
-สรุปข้อค้นพบ: แผนก IT มีพนักงานมากที่สุด...
-------------------------------------------------------------
-[todo สุดท้าย]
-[x] 1. นับพนักงานที่ปฏิบัติงานแยกตามแผนก
-[x] 2. หาพนักงานที่มีมูลค่าโครงการรวมสูงสุด 3 อันดับแรก
-[x] 3. สรุปข้อค้นพบเชิงธุรกิจ
+สถานะที่ merge เข้า `main`: `76 passed`
+
+ไฟล์ทดสอบสำคัญ:
+
+- `tests/test_lab6_phase2b.py`
+- `tests/test_lab6_atomic_grader.py`
+- `tests/test_hr_skill_contracts.py`
+- `tests/test_finance_skill_contracts.py`
+
+## ประวัติและจุดย้อนกลับ
+
+เอกสารผลทดลอง Phase 1–2D เดิมยังอยู่ใน `artifacts/` เพื่อให้ตรวจย้อนกลับได้
+แต่ไม่ใช่คำอธิบาย runtime ปัจจุบัน
+
+- `archive/original-49f6f10` — original baseline ก่อนงาน Observation/Evidence/Skill
+- `milestone/skill-contracts-7e24c20` — HR/Finance Skill contracts ที่ merge เข้า `main`
+
+ทดลองเปิด baseline โดยไม่แก้ `main`:
+
+```bash
+git switch -c investigate-original archive/original-49f6f10
 ```
 
-ดู screenshot ตัวอย่าง: `../../screenshots/labs/lab6_todowrite.png`
+กลับสู่ปัจจุบัน:
+
+```bash
+git switch main
+```

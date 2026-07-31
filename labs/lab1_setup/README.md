@@ -57,7 +57,8 @@ cp .env.example .env
 |--------|-----|----------|
 | `OPENROUTER_API_KEY` | `sk-or-v1-...` | ขอคีย์ได้ที่ https://openrouter.ai/keys |
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | endpoint มาตรฐาน OpenRouter |
-| `OPENROUTER_MODEL` | `anthropic/claude-sonnet-4.6` | โมเดลที่ทดสอบแล้ว |
+| `OPENROUTER_MODEL` | `anthropic/claude-sonnet-4.6` | default ของ code; controlled Lab 6 tests ใช้ `qwen/qwen3.5-35b-a3b` |
+| `OBSERVER_MODEL` | `openai/gpt-oss-120b` | optional model สำหรับ semantic observer ใน Lab 6; ถ้าไม่ตั้งจะใช้ `OPENROUTER_MODEL` |
 | `MCP_SERVER_URL` | `https://<subdomain>.ngrok-free.app/mcp` | URL ของ MCP MSSQL Server จริง (expose ผ่าน ngrok) |
 
 > ⚠️ ไฟล์ `.env` ถูก `.gitignore` ไว้แล้ว — **ห้าม commit คีย์จริงขึ้น repo เด็ดขาด**

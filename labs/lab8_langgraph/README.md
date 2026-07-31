@@ -2,6 +2,11 @@
 
 > หลักสูตร **Agentic AI Development with Python (หลักสูตรที่ 2)** — Module 3.1
 
+> **ขอบเขตปัจจุบัน:** Lab 8 เป็นบทเรียนเปรียบเทียบ framework และยังรันได้ตามเดิม
+> แต่สายพัฒนา Observation/Evidence/Skill contracts ล่าสุดอยู่ใน
+> [Lab 6 Pure Python Agent](../lab6_todo/README.md) ไม่ได้ใช้ LangGraph
+> ใน critical path
+
 > **ตำแหน่งใน [8 Layer ของ repo](../../README.md#สถาปัตยกรรม-agent-app--agent--llm--8-layers):** รวม Layer 2 (Memory ผ่าน Checkpointer) + 3 (Tools) + 5 (Reasoning Loop เป็น graph) เข้าด้วยกัน — จุด pivot ที่ framework ห่อหลาย layer ให้
 
 ---

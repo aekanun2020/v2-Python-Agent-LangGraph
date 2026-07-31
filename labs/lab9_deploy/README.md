@@ -200,14 +200,14 @@ course outline ข้อ 3.3 กำหนดให้ deploy ด้วย **Dock
 | 5. Reasoning Loop | | | ● | ● | ● | ● | ● | ● | ◐ |
 | 6. Sandbox + Execution | | | ◐* | | | | | | ◐* |
 | 7. Gateway + Scheduler | | | | | | | | | ◐ |
-| 8. Safety Layer | | | ◐* | | | | | | ◐ |
+| 8. Safety Layer | | | ◐* | | | ◐ | | | ◐ |
 | (พื้นฐาน) Env check | ● | | | | | | | | |
 | (พื้นฐาน) Model select | | ● | | | | | | | |
 
 ### สรุปสถานะ layer
 - ✅ **ครบจริง 4 layer:** 1 (Instructions), 2 (Memory), 3 (Tools+Skills), 5 (Reasoning Loop)
-- 🟡 **มีบางส่วน 1 layer:** 7 (Gateway) — มี HTTP gateway (`/chat`, `/health`) แต่ยังไม่มี Telegram/Slack และไม่มี Scheduler/Cron
-- ❌ **ยังไม่มีจริง 3 layer:** 4 (Hooks), 6 (Sandbox/Execution ตามนิยาม), 8 (Safety)
+- 🟡 **มีบางส่วน 2 layer:** 7 (Gateway) — มี HTTP gateway แต่ยังไม่มี Scheduler; 8 (Safety) — Lab 6 มี evidence admission, semantic-risk routing และ fail-closed Claim Gate
+- ❌ **ยังไม่มีจริง 2 layer:** 4 (Hooks), 6 (Sandbox/Execution ตามนิยาม)
 
 ### Gap ที่เหลือ (`◐*` = มีร่องรอยแต่ไม่ใช่ระบบจริง)
 - **Layer 4 — Hooks:** L7 (inject note) / L9 (log tool calls) เป็นพฤติกรรมแบบ hook ที่ hardcode ไว้ในลูป
@@ -215,8 +215,9 @@ course outline ข้อ 3.3 กำหนดให้ deploy ด้วย **Dock
 - **Layer 6 — Sandbox/Execution:** L9 Docker = containerize ตัว agent service เองเพื่อ deploy
   (ไม่ใช่ sandbox ที่ agent รันโค้ดที่ LLM สร้างขึ้น); L3 `eval()` = เดโมเครื่องคิดเลข
   — ไม่ใช่ code-execution sandbox จริง
-- **Layer 8 — Safety:** L9 มีแค่ retry/backoff + error handling + logging (robustness)
-  ยังไม่มี permission gating, audit trail, หรือ self-check ก่อนรัน query
+- **Layer 8 — Safety:** L6 มี evidence provenance, deterministic contract checks
+  และ fail-closed Claim Gate ส่วน L9 มี retry/backoff + logging แต่ทั้ง repo
+  ยังไม่มี permission gating และ environment containment เต็มระบบ
 
 ### ทำไม Lab 9 ถึง "แตะหลาย layer แต่ไม่เต็ม"
 Lab 9 เป็น **Capstone / Deploy** — หน้าที่คือ "รวมร่าง Lab ก่อนหน้าแล้ว deploy"

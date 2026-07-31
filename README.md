@@ -1,86 +1,52 @@
 # v2-Python-Agent-LangGraph
 
-## Latest: Pure Python Dynamic Observation + typed claims
+## สถานะปัจจุบัน: Pure Python Agent + bounded-domain Skills
 
-The current Lab 6 implementation is a Pure Python Agent runtime. It uses
-deterministic MCP evidence admission, executable metric/grain contracts,
-semantic-risk routing, and fail-closed typed claim composition.
-
-Controlled Q1–Q10 HR results with the same Qwen Agent, GPT-OSS Observer, and
-MCP endpoint:
-
-| Runtime | Atomic score | Whole questions | Total time |
-|---|---:|---:|---:|
-| Phase 2A baseline | 57/77 | 3/10 | 638.960s |
-| Current enhanced run 5 | 77/77 | 10/10 | 176.945s |
-| Current enhanced run 6 | 77/77 | 10/10 | 169.515s |
-
-This supports superiority only within the frozen controlled suite—not a
-universal production claim. See the
-[Lab 6 run guide](labs/lab6_todo/README.md#current-phase-2d-executable-metric-contracts)
-and [final evidence report](artifacts/lab6_phase2d_executable_contract_final_report.md).
-
-### Finance Skill forward test
-
-An unseen Finance Q1–Q10 suite exposed that the generic claim gate completed
-only 2/10 strict answer contracts. The new
-[`finance-analytics` Skill](skills/finance-analytics/SKILL.md) moves lending
-semantics and executable answer contracts outside the runtime core.
-
-| Runtime | Questions | Atomic | Median |
-|---|---:|---:|---:|
-| Before Skill | 2/10 | not frozen | 97.591s |
-| Skill run 3 | 10/10 | 148/148 | 0.792s |
-| Skill run 4 | 10/10 | 148/148 | 0.730s |
-
-Matched Skill contracts execute `contract → MCP → deterministic emit`; they do
-not call the Agent or Observer LLM. Unmatched questions retain the general
-Agent path. See the
-[controlled Finance report](artifacts/finance_skill_run3_run4_report.md).
-
-### HR Skill isolation
-
-HR domain contracts and semantics now live in
-[`skills/hr-analytics`](skills/hr-analytics/SKILL.md), not in the generic
-runtime contract file. The frozen HR Q1–Q10 suite is fully contract matched.
-
-| Run | Questions | Atomic | Median |
-|---|---:|---:|---:|
-| HR Skill run 4 | 10/10 | 77/77 | 0.710s |
-| HR Skill run 5 | 10/10 | 77/77 | 0.706s |
-
-Both HR runs produced the same answer hash. A full Finance non-regression smoke
-remained `10/10`, `148/148`, with the same Finance answer hash as before HR
-isolation. See the
-[HR Skill isolation report](artifacts/hr_skill_run4_run5_report.md).
-
-## v2 — PlannerState ที่แก้แผนจากหลักฐานจริง
-
-เวอร์ชันนี้เพิ่ม **Planner → Tool → Review → Replan → Answer Review** ให้ Lab 8
-เพื่อให้ Agent ไม่ได้เพียงวนเรียก tool แต่มีแผนที่ตรวจสอบและแก้ไขได้ระหว่างทำงาน:
-
-- เก็บ `goal`, `steps`, `status`, `evidence`, `assumptions` และ `revision` ใน `PlannerState`
-- Reviewer อ่านผล MCP tool จริงแล้วเปลี่ยนสถานะหรือแก้ลำดับแผน
-- คำตอบร่างต้องผ่าน Answer Review; ถ้าหลักฐานไม่ครบ Agent จะได้รับ feedback และทำงานต่อ
-- รองรับ dependency injection เพื่อทดสอบ orchestration โดยไม่เสียค่า LLM
-- มี unit tests และ proof script ที่เรียก MCP จริง
+งานพัฒนาล่าสุดอยู่ที่ **Lab 6** และไม่ใช้ LangGraph ใน critical path:
 
 ```text
-planner → call_model → tools → capture_tool_result → review_plan ─┐
-                    └→ review_answer → APPROVED → END             │
-                              └→ REJECTED → call_model ←──────────┘
+Skill contract -> MCP evidence -> deterministic checks
+               -> LLM semantic review เฉพาะกรณีเสี่ยง
+               -> fail-closed Claim Gate -> Answer
 ```
 
-### ผลทดสอบจริง
+แนวคิดสำคัญคือ Observation เพียงอย่างเดียวไม่รู้ความหมายทางธุรกิจ:
 
-ภาพนี้มาจากการรัน **OpenRouter LLM จริง + MCP จริง** ไม่ใช่ mock:
+- **Skill** เก็บ semantics และ policy ของ bounded domain
+- **Contract** นิยาม query, grain, field, label และ completion rule ที่ runtime ตรวจได้
+- **Observation** ตรวจผล tool เทียบกับ state และ contract
+- **Claim Gate** ปล่อยเฉพาะ claim ที่ accepted evidence รองรับ
 
-![OpenRouter LLM + Real MCP + PlannerState](artifacts/planner_openrouter_mcp_proof.png)
+Runtime core ค้นหา contracts จาก
+`skills/*/references/answer_contracts.json`; ไฟล์ generic
+`labs/lab6_todo/executable_metric_contracts.json` ไม่มี HR/Finance contract
+เพื่อไม่ให้ core ผูกกับโดเมนใดโดเมนหนึ่ง
 
-ผลที่พิสูจน์ได้: MCP tool calls 3 ครั้ง · plan revision 1 → 5 · completed 6/6 ขั้น ·
-Answer Review = APPROVED · unit tests 2/2
+Skills ปัจจุบัน:
 
-### Quick start สำหรับผู้เรียน
+- [HR Analytics](skills/hr-analytics/SKILL.md)
+- [Finance Analytics](skills/finance-analytics/SKILL.md)
+
+### ผล controlled tests
+
+| Suite | Repeated runs | Questions | Atomic items | Median |
+|---|---:|---:|---:|---:|
+| HR Skill | 2 | 10/10 | 77/77 | 0.706–0.710s |
+| Finance Skill | 2 | 10/10 | 148/148 | 0.730–0.792s |
+
+HR ทั้งสองรอบได้ answer hash เดียวกัน และ Finance non-regression หลังเพิ่ม HR
+Skill ยังคง score และ answer hash เดิม คำถามที่ match contract ใช้เส้นทาง
+`contract → MCP → deterministic emit` โดยไม่เรียก Agent/Observer LLM
+
+ผลนี้รับรองเฉพาะ intent families และชุดข้อมูลที่ contracts ประกาศไว้
+ไม่ใช่การรับรองคำถาม HR/Finance ทุกแบบหรือ production readiness
+
+อ่านรายละเอียดและวิธีรันที่
+[Lab 6 — current architecture](labs/lab6_todo/README.md),
+[HR report](artifacts/hr_skill_run4_run5_report.md) และ
+[Finance report](artifacts/finance_skill_run3_run4_report.md)
+
+## Quick start สำหรับผู้เรียน
 
 พัฒนาและทดสอบด้วย Python 3.11:
 
@@ -95,37 +61,32 @@ cp .env.example .env
 
 ```dotenv
 OPENROUTER_API_KEY=ใส่คีย์ของผู้เรียน
+OPENROUTER_MODEL=qwen/qwen3.5-35b-a3b
+OBSERVER_MODEL=openai/gpt-oss-120b
 MCP_SERVER_URL=https://your-mcp-server.example/mcp
 ```
 
-ตรวจ logic ของ PlannerState โดยไม่เรียก LLM หรือ MCP:
+รัน Pure Python Agent ปัจจุบันกับ MCP:
 
 ```bash
-python -m unittest -v tests.test_lab8_planner
+python labs/lab6_todo/agent_todo.py \
+  "นับพนักงานที่ยังปฏิบัติงานแยกตามแผนก"
 ```
 
-พิสูจน์ replanning ด้วย MCP tool จริงโดยไม่ต้องมี LLM key:
+รัน automated tests:
 
 ```bash
-python -m scripts.prove_planner_mcp
+python -m pytest tests --ignore=tests/test_lab8_planner.py -q
 ```
 
-รัน Agent end-to-end ด้วย OpenRouter Planner/Reviewer และ MCP tools จริง:
+สถานะที่ merge เข้า `main`: `76 passed`
 
-```bash
-python labs/lab8_langgraph/agent_langgraph.py
-```
+### จุดย้อนกลับ
 
-หรือใช้คำสั่งย่อ:
+- `archive/original-49f6f10` — original baseline
+- `milestone/skill-contracts-7e24c20` — HR/Finance Skill milestone
 
-```bash
-make test        # unit tests
-make proof       # real MCP, deterministic driver
-make run-planner # real OpenRouter + real MCP
-```
-
-> `make proof` และ `make run-planner` อ่าน endpoint/key จาก `.env` ผ่าน `python-dotenv`
-> คีย์จริงจะไม่ถูกเก็บในภาพหลักฐานหรือ source code
+Tags ทั้งสองมีคำอธิบายและอยู่บน remote จึงทดลองย้อนหลังได้โดยไม่แก้ `main`
 
 > หลักสูตร **Agentic AI Development with Python (หลักสูตรที่ 2)** —
 > เขียน Agent ด้วย Pure Python ทีละขั้น (Lab 1–7) แล้วเปรียบเทียบกับ LangGraph (Lab 8) ก่อน deploy เป็น API Service (Lab 9)
@@ -173,10 +134,13 @@ Python-Agent-LangGraph/
 │   ├── lab3_agent_loop/        # Lab 3: agent loop แรก (Pure Python)
 │   ├── lab4_mcp_agent/         # Lab 4: + MCP MSSQL จริง
 │   ├── lab5_skills/            # Lab 5: + Skill routing (มีโฟลเดอร์ skills/)
-│   ├── lab6_todo/              # Lab 6: + TodoWrite
+│   ├── lab6_todo/              # Lab 6: Pure Python Observation/Evidence/Claim Gate
 │   ├── lab7_memory/            # Lab 7: + Memory/Compaction/Note-taking
 │   ├── lab8_langgraph/         # Lab 8: LangGraph Agent (pivot — เทียบ Pure Python)
 │   └── lab9_deploy/            # Lab 9: ห่อ agent เป็น FastAPI API + Docker
+├── skills/
+│   ├── hr-analytics/           # HR semantics + executable answer contracts
+│   └── finance-analytics/      # Finance semantics + executable answer contracts
 ├── docker-compose.yml          # Lab 9: service agent (ชี้ MCP MSSQL จริงผ่าน .env)
 ├── .dockerignore
 ├── discover_mssql.py           # ยูทิลิตี้ตรวจการเชื่อมต่อ + list tools/args schema
@@ -242,10 +206,10 @@ Python-Agent-LangGraph/
 | 5. Reasoning Loop (Agent Loop) | | | ● | ● | ● | ● | ● | ● | ◐ |
 | 6. Sandbox + Execution | | | ◐* | | | | | | ◐* |
 | 7. Gateway + Scheduler | | | | | | | | | ◐ |
-| 8. Safety Layer | | | ◐* | | | | | | ◐ |
+| 8. Safety Layer | | | ◐* | | | ◐ | | | ◐ |
 
 > `◐*` = มีร่องรอย/พฤติกรรมคล้าย แต่ยังไม่ใช่ระบบจริงตามนิยาม layer
-> **สรุป coverage:** ครบจริง 4 layer (1, 2, 3, 5) · มีบางส่วน 1 layer (7 — มี HTTP gateway แต่ยังไม่มี Telegram/Slack/Cron) · ยังไม่มีจริง 3 layer (4 Hooks, 6 Sandbox/Execution, 8 Safety)
+> **สรุป coverage:** ครบจริง 4 layer (1, 2, 3, 5) · มีบางส่วนใน layer 7 (HTTP gateway) และ layer 8 (Lab 6 evidence admission/Claim Gate แต่ยังไม่มี permission/containment เต็มระบบ) · layer 4 Hooks และ layer 6 Sandbox/Execution ยังไม่ใช่ระบบเต็ม
 > รายละเอียด gap + เหตุผลว่าทำไม layer 4/6/8 อยู่นอกขอบเขต `course2_outline-1.pdf` อธิบายไว้ที่ [Lab 9 — Layer Coverage & Gaps](labs/lab9_deploy/README.md) (มีภาพ matrix ประกอบ)
 
 README ของแต่ละ Lab จะมีบรรทัด **"ตำแหน่งใน 8 Layer"** บอกว่า Lab นั้นสร้างชิ้นส่วนไหนของภาพนี้
@@ -262,6 +226,8 @@ README ของแต่ละ Lab จะมีบรรทัด **"ตำแ�
 | Tool/skill registry (MCP→OpenAI schema) | `core/registry.py`, `lab4` | **3** | `ToolNode` + `MultiServerMCPClient` |
 | Skill routing (Progressive Disclosure) | `lab5_skills` | **3 + 1** | conditional edge |
 | Plan state (TodoWrite) | `lab6_todo` | **3 → 2** | state ใน `AgentState` |
+| Evidence admission + Dynamic Observation | `lab6_todo/evidence_*`, `dynamic_observer.py` | **5 + 8** | ไม่มี counterpart ใน Lab 8 ตัวอย่าง |
+| Domain Skill contracts + Claim Gate | `skills/*`, `lab6_todo/claim_gate.py` | **1 + 3 + 8** | ไม่มี counterpart ใน Lab 8 ตัวอย่าง |
 | Memory + compaction + notes | `lab7_memory` | **2** | `MemorySaver` checkpointer |
 | Prompt/instruction assembly | `core/llm.py`, system prompts | **1** | system message ใน state |
 | API gateway (FastAPI `/chat`) | `lab9_deploy` | **7** | — (ชั้น deploy) |
